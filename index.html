@@ -38,7 +38,9 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 /* 박스 디자인: 오버레이 */
 .lo-overlay .pimg{margin-bottom:0}
 .ov-cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:30px 10px 10px 14px;background:linear-gradient(to top,rgba(255,255,255,.92),rgba(255,255,255,0))}
-.ov-cap .ptitle{flex:1;max-width:none}
+.ov-cap .sbody{flex:1;min-width:0;display:grid;gap:1px}
+.ov-cap .ptitle{max-width:none}
+.ov-cap .phint{color:#777}
 .lo-overlay .pimg.no-pic{aspect-ratio:auto;min-height:110px;background:var(--soft)}
 /* 박스 디자인: 가로형 */
 .pside{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 8px;border-radius:14px;cursor:pointer}
@@ -232,6 +234,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     <div class="picker r21" id="pPicker"></div>
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
+    <label>안내 문구 (비우면 안 보여요)<input id="pHint"></label>
     <label>프롬프트<textarea id="pBody" placeholder="복사될 프롬프트 내용"></textarea></label>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
@@ -367,7 +370,10 @@ function render(){
 }
 
 // ---------- 프롬프트 박스 (디자인별) ----------
-const HINT = `<span class="phint"><span class="h-open">눌러서 전체 프롬프트 보기</span><span class="h-close">눌러서 접기</span></span>`;
+const DEFAULT_HINT = "눌러서 전체 프롬프트 보기";
+const hintHtml = p => (p.hint === undefined || p.hint === DEFAULT_HINT)
+  ? `<span class="phint"><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">눌러서 접기</span></span>`
+  : `<span class="phint">${esc(p.hint)}</span>`;
 function promptHtml(p, admin){
   const lo = p.layout || "stack";
   const title = `<span class="ptitle">${esc(p.title || "제목 없음")}</span>`;
@@ -377,18 +383,18 @@ function promptHtml(p, admin){
   if (lo === "overlay") {
     inner = `<div class="box pimg press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">
       ${mediaHtml(p)}${edit(!!p.image)}
-      <div class="ov-cap">${title}${copy}</div></div>`;
+      <div class="ov-cap"><div class="sbody">${title}${hintHtml(p)}</div>${copy}</div></div>`;
   } else if (lo === "side") {
     inner = `<div class="box pside press" data-tog="${p.id}">
       <div class="sthumb">${mediaHtml(p)}</div>
-      <div class="sbody">${title}${HINT}</div>${edit(false)}${copy}</div>`;
+      <div class="sbody">${title}${hintHtml(p)}</div>${edit(false)}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press" data-tog="${p.id}">
       ${title}<div class="tsnip">${esc(p.content)}</div>
-      <div class="tfoot">${HINT}${copy}</div>${edit(false)}</div>`;
+      <div class="tfoot">${hintHtml(p)}${copy}</div>${edit(false)}</div>`;
   } else {
     inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
-      <div class="box pbar press" data-tog="${p.id}">${title}${HINT}${p.image ? "" : edit(false)}${copy}</div>`;
+      <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
   }
   return `<div class="item lo-${lo} ${openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
     <div class="expand"><div><div class="expand-inner">${esc(p.content)}</div></div></div></div>`;
@@ -661,6 +667,7 @@ function openPrompt(id, preset){
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
   $("#pBody").value = p.content || "";
+  $("#pHint").value = p.hint === undefined ? DEFAULT_HINT : p.hint;
   pEditor.load(p);
   setLayout(p.layout || "stack");
   $("#promptDelBtn").hidden = !id;
@@ -699,7 +706,7 @@ $("#folderDelBtn").onclick = async () => {
 $("#promptForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("promptSave", async () => {
-    const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, layout: curLayout, ...pEditor.data(), updated: serverTimestamp() };
+    const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, hint: $("#pHint").value.trim(), layout: curLayout, ...pEditor.data(), updated: serverTimestamp() };
     try {
       if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
       else {
