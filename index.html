@@ -50,15 +50,16 @@ textarea{min-height:180px;resize:vertical;line-height:1.55}
 .chev{color:#c4c4c4;font-size:20px;line-height:1;padding-right:4px}
 
 /* 프롬프트: 9:16 카드 */
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-@media (min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
-.card{position:relative;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:var(--soft);cursor:pointer;border:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:1fr;gap:10px}
+.card{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:var(--soft);cursor:pointer;border:1px solid var(--line)}
 .card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.card-text{position:absolute;left:0;right:0;bottom:0;padding:28px 10px 10px;font-size:12px;line-height:1.45;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card-text{position:absolute;left:0;right:0;bottom:0;padding:32px 76px 12px 12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card.has-img .card-text{color:#fff;background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0))}
-.card:not(.has-img) .card-text{top:0;bottom:auto;padding:12px 44px 12px 12px;color:var(--text);-webkit-line-clamp:12}
+.card:not(.has-img) .card-text{top:0;bottom:auto;padding:12px 48px 12px 12px;color:var(--text);-webkit-line-clamp:5}
 .edit-ic{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.88);display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
 .edit-ic svg{width:15px;height:15px}
+.copy-btn{position:absolute;right:10px;bottom:10px;height:28px;padding:0 12px;border-radius:999px;border:none;background:rgba(255,255,255,.92);color:#111;font:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.card:not(.has-img) .copy-btn{background:var(--text);color:#fff}
 /* 상세 보기 */
 .view-img{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:var(--soft);display:block}
 .view-text{white-space:pre-wrap;word-break:break-word;font-size:14px;max-height:30vh;overflow:auto}
@@ -229,6 +230,7 @@ function render(){
       ${p.image ? `<img src="${p.image}" alt="" loading="lazy">` : ""}
       <div class="card-text">${esc(p.content)}</div>
       ${admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil}</button>` : ""}
+      <button class="copy-btn press" data-copy="${p.id}">복사</button>
     </div>`).join("")}</div>`;
 }
 
@@ -237,9 +239,10 @@ window.addEventListener("hashchange", () => { render(); window.scrollTo(0,0); })
 $("#backBtn").onclick = () => { location.hash = ""; };
 
 $("#view").addEventListener("click", async e => {
-  const t = e.target.closest("[data-edit],[data-open],[data-view]");
+  const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-view]");
   if (!t) return;
-  if (t.dataset.edit) { e.stopPropagation(); openPrompt(t.dataset.edit); return; }
+  if (t.dataset.edit) { openPrompt(t.dataset.edit); return; }
+  if (t.dataset.copy) { copyText(docs.find(x => x.id === t.dataset.copy)?.content || ""); return; }
   if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
   if (t.dataset.view) openView(t.dataset.view);
 });
@@ -251,8 +254,8 @@ function openView(id){
   $("#vText").textContent = p.content || "";
   $("#viewDlg").showModal();
 }
-$("#vCopy").onclick = async () => {
-  const text = viewing?.content || "";
+$("#vCopy").onclick = () => copyText(viewing?.content || "");
+async function copyText(text){
   try { await navigator.clipboard.writeText(text); }
   catch(_) { const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
   toast("복사됐어요");
