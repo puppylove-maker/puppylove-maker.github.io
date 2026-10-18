@@ -58,6 +58,17 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .lo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .lo-card{display:grid;gap:8px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;font:inherit;font-size:12px;color:var(--sub);cursor:pointer;text-align:left}
 .lo-card.on{border-color:#bdbdbd;background:var(--soft)}
+/* 박스 디자인 변경 (아코디언) */
+.acc{border:1px solid var(--line);border-radius:10px;background:#fff}
+.acc-head{width:100%;display:flex;align-items:center;gap:8px;border:none;background:none;padding:10px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.acc-head span:first-child{flex:1}
+.acc-cur{font-size:12px;color:var(--muted)}
+.acc-head svg{width:16px;height:16px;color:#999;transition:transform .3s var(--ease)}
+.acc.open .acc-head svg{transform:rotate(180deg)}
+.acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease)}
+.acc-body>div{overflow:hidden}
+.acc.open .acc-body{grid-template-rows:1fr}
+.acc .lo-grid{padding:0 10px 10px}
 /* 수정 창 안의 작은 디자인 선택 */
 .lo-grid.compact{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
 .lo-grid.compact .lo-card{padding:6px;gap:5px;border-radius:10px;font-size:11px;text-align:center}
@@ -268,7 +279,10 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>안내 문구 (비우면 안 보여요)<input id="pHint"></label>
     <label>프롬프트<textarea id="pBody" placeholder="복사될 프롬프트 내용"></textarea></label>
-    <div class="field">박스 디자인<div class="lo-grid compact" id="pLayout"></div></div>
+    <div class="acc" id="loAcc">
+      <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div></div></div>
+    </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -680,9 +694,11 @@ function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => 
 $("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
 let curLayout = "stack";
 document.addEventListener("click", e => { const b = e.target.closest("#pLayout [data-lo]"); if (b) setLayout(b.dataset.lo); });
+$("#loAccBtn").onclick = () => $("#loAcc").classList.toggle("open");
 function setLayout(lo){
   curLayout = lo;
   $("#pLayout").innerHTML = loCards(lo);
+  $("#loCur").textContent = LAYOUTS.find(l => l.id === lo)?.name || "";
   const pk = $("#pPicker");
   pk.classList.toggle("r21", lo !== "side"); pk.classList.toggle("r11", lo === "side");
   pk.hidden = $("#pTools").hidden = lo === "text";
@@ -746,6 +762,7 @@ function openPrompt(id, preset){
   $("#pHint").value = p.hint === undefined ? DEFAULT_HINT : p.hint;
   pEditor.load(p);
   setLayout(p.layout || "stack");
+  $("#loAcc").classList.remove("open");
   $("#promptDelBtn").hidden = !id;
   $("#promptDlg").showModal();
 }
