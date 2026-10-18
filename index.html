@@ -49,13 +49,19 @@ textarea{min-height:180px;resize:vertical;line-height:1.55}
 .folder-name{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chev{color:#c4c4c4;font-size:20px;line-height:1;padding-right:4px}
 
-/* 프롬프트 */
-.item{padding:12px;display:grid;gap:10px}
-.item-img{width:100%;max-height:260px;object-fit:cover;border-radius:10px;display:block;background:var(--soft)}
-.body{white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:14px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
-.body.open{display:block}
-.item-actions{display:flex;justify-content:flex-end;gap:6px}
-
+/* 프롬프트: 9:16 카드 */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media (min-width:560px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{position:relative;aspect-ratio:9/16;border-radius:14px;overflow:hidden;background:var(--soft);cursor:pointer;border:1px solid var(--line)}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.card-text{position:absolute;left:0;right:0;bottom:0;padding:28px 10px 10px;font-size:12px;line-height:1.45;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.card.has-img .card-text{color:#fff;background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,0))}
+.card:not(.has-img) .card-text{top:0;bottom:auto;padding:12px 44px 12px 12px;color:var(--text);-webkit-line-clamp:12}
+.edit-ic{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:none;background:rgba(255,255,255,.88);display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.edit-ic svg{width:15px;height:15px}
+/* 상세 보기 */
+.view-img{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:var(--soft);display:block}
+.view-text{white-space:pre-wrap;word-break:break-word;font-size:14px;max-height:30vh;overflow:auto}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted);min-height:0}
 .who{font-size:11px;color:var(--muted);text-align:right;margin:-10px 0 12px}
@@ -127,6 +133,18 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
       </div>
     </div>
   </form>
+</dialog>
+
+<!-- 상세 보기 -->
+<dialog id="viewDlg">
+  <div class="dlg">
+    <img class="view-img" id="vImg" alt="" hidden>
+    <div class="view-text" id="vText"></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="viewDlg">닫기</button>
+      <button type="button" class="btn primary press" id="vCopy">복사</button>
+    </div>
+  </div>
 </dialog>
 
 <div class="toast" id="toast"></div>
@@ -205,15 +223,12 @@ function render(){
     $("#view").innerHTML = `<div class="empty">${admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
     return;
   }
-  $("#view").innerHTML = `<div class="list">${items.map(p => `
-    <div class="box item">
-      ${p.image ? `<img class="item-img" src="${p.image}" alt="">` : ""}
-      ${p.title ? `<div style="font-weight:600">${esc(p.title)}</div>` : ""}
-      <div class="body" data-more="1">${esc(p.content)}</div>
-      <div class="item-actions">
-        ${admin ? `<button class="btn sm ghost press" data-edit="${p.id}">수정</button>` : ""}
-        <button class="btn sm press" data-copy="${p.id}">복사</button>
-      </div>
+  const pencil = `<svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+  $("#view").innerHTML = `<div class="grid">${items.map(p => `
+    <div class="card press ${p.image ? "has-img" : ""}" data-view="${p.id}">
+      ${p.image ? `<img src="${p.image}" alt="" loading="lazy">` : ""}
+      <div class="card-text">${esc(p.content)}</div>
+      ${admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil}</button>` : ""}
     </div>`).join("")}</div>`;
 }
 
@@ -222,18 +237,26 @@ window.addEventListener("hashchange", () => { render(); window.scrollTo(0,0); })
 $("#backBtn").onclick = () => { location.hash = ""; };
 
 $("#view").addEventListener("click", async e => {
-  const t = e.target.closest("[data-open],[data-copy],[data-more],[data-edit]");
+  const t = e.target.closest("[data-edit],[data-open],[data-view]");
   if (!t) return;
+  if (t.dataset.edit) { e.stopPropagation(); openPrompt(t.dataset.edit); return; }
   if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
-  if (t.dataset.more) t.classList.toggle("open");
-  if (t.dataset.edit) openPrompt(t.dataset.edit);
-  if (t.dataset.copy) {
-    const p = docs.find(x => x.id === t.dataset.copy);
-    try { await navigator.clipboard.writeText(p.content); }
-    catch(_) { const ta=document.createElement("textarea"); ta.value=p.content; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
-    toast("복사됐어요");
-  }
+  if (t.dataset.view) openView(t.dataset.view);
 });
+let viewing = null;
+function openView(id){
+  const p = docs.find(x => x.id === id); if (!p) return;
+  viewing = p;
+  $("#vImg").hidden = !p.image; if (p.image) $("#vImg").src = p.image;
+  $("#vText").textContent = p.content || "";
+  $("#viewDlg").showModal();
+}
+$("#vCopy").onclick = async () => {
+  const text = viewing?.content || "";
+  try { await navigator.clipboard.writeText(text); }
+  catch(_) { const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  toast("복사됐어요");
+};
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
 
 // ---------- 이미지 선택 ----------
