@@ -147,6 +147,9 @@ textarea.short{min-height:70px}
 .oname{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .oarrow{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--sub);font-size:14px}
 .oarrow:disabled{opacity:.3}
+.oarrow.del{color:var(--danger);border-color:#f3dede}
+.oarrow.del svg{width:15px;height:15px}
+.orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
 .obar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
 
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
@@ -395,7 +398,7 @@ function promptHtml(p, admin){
 function renderReorder(){
   const rows = reorder.ids.map(id => reorder.map[id]);
   $("#view").innerHTML = `
-    <div class="obar"><span>화살표로 순서를 바꾸세요</span>
+    <div class="obar"><span>${reorder.removed.size ? `${reorder.removed.size}개 삭제 예정` : "순서 바꾸기·삭제"}</span>
       <span class="row"><button class="btn sm press" id="oCancel">취소</button><button class="btn sm primary press" id="oDone">완료</button></span></div>
     <div class="olist">${rows.map((o, i) => `
       <div class="orow" data-oid="${o.id}">
@@ -403,6 +406,7 @@ function renderReorder(){
         <span class="oname">${esc(o.name || o.title || "제목 없음")}</span>
         <button class="oarrow press" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
         <button class="oarrow press" data-down="${i}" ${i === rows.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
+        <button class="oarrow del press" data-del="${o.id}" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
       </div>`).join("")}</div>`;
 }
 function moveRow(from, to){
@@ -417,18 +421,38 @@ function moveRow(from, to){
     requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
   });
 }
+function removeRow(id){
+  const el = document.querySelector(`.orow[data-oid="${id}"]`);
+  const go = () => {
+    const before = new Map([...document.querySelectorAll(".orow")].map(r => [r.dataset.oid, r.getBoundingClientRect().top]));
+    reorder.ids = reorder.ids.filter(x => x !== id); reorder.removed.add(id);
+    renderReorder();
+    document.querySelectorAll(".orow").forEach(r => {
+      const dy = before.get(r.dataset.oid) - r.getBoundingClientRect().top; if (!dy) return;
+      r.style.transform = `translateY(${dy}px)`; r.style.transition = "none";
+      requestAnimationFrame(() => { r.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; r.style.transform = ""; });
+    });
+  };
+  if (el) { el.classList.add("leaving"); setTimeout(go, 200); } else go();
+}
 function startReorder(){
   const list = currentFolderId() ? prompts() : folders();
-  reorder = { ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])) };
+  reorder = { ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
   render(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function finishReorder(save){
   if (save) {
+    const n = reorder.removed.size, isFolders = !currentFolderId();
+    if (n && !confirm(isFolders ? `폴더 ${n}개와 그 안의 프롬프트를 모두 삭제할까요?` : `프롬프트 ${n}개를 삭제할까요?`)) return;
     try {
       const batch = writeBatch(db);
       reorder.ids.forEach((id, i) => batch.update(doc(db, "prompts", id), { order: i }));
-      await batch.commit(); toast("순서를 저장했어요");
+      for (const id of reorder.removed) {
+        batch.delete(doc(db, "prompts", id));
+        if (isFolders) (await getDocs(query(col, where("folderId", "==", id)))).docs.forEach(d => batch.delete(d.ref));
+      }
+      await batch.commit(); toast(n ? "저장하고 삭제했어요" : "순서를 저장했어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
   }
   reorder = null; render();
@@ -443,10 +467,11 @@ window.addEventListener("hashchange", onRoute);
 $("#backBtn").onclick = () => { location.hash = ""; };
 
 $("#view").addEventListener("click", e => {
-  const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-tog],[data-up],[data-down],#oDone,#oCancel");
+  const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-tog],[data-up],[data-down],[data-del],#oDone,#oCancel");
   if (!t) return;
   if (t.id === "oDone") return finishReorder(true);
   if (t.id === "oCancel") return finishReorder(false);
+  if (t.dataset.del) return removeRow(t.dataset.del);
   if (t.dataset.up) return moveRow(+t.dataset.up, +t.dataset.up - 1);
   if (t.dataset.down) return moveRow(+t.dataset.down, +t.dataset.down + 1);
   if (t.dataset.edit) return openPrompt(t.dataset.edit);
@@ -594,8 +619,8 @@ const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card pr
 function openMenu(){
   const fid = currentFolderId();
   const items = fid
-    ? [["tpl", "새 프롬프트", "박스 디자인 골라서 추가"], ...(prompts().length > 1 ? [["order", "순서 바꾸기", "프롬프트 순서 정하기"]] : [])]
-    : [["new", "새 폴더", "폴더 추가"], ...(folders().length > 1 ? [["order", "순서 바꾸기", "폴더 순서 정하기"]] : [])];
+    ? [["tpl", "새 프롬프트", "박스 디자인 골라서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    : [["new", "새 폴더", "폴더 추가"], ...(folders().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
   $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
 }
