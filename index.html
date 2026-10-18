@@ -191,6 +191,8 @@ textarea.short{min-height:70px}
 .orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
 .obar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
 
+.skel{background:linear-gradient(90deg,#f3f3f3 0%,#fafafa 50%,#f3f3f3 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-color:#f0f0f0}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted)}
 .who{font-size:11px;color:var(--muted);text-align:center}
@@ -367,19 +369,33 @@ onSnapshot(query(col, where("type", "==", "folder")), snap => {
   render();
 }, () => { $("#status").textContent = "불러오기에 실패했어요"; });
 
-let unsubPrompts = null;
+// 폴더별로 한 번 연결해두고 계속 기억 (다시 들어가면 바로 보임)
+const promptCache = new Map(); // fid -> { docs, ready, unsub }
+function ensurePrompts(fid){
+  if (!fid || promptCache.has(fid)) return promptCache.get(fid);
+  const entry = { docs: [], ready: false, unsub: null };
+  promptCache.set(fid, entry);
+  entry.unsub = onSnapshot(query(col, where("folderId", "==", fid)), snap => {
+    entry.docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.type !== "folder");
+    entry.ready = true;
+    if (currentFolderId() === fid) { promptDocs = entry.docs; promptsReady = true; render(); }
+  }, () => { promptCache.delete(fid); if (currentFolderId() === fid) $("#status").textContent = "불러오기에 실패했어요"; });
+  return entry;
+}
 function watchPrompts(){
   const fid = currentFolderId();
-  if (fid === promptsFor) return;
-  unsubPrompts?.(); unsubPrompts = null;
-  promptsFor = fid; promptDocs = []; promptsReady = false;
-  if (!fid) return;
-  unsubPrompts = onSnapshot(query(col, where("folderId", "==", fid)), snap => {
-    promptDocs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.type !== "folder");
-    promptsReady = true;
-    render();
-  }, () => { $("#status").textContent = "불러오기에 실패했어요"; });
+  promptsFor = fid;
+  if (!fid) { promptDocs = []; promptsReady = false; return; }
+  const e = ensurePrompts(fid);
+  promptDocs = e.docs; promptsReady = e.ready;
 }
+// 폴더에 손가락이 닿는 순간 미리 받기 시작
+document.addEventListener("pointerdown", e => {
+  const f = e.target.closest("[data-open]"); if (f) ensurePrompts(f.dataset.open);
+}, { passive: true });
+document.addEventListener("pointerover", e => {
+  const f = e.target.closest("[data-open]"); if (f) ensurePrompts(f.dataset.open);
+}, { passive: true });
 
 // ---------- 화면 ----------
 function render(){
@@ -419,7 +435,7 @@ function render(){
   if (folder.desc && !reorder) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
   const items = prompts();
   if (reorder) return renderReorder();
-  if (!promptsReady) { $("#view").innerHTML = `<div class="status">불러오는 중…</div>`; return; }
+  if (!promptsReady) { $("#view").innerHTML = `<div class="plist">${`<div class="item"><div class="box skel" style="aspect-ratio:2/1"></div><div class="box skel" style="height:48px;margin-top:4px"></div></div>`.repeat(2)}</div>`; return; }
   if (!items.length) {
     $("#view").innerHTML = `<div class="empty">${admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
     return;
