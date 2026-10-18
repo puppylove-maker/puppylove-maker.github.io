@@ -4,67 +4,66 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>프롬프트 보관함</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{
-  --bg:#f6f5f2;--card:#ffffff;--text:#1d1d1f;--muted:#6b6b70;--line:#e4e2dc;
-  --accent:#3b5bdb;--accent-soft:#e7ecff;--danger:#d6336c;--chip:#efede8;
-}
-@media (prefers-color-scheme: dark){
-  :root{--bg:#141416;--card:#1e1e22;--text:#f1f1f3;--muted:#9a9aa2;--line:#2e2e34;
-  --accent:#7c94ff;--accent-soft:#252c4a;--danger:#ff6b9a;--chip:#2a2a30;}
+  --bg:#ffffff;--text:#111111;--sub:#555555;--muted:#999999;--line:#ececec;--soft:#f5f5f5;--danger:#c0392b;
+  color-scheme:light;
 }
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.55}
-.wrap{max-width:860px;margin:0 auto;padding:28px 16px 80px}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-h1{font-size:1.5rem;margin:0}
-.btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:10px;font:inherit;font-size:.9rem;cursor:pointer}
-.btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
+h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--text);border-color:var(--text);color:#fff}
+.btn.primary:hover{background:#333}
+.btn.ghost{border-color:transparent;color:var(--sub)}
 .btn.danger{color:var(--danger)}
-.btn.sm{padding:5px 10px;font-size:.82rem}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-input,textarea{width:100%;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-input:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
-textarea{min-height:200px;resize:vertical}
-.search{margin-bottom:12px}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.chip{border:none;background:var(--chip);color:var(--muted);padding:6px 12px;border-radius:999px;font:inherit;font-size:.85rem;cursor:pointer}
-.chip.on{background:var(--accent);color:#fff}
-.list{display:grid;gap:12px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-.card h3{margin:0 0 4px;font-size:1.05rem}
-.cat{font-size:.78rem;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:6px}
-.body{white-space:pre-wrap;word-break:break-word;color:var(--muted);font-size:.92rem;margin:10px 0 12px;max-height:7.5em;overflow:hidden}
-.body.open{max-height:none}
-.empty{text-align:center;color:var(--muted);padding:48px 0}
-.status{font-size:.85rem;color:var(--muted);margin-bottom:12px;min-height:1.2em}
-.who{font-size:.8rem;color:var(--muted)}
-dialog{border:none;border-radius:16px;padding:0;width:min(560px,calc(100% - 32px));background:var(--card);color:var(--text)}
-dialog::backdrop{background:rgba(0,0,0,.45)}
-.dlg{padding:20px;display:grid;gap:12px}
-.dlg h2{margin:0;font-size:1.15rem}
-label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
-.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;opacity:0;transition:.2s;pointer-events:none}
+.btn.sm{height:26px;padding:0 8px;font-size:12px}
+input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+input:focus,textarea:focus{outline:none;border-color:var(--text)}
+textarea{min-height:200px;resize:vertical;line-height:1.55}
+.search{height:36px;margin-bottom:10px;background:var(--soft);border-color:var(--soft)}
+.search:focus{background:var(--bg)}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--sub);height:26px;padding:0 10px;border-radius:999px;font:inherit;font-size:12px;cursor:pointer}
+.chip.on{background:var(--text);border-color:var(--text);color:#fff}
+.list{border-top:1px solid var(--line)}
+.item{padding:12px 0;border-bottom:1px solid var(--line)}
+.item-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.item-title{font-size:14px;font-weight:600;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
+.body{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+.body.open{display:block}
+.empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
+.status{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:4px}
+.who{font-size:11px;color:var(--muted);text-align:right;margin:-8px 0 10px}
+dialog{border:none;border-radius:10px;padding:0;width:min(520px,calc(100% - 24px));background:var(--bg);color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,.12)}
+dialog::backdrop{background:rgba(0,0,0,.3)}
+.dlg{padding:16px;display:grid;gap:10px}
+.dlg h2{margin:0;font-size:15px;font-weight:700}
+label{font-size:12px;color:var(--sub);display:grid;gap:4px}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:.2s;pointer-events:none}
 .toast.show{opacity:1}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>📚 프롬프트 보관함</h1>
+    <h1>프롬프트 보관함</h1>
     <div class="row">
-      <span class="who" id="who"></span>
-      <button class="btn primary" id="addBtn" hidden>+ 새 프롬프트</button>
-      <button class="btn" id="backupBtn" hidden>백업 저장</button>
-      <button class="btn" id="loginBtn" hidden>Google 로그인</button>
-      <button class="btn" id="logoutBtn" hidden>로그아웃</button>
+      <button class="btn ghost" id="backupBtn" hidden>백업</button>
+      <button class="btn ghost" id="logoutBtn" hidden>로그아웃</button>
+      <button class="btn" id="loginBtn" hidden>로그인</button>
+      <button class="btn primary" id="addBtn" hidden>추가</button>
     </div>
   </header>
+  <div class="who" id="who" hidden></div>
 
-  <input class="search" id="q" placeholder="검색 (제목, 내용, 카테고리)">
+  <input class="search" id="q" placeholder="검색">
   <div class="chips" id="chips"></div>
   <div class="status" id="status"></div>
   <div class="list" id="list"></div>
@@ -130,18 +129,19 @@ function render(){
     .sort((a,b) => ts(b.updated) - ts(a.updated));
 
   if (!items.length) {
-    $("#list").innerHTML = `<div class="empty">${prompts.length ? "검색 결과가 없어요" : (isAdmin() ? "아직 프롬프트가 없어요. ‘+ 새 프롬프트’로 추가해보세요!" : "아직 프롬프트가 없어요.")}</div>`;
+    $("#list").innerHTML = `<div class="empty">${prompts.length ? "검색 결과가 없어요" : (isAdmin() ? "아직 프롬프트가 없어요. ‘추가’를 눌러 시작하세요." : "아직 프롬프트가 없어요.")}</div>`;
     return;
   }
   $("#list").innerHTML = items.map(p => `
-    <div class="card">
-      <h3>${esc(p.title)}</h3>${p.category ? `<span class="cat">${esc(p.category)}</span>` : ""}
-      <div class="body" data-id="${p.id}">${esc(p.content)}</div>
-      <div class="row">
-        <button class="btn sm primary" data-copy="${p.id}">복사</button>
-        <button class="btn sm" data-more="${p.id}">펼치기</button>
-        ${isAdmin() ? `<button class="btn sm" data-edit="${p.id}">수정</button>` : ""}
+    <div class="item">
+      <div class="item-top">
+        <p class="item-title">${esc(p.title)}${p.category ? `<span class="cat">${esc(p.category)}</span>` : ""}</p>
+        <div class="row" style="flex-wrap:nowrap">
+          ${isAdmin() ? `<button class="btn sm ghost" data-edit="${p.id}">수정</button>` : ""}
+          <button class="btn sm" data-copy="${p.id}">복사</button>
+        </div>
       </div>
+      <div class="body" data-more="${p.id}">${esc(p.content)}</div>
     </div>`).join("");
 }
 
@@ -156,8 +156,7 @@ $("#list").addEventListener("click", async e => {
     toast("복사됐어요");
   }
   if (t.dataset.more) {
-    const b = document.querySelector(`.body[data-id="${t.dataset.more}"]`);
-    b.classList.toggle("open"); t.textContent = b.classList.contains("open") ? "접기" : "펼치기";
+    t.classList.toggle("open");
   }
   if (t.dataset.edit) openEdit(t.dataset.edit);
 });
@@ -199,7 +198,7 @@ if (!firebaseConfig.apiKey) {
     user = u;
     $("#loginBtn").hidden = !!u;
     $("#logoutBtn").hidden = !u;
-    $("#who").textContent = u ? (isAdmin() ? u.email : u.email + " (보기 전용)") : "";
+    $("#who").hidden = !u || isAdmin(); $("#who").textContent = u && !isAdmin() ? u.email + " · 보기 전용" : "";
     render();
   });
 
