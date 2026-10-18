@@ -12,7 +12,7 @@
   color-scheme:light;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-button,input,textarea{outline:none}
+button,input,textarea,select{outline:none}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:640px;margin:0 auto;padding:20px 16px 60px}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
@@ -20,9 +20,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;mar
 h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;align-items:center}
+.desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:-4px 0 14px}
 
-/* 눌림 애니메이션 */
-.press{transition:transform .18s var(--ease),background-color .18s var(--ease),border-color .18s var(--ease)}
+.press{transition:transform .18s var(--ease),background-color .18s var(--ease),border-color .18s var(--ease),opacity .18s}
 .press:active{transform:scale(.97)}
 
 .btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
@@ -32,53 +32,65 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .btn.ghost{border-color:transparent;color:var(--sub);background:transparent}
 .btn.ghost:hover{background:var(--soft)}
 .btn.danger{color:var(--danger)}
-.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn.sm{height:28px;padding:0 9px;font-size:12px}
 .btn:disabled{opacity:.5}
 
-input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;transition:border-color .15s}
+input,textarea,select{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;transition:border-color .15s}
 input:focus,textarea:focus{border-color:#cfcfcf}
-textarea{min-height:180px;resize:vertical;line-height:1.55}
+textarea{min-height:140px;resize:vertical;line-height:1.55}
+textarea.short{min-height:70px}
 
-.box{border:1px solid var(--line);border-radius:14px;background:var(--bg)}
-.list{display:grid;gap:8px}
+.box{border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+.list{display:grid;gap:10px}
 
-/* 폴더: 한 줄에 하나 */
-.folder{position:relative;display:block;width:100%;height:96px;padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer;background:var(--soft)}
-.folder img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.folder-name{position:absolute;left:0;right:0;bottom:0;padding:24px 16px 12px;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.folder.has-img .folder-name{color:#fff;background:linear-gradient(to top,rgba(0,0,0,.22),rgba(0,0,0,0));text-shadow:0 1px 3px rgba(0,0,0,.25)}
-.folder:not(.has-img) .folder-name{top:0;display:flex;align-items:center;padding:0 16px}
+.media{position:absolute;inset:0;overflow:hidden}
+.media img{width:100%;height:100%;object-fit:cover;display:block}
 
-/* 프롬프트: 9:16 카드 */
-.grid{display:grid;grid-template-columns:1fr;gap:10px}
-.card{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:var(--soft);cursor:pointer;border:1px solid var(--line)}
-.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
-.card-text{position:absolute;left:0;right:0;bottom:0;padding:32px 76px 12px 12px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card.has-img .card-text{color:#fff;background:linear-gradient(to top,rgba(0,0,0,.28),rgba(0,0,0,0));text-shadow:0 1px 3px rgba(0,0,0,.3)}
-.card:not(.has-img) .card-text{top:0;bottom:auto;padding:12px 48px 12px 12px;color:var(--text);-webkit-line-clamp:5}
-.edit-ic{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);display:grid;place-items:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.edit-ic svg{width:15px;height:15px}
-.copy-btn{position:absolute;right:10px;bottom:10px;height:28px;padding:0 12px;border-radius:999px;border:none;background:rgba(255,255,255,.92);color:#111;font:inherit;font-size:12px;font-weight:600;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.12)}
-.card:not(.has-img) .copy-btn{background:#fff;border:1px solid var(--line)}
-/* 상세 보기 */
-.view-img{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:var(--soft);display:block}
-.view-text{white-space:pre-wrap;word-break:break-word;font-size:14px;max-height:30vh;overflow:auto}
+.cap{position:absolute;left:0;right:0;bottom:0;padding:28px 76px 12px 14px;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-white .cap{color:var(--text);background:linear-gradient(to top,rgba(255,255,255,.85),rgba(255,255,255,0))}
+.g-black .cap{color:#fff;background:linear-gradient(to top,rgba(0,0,0,.45),rgba(0,0,0,0))}
+.g-none .cap{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.45)}
+.no-img .cap{top:0;bottom:auto;padding:14px 48px 14px 14px;color:var(--text);background:none;text-shadow:none;white-space:normal;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+
+.folder{position:relative;display:block;width:100%;aspect-ratio:4/1;min-height:84px;padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.folder .cap{font-size:15px;padding-right:16px}
+.folder.no-img .cap{top:0;bottom:0;display:flex;align-items:center}
+
+.card{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;cursor:pointer}
+.edit-ic{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:none;padding:0;display:grid;place-items:center;cursor:pointer;z-index:2}
+.edit-ic svg{width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.no-img .edit-ic svg{filter:none}
+.copy-btn{position:absolute;right:10px;bottom:10px;height:28px;padding:0 12px;border-radius:999px;border:1px solid rgba(0,0,0,.06);background:rgba(255,255,255,.94);color:#111;font:inherit;font-size:12px;font-weight:600;cursor:pointer;z-index:2}
+
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
-.status{font-size:12px;color:var(--muted);min-height:0}
+.status{font-size:12px;color:var(--muted)}
 .who{font-size:11px;color:var(--muted);text-align:right;margin:-10px 0 12px}
 
-/* 다이얼로그 */
-dialog{border:none;border-radius:16px;padding:0;width:min(480px,calc(100% - 24px));background:var(--bg);color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.14)}
+dialog{border:none;border-radius:16px;padding:0;width:min(480px,calc(100% - 24px));max-height:calc(100% - 24px);background:var(--bg);color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.14)}
 dialog[open]{animation:pop .22s var(--ease)}
-dialog::backdrop{background:rgba(0,0,0,.28)}
+dialog::backdrop{background:rgba(0,0,0,.25)}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .dlg{padding:16px;display:grid;gap:12px}
 .dlg h2{margin:0;font-size:15px;font-weight:700}
 label{font-size:12px;color:var(--sub);display:grid;gap:5px}
-.picker{position:relative;border:1px dashed #d4d4d4;border-radius:12px;background:var(--soft);min-height:110px;display:grid;place-items:center;cursor:pointer;overflow:hidden;color:var(--muted);font-size:13px}
-.picker img{width:100%;max-height:220px;object-fit:cover;display:block}
-.picker-x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.92);color:#666;font-size:15px;line-height:1;cursor:pointer}
-.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#fff;color:var(--text);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.08);padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.22s var(--ease);pointer-events:none}
+.picker{position:relative;border:1px dashed #d4d4d4;border-radius:12px;background:var(--soft);overflow:hidden;color:var(--muted);font-size:13px;touch-action:none;user-select:none;-webkit-user-select:none}
+.picker.r169{aspect-ratio:16/9}
+.picker.r41{aspect-ratio:4/1;min-height:84px}
+.picker .empty-hint{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer}
+.picker.has{cursor:grab;border-style:solid}
+.picker.has:active{cursor:grabbing}
+.picker .drag-hint{position:absolute;left:8px;top:8px;font-size:11px;background:rgba(255,255,255,.9);color:var(--sub);padding:2px 8px;border-radius:999px;pointer-events:none}
+.tools{display:flex;gap:6px;align-items:center}
+.tools input[type=range]{flex:1;padding:0;border:none;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:#e6e6e6}
+.tools input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tools input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0}
+.seg{display:flex;background:var(--soft);border-radius:8px;padding:3px;gap:3px}
+.seg button{flex:1;height:28px;border:none;border-radius:6px;background:transparent;font:inherit;font-size:12px;color:var(--sub);cursor:pointer}
+.seg button.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.view-img{width:100%;max-height:60vh;object-fit:contain;border-radius:10px;background:var(--soft);display:block}
+.view-title{font-size:15px;font-weight:700}
+.view-text{white-space:pre-wrap;word-break:break-word;font-size:14px;max-height:30vh;overflow:auto;color:var(--sub)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#fff;color:var(--text);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.08);padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.22s var(--ease);pointer-events:none;z-index:10}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
@@ -98,17 +110,19 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     </div>
   </header>
   <div class="who" id="who" hidden></div>
+  <div class="desc" id="desc" hidden></div>
   <div class="status" id="status"></div>
   <div id="view"></div>
 </div>
 
-<!-- 폴더 -->
 <dialog id="folderDlg">
   <form class="dlg" id="folderForm">
     <h2 id="folderDlgTitle">새 폴더</h2>
-    <div class="picker press" id="fPicker" data-input="fFile"></div>
-    <input type="file" id="fFile" accept="image/*" hidden>
+    <div class="picker r41" id="fPicker"></div>
+    <div class="tools" id="fTools"></div>
+    <label>글씨 배경<div class="seg" id="fGrad"></div></label>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
+    <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -119,13 +133,14 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
   </form>
 </dialog>
 
-<!-- 프롬프트 -->
 <dialog id="promptDlg">
   <form class="dlg" id="promptForm">
     <h2 id="promptDlgTitle">새 프롬프트</h2>
-    <div class="picker press" id="pPicker" data-input="pFile"></div>
-    <input type="file" id="pFile" accept="image/*" hidden>
-    <label>프롬프트<textarea id="pBody" required placeholder="프롬프트 내용을 입력하세요"></textarea></label>
+    <div class="picker r169" id="pPicker"></div>
+    <div class="tools" id="pTools"></div>
+    <label>글씨 배경<div class="seg" id="pGrad"></div></label>
+    <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
+    <label>프롬프트<textarea id="pBody" required placeholder="복사될 프롬프트 내용"></textarea></label>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -136,10 +151,10 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
   </form>
 </dialog>
 
-<!-- 상세 보기 -->
 <dialog id="viewDlg">
   <div class="dlg">
     <img class="view-img" id="vImg" alt="" hidden>
+    <div class="view-title" id="vTitle"></div>
     <div class="view-text" id="vText"></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">닫기</button>
@@ -148,6 +163,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
   </div>
 </dialog>
 
+<input type="file" id="fileIn" accept="image/*" hidden>
 <div class="toast" id="toast"></div>
 
 <script type="module">
@@ -167,17 +183,17 @@ import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app), db = getFirestore(app);
-const col = collection(db, "prompts"); // 폴더와 프롬프트를 한 곳에 저장 (type으로 구분)
+const col = collection(db, "prompts");
 
 const $ = s => document.querySelector(s);
-let docs = [], user = null, editingFolder = null, editingPrompt = null;
-const img = { fFile: null, pFile: null }; // 다이얼로그에서 고른 이미지 (dataURL / "" = 제거 / null = 그대로)
+let docs = [], user = null, editingFolder = null, editingPrompt = null, viewing = null;
 const isAdmin = () => !!user && ADMINS.includes(user.email);
 const UNSORTED = "_unsorted";
 
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 const ts = v => v?.toMillis ? v.toMillis() : (typeof v === "number" ? v : 0);
+const num = (v, d) => (typeof v === "number" && isFinite(v)) ? v : d;
 
 const folders = () => docs.filter(d => d.type === "folder").sort((a,b) => ts(a.created) - ts(b.created));
 const prompts = () => docs.filter(d => d.type !== "folder");
@@ -185,7 +201,14 @@ const folderIds = () => new Set(folders().map(f => f.id));
 const inFolder = (p, fid) => fid === UNSORTED ? !folderIds().has(p.folderId) : p.folderId === fid;
 const currentFolderId = () => { const m = location.hash.match(/^#\/f\/(.+)$/); return m ? decodeURIComponent(m[1]) : null; };
 
-// ---------- 화면 ----------
+function imgStyle(o){
+  const x = num(o.imgX, 50), y = num(o.imgY, 50), z = num(o.zoom, 1);
+  return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
+}
+const mediaHtml = o => o.image ? `<div class="media"><img src="${o.image}" alt="" loading="lazy" style="${imgStyle(o)}"></div>` : "";
+const gradClass = o => o.image ? "g-" + (o.grad || "white") : "no-img";
+const pencil = light => `<svg viewBox="0 0 24 24" fill="none" stroke="${light ? "#fff" : "#8a8a8a"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+
 function render(){
   const fid = currentFolderId();
   const admin = isAdmin();
@@ -193,20 +216,21 @@ function render(){
   $("#addBtn").hidden = !admin;
   $("#backBtn").hidden = !fid;
   $("#folderEditBtn").hidden = !admin || !fid || fid === UNSORTED;
+  $("#desc").hidden = true;
 
   if (!fid) {
     $("#pageTitle").textContent = "프롬프트 보관함";
     $("#addBtn").textContent = "새 폴더";
-    const list = folders().map(f => ({ id: f.id, name: f.name, image: f.image }));
+    const list = [...folders()];
     if (prompts().some(p => inFolder(p, UNSORTED))) list.push({ id: UNSORTED, name: "미분류" });
     if (!list.length) {
       $("#view").innerHTML = `<div class="empty">${admin ? "‘새 폴더’를 눌러 첫 폴더를 만들어보세요." : "아직 폴더가 없어요."}</div>`;
       return;
     }
     $("#view").innerHTML = `<div class="list">${list.map(f => `
-      <button class="box folder press ${f.image ? "has-img" : ""}" data-open="${esc(f.id)}">
-        ${f.image ? `<img src="${f.image}" alt="" loading="lazy">` : ""}
-        <span class="folder-name">${esc(f.name)}</span>
+      <button class="box folder press ${gradClass(f)}" data-open="${esc(f.id)}">
+        ${mediaHtml(f)}
+        <span class="cap">${esc(f.name)}</span>
       </button>`).join("")}</div>`;
     return;
   }
@@ -217,39 +241,42 @@ function render(){
     $("#view").innerHTML = ""; $("#addBtn").hidden = true; return;
   }
   $("#pageTitle").textContent = folder ? folder.name : "미분류";
+  if (folder?.desc) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
   $("#addBtn").textContent = "추가";
   const items = prompts().filter(p => inFolder(p, fid)).sort((a,b) => ts(b.updated) - ts(a.updated));
   if (!items.length) {
     $("#view").innerHTML = `<div class="empty">${admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
     return;
   }
-  const pencil = `<svg viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
-  $("#view").innerHTML = `<div class="grid">${items.map(p => `
-    <div class="card press ${p.image ? "has-img" : ""}" data-view="${p.id}">
-      ${p.image ? `<img src="${p.image}" alt="" loading="lazy">` : ""}
-      <div class="card-text">${esc(p.content)}</div>
-      ${admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil}</button>` : ""}
+  $("#view").innerHTML = `<div class="list">${items.map(p => {
+    const label = p.title || (!p.image ? p.content : "");
+    return `
+    <div class="box card press ${gradClass(p)}" data-view="${p.id}">
+      ${mediaHtml(p)}
+      ${label ? `<div class="cap">${esc(label)}</div>` : ""}
+      ${admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(!!p.image)}</button>` : ""}
       <button class="copy-btn press" data-copy="${p.id}">복사</button>
-    </div>`).join("")}</div>`;
+    </div>`; }).join("")}</div>`;
 }
 
-// ---------- 이동 / 클릭 ----------
 window.addEventListener("hashchange", () => { render(); window.scrollTo(0,0); });
 $("#backBtn").onclick = () => { location.hash = ""; };
 
-$("#view").addEventListener("click", async e => {
+$("#view").addEventListener("click", e => {
   const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-view]");
   if (!t) return;
-  if (t.dataset.edit) { openPrompt(t.dataset.edit); return; }
-  if (t.dataset.copy) { copyText(docs.find(x => x.id === t.dataset.copy)?.content || ""); return; }
+  if (t.dataset.edit) return openPrompt(t.dataset.edit);
+  if (t.dataset.copy) return copyText(docs.find(x => x.id === t.dataset.copy)?.content || "");
   if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
   if (t.dataset.view) openView(t.dataset.view);
 });
-let viewing = null;
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
+
 function openView(id){
   const p = docs.find(x => x.id === id); if (!p) return;
   viewing = p;
   $("#vImg").hidden = !p.image; if (p.image) $("#vImg").src = p.image;
+  $("#vTitle").textContent = p.title || ""; $("#vTitle").hidden = !p.title;
   $("#vText").textContent = p.content || "";
   $("#viewDlg").showModal();
 }
@@ -258,22 +285,71 @@ async function copyText(text){
   try { await navigator.clipboard.writeText(text); }
   catch(_) { const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
   toast("복사됐어요");
-};
-document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
-
-// ---------- 이미지 선택 ----------
-function showPicker(pickerId, src){
-  const el = $("#" + pickerId);
-  el.innerHTML = src ? `<img src="${src}" alt=""><button type="button" class="picker-x" aria-label="이미지 제거">×</button>` : `<span>이미지 추가 (선택)</span>`;
 }
-document.querySelectorAll(".picker").forEach(el => {
-  el.addEventListener("click", e => {
-    const inputId = el.dataset.input;
-    if (e.target.closest(".picker-x")) { img[inputId] = ""; showPicker(el.id, ""); return; }
-    $("#" + inputId).click();
+
+// ---------- 이미지 편집기: 드래그로 위치, 슬라이더로 확대 ----------
+let fileTarget = null;
+function makeEditor(pickerId, toolsId, gradId){
+  const st = { image:"", imgX:50, imgY:50, zoom:1, grad:"white" };
+  const picker = $("#" + pickerId), tools = $("#" + toolsId), gradEl = $("#" + gradId);
+  tools.innerHTML = `
+    <button type="button" class="btn sm press" data-act="pick">이미지 선택</button>
+    <button type="button" class="btn sm ghost press" data-act="remove">제거</button>
+    <input type="range" min="1" max="3" step="0.01" aria-label="확대">`;
+  gradEl.innerHTML = `<button type="button" data-g="white">흰색</button><button type="button" data-g="black">검은색</button><button type="button" data-g="none">없음</button>`;
+  const range = tools.querySelector("input");
+  const applyImg = () => { const im = picker.querySelector("img"); if (im) im.style.cssText = imgStyle(st); };
+
+  function paint(){
+    if (st.image) {
+      picker.classList.add("has");
+      picker.innerHTML = `<div class="media"><img src="${st.image}" alt="" draggable="false" style="${imgStyle(st)}"></div><span class="drag-hint">드래그로 위치 조절</span>`;
+    } else {
+      picker.classList.remove("has");
+      picker.innerHTML = `<div class="empty-hint">이미지 추가 (선택)</div>`;
+    }
+    tools.querySelector('[data-act="remove"]').hidden = !st.image;
+    tools.querySelector('[data-act="pick"]').textContent = st.image ? "이미지 변경" : "이미지 선택";
+    range.hidden = !st.image; range.value = st.zoom;
+    gradEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.g === st.grad));
+  }
+  const pick = () => { fileTarget = api; $("#fileIn").click(); };
+  tools.addEventListener("click", e => {
+    const a = e.target.closest("[data-act]")?.dataset.act;
+    if (a === "pick") pick();
+    if (a === "remove") { st.image = ""; paint(); }
   });
-});
-async function resizeImage(file, max = 1000){
+  gradEl.addEventListener("click", e => { const g = e.target.closest("[data-g]")?.dataset.g; if (g) { st.grad = g; paint(); } });
+  range.addEventListener("input", () => { st.zoom = +range.value; applyImg(); });
+  picker.addEventListener("click", () => { if (!st.image) pick(); });
+
+  let drag = null;
+  picker.addEventListener("pointerdown", e => {
+    if (!st.image) return;
+    drag = { x: e.clientX, y: e.clientY, ox: st.imgX, oy: st.imgY, w: picker.clientWidth, h: picker.clientHeight };
+    picker.setPointerCapture(e.pointerId);
+  });
+  picker.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const k = 1.6 / st.zoom;
+    st.imgX = Math.max(0, Math.min(100, drag.ox - (e.clientX - drag.x) / drag.w * 100 * k));
+    st.imgY = Math.max(0, Math.min(100, drag.oy - (e.clientY - drag.y) / drag.h * 100 * k));
+    applyImg();
+  });
+  const end = () => { drag = null; };
+  picker.addEventListener("pointerup", end); picker.addEventListener("pointercancel", end);
+
+  const api = {
+    load(o){ Object.assign(st, { image: o.image || "", imgX: num(o.imgX,50), imgY: num(o.imgY,50), zoom: num(o.zoom,1), grad: o.grad || "white" }); paint(); },
+    setImage(src){ Object.assign(st, { image: src, imgX:50, imgY:50, zoom:1 }); paint(); },
+    data(){ return { image: st.image, imgX: Math.round(st.imgX*10)/10, imgY: Math.round(st.imgY*10)/10, zoom: Math.round(st.zoom*100)/100, grad: st.grad }; }
+  };
+  return api;
+}
+const fEditor = makeEditor("fPicker", "fTools", "fGrad");
+const pEditor = makeEditor("pPicker", "pTools", "pGrad");
+
+async function resizeImage(file, max = 1200){
   const url = URL.createObjectURL(file);
   try {
     const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
@@ -286,41 +362,36 @@ async function resizeImage(file, max = 1000){
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
-["fFile","pFile"].forEach(id => {
-  $("#" + id).addEventListener("change", async e => {
-    const f = e.target.files[0]; e.target.value = "";
-    if (!f) return;
-    try {
-      img[id] = await resizeImage(f);
-      showPicker(id === "fFile" ? "fPicker" : "pPicker", img[id]);
-    } catch(_) { toast("이미지를 불러오지 못했어요"); }
-  });
+$("#fileIn").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f || !fileTarget) return;
+  try { fileTarget.setImage(await resizeImage(f)); } catch(_) { toast("이미지를 불러오지 못했어요"); }
 });
 
-// ---------- 추가 / 편집 열기 ----------
 $("#addBtn").onclick = () => currentFolderId() ? openPrompt(null) : openFolder(null);
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
 function openFolder(id){
-  editingFolder = id; img.fFile = null;
-  const f = docs.find(d => d.id === id);
+  editingFolder = id;
+  const f = docs.find(d => d.id === id) || {};
   $("#folderDlgTitle").textContent = id ? "폴더 편집" : "새 폴더";
-  $("#fName").value = f ? f.name : "";
-  showPicker("fPicker", f?.image || "");
+  $("#fName").value = f.name || "";
+  $("#fDesc").value = f.desc || "";
+  fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
 }
 function openPrompt(id){
-  editingPrompt = id; img.pFile = null;
+  editingPrompt = id;
   const p = docs.find(d => d.id === id) || {};
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
+  $("#pTitle").value = p.title || "";
   $("#pBody").value = p.content || "";
-  showPicker("pPicker", p.image || "");
+  pEditor.load(p);
   $("#promptDelBtn").hidden = !id;
   $("#promptDlg").showModal();
 }
 
-// ---------- 저장 / 삭제 ----------
 async function withBusy(btnId, fn){
   const b = $("#" + btnId); b.disabled = true;
   try { await fn(); } finally { b.disabled = false; }
@@ -329,11 +400,10 @@ $("#folderForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("folderSave", async () => {
     const name = $("#fName").value.trim(); if (!name) return;
-    const data = { name, updated: serverTimestamp() };
-    if (img.fFile !== null) data.image = img.fFile;
+    const data = { name, desc: $("#fDesc").value.trim(), ...fEditor.data(), updated: serverTimestamp() };
     try {
       if (editingFolder) await updateDoc(doc(db, "prompts", editingFolder), data);
-      else await addDoc(col, { type: "folder", created: serverTimestamp(), image: "", ...data });
+      else await addDoc(col, { type: "folder", created: serverTimestamp(), ...data });
       $("#folderDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
   });
@@ -351,13 +421,12 @@ $("#folderDelBtn").onclick = async () => {
 $("#promptForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("promptSave", async () => {
-    const data = { content: $("#pBody").value, updated: serverTimestamp() };
-    if (img.pFile !== null) data.image = img.pFile;
+    const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, ...pEditor.data(), updated: serverTimestamp() };
     try {
       if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
       else {
         const fid = currentFolderId();
-        await addDoc(col, { type: "prompt", folderId: fid === UNSORTED ? null : fid, image: "", ...data });
+        await addDoc(col, { type: "prompt", folderId: fid === UNSORTED ? null : fid, ...data });
       }
       $("#promptDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
@@ -369,18 +438,16 @@ $("#promptDelBtn").onclick = async () => {
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
-// ---------- 백업 ----------
 $("#backupBtn").onclick = () => {
-  const pack = (fid, name, image) => ({ folder: name, image: image || "", prompts: prompts().filter(p => inFolder(p, fid)).map(p => ({ image: p.image || "", content: p.content })) });
-  const data = folders().map(f => pack(f.id, f.name, f.image));
-  if (prompts().some(p => inFolder(p, UNSORTED))) data.push(pack(UNSORTED, "미분류"));
+  const strip = o => { const { id, created, updated, ...rest } = o; return rest; };
+  const data = folders().map(f => ({ ...strip(f), prompts: prompts().filter(p => inFolder(p, f.id)).map(strip) }));
+  if (prompts().some(p => inFolder(p, UNSORTED))) data.push({ name: "미분류", prompts: prompts().filter(p => inFolder(p, UNSORTED)).map(strip) });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
   a.download = `프롬프트_백업_${new Date().toISOString().slice(0,10)}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
 
-// ---------- 로그인 ----------
 onAuthStateChanged(auth, u => {
   user = u;
   $("#loginBtn").hidden = !!u;
@@ -399,7 +466,6 @@ $("#loginBtn").onclick = async () => {
 };
 $("#logoutBtn").onclick = () => signOut(auth);
 
-// ---------- 데이터 ----------
 $("#status").textContent = "불러오는 중…";
 onSnapshot(col, snap => {
   docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
