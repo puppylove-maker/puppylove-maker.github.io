@@ -24,8 +24,8 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .row{display:flex;gap:6px;align-items:center}
 .desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
 .hbtns{display:flex;gap:6px;position:relative;flex:none}
-.icon-btn{width:34px;height:34px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
-.icon-btn svg{width:20px;height:20px}
+.icon-btn{width:30px;height:30px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:16px;height:16px}
 .icon-btn.plus{color:#555}
 .icon-btn.plus svg{transition:transform .3s var(--ease)}
 .icon-btn.plus.on svg{transform:rotate(45deg)}
@@ -174,7 +174,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 .seg{display:flex;background:var(--soft);border-radius:8px;padding:3px;gap:3px}
 .seg button{flex:1;height:28px;border:none;border-radius:6px;background:transparent;font:inherit;font-size:12px;color:var(--sub);cursor:pointer}
 .seg button.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#fff;color:var(--text);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.08);padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.22s var(--ease);pointer-events:none;z-index:10}
+.toast{white-space:nowrap;position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#fff;color:var(--text);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.08);padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.22s var(--ease);pointer-events:none;z-index:10}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
@@ -226,11 +226,10 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 <dialog id="promptDlg">
   <form class="dlg" id="promptForm">
     <h2 id="promptDlgTitle">새 프롬프트</h2>
-    <label>박스 디자인<div class="lo-grid" id="pLayout"></div></label>
     <div class="picker r21" id="pPicker"></div>
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
-    <label>프롬프트<textarea id="pBody" required placeholder="복사될 프롬프트 내용"></textarea></label>
+    <label>프롬프트<textarea id="pBody" placeholder="복사될 프롬프트 내용"></textarea></label>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -243,7 +242,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 
 <dialog id="tplDlg">
   <div class="dlg">
-    <h2>박스 디자인 고르기</h2>
+    <h2>어떤 박스를 추가할까요?</h2>
     <div class="lo-grid" id="tplList"></div>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn press" data-close="tplDlg">닫기</button></div>
   </div>
@@ -566,15 +565,23 @@ $("#fileIn").addEventListener("change", async e => {
 });
 
 // ---------- 추가 / 편집 ----------
+async function addBlankPrompt(lo){
+  try {
+    const last = prompts().at(-1);
+    const ref = await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), updated: serverTimestamp(),
+      order: last ? promptKey(last) + 1 : 0, layout: lo, title: "새 프롬프트", content: "", image: "", imgX: 50, imgY: 50, zoom: 1 });
+    toast("추가됐어요");
+    setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+  } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
+}
 let curLayout = "stack";
 function setLayout(lo){
   curLayout = lo;
-  $("#pLayout").innerHTML = loCards(lo);
   const pk = $("#pPicker");
   pk.classList.toggle("r21", lo !== "side"); pk.classList.toggle("r11", lo === "side");
   pk.hidden = $("#pTools").hidden = lo === "text";
 }
-$("#pLayout").addEventListener("click", e => { const lo = e.target.closest("[data-lo]")?.dataset.lo; if (lo) setLayout(lo); });
+
 
 // ---------- + 메뉴 ----------
 const LAYOUTS = [
@@ -587,7 +594,7 @@ const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card pr
 function openMenu(){
   const fid = currentFolderId();
   const items = fid
-    ? [["new", "새 프롬프트", "빈 프롬프트 추가"], ["tpl", "디자인 골라서 만들기", "박스 디자인 템플릿"], ...(prompts().length > 1 ? [["order", "순서 바꾸기", "프롬프트 순서 정하기"]] : [])]
+    ? [["tpl", "새 프롬프트", "박스 디자인 골라서 추가"], ...(prompts().length > 1 ? [["order", "순서 바꾸기", "프롬프트 순서 정하기"]] : [])]
     : [["new", "새 폴더", "폴더 추가"], ...(folders().length > 1 ? [["order", "순서 바꾸기", "폴더 순서 정하기"]] : [])];
   $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
@@ -609,7 +616,7 @@ $("#menu").addEventListener("click", e => {
 $("#tplList").addEventListener("click", e => {
   const lo = e.target.closest("[data-lo]")?.dataset.lo; if (!lo) return;
   $("#tplDlg").close();
-  setTimeout(() => openPrompt(null, { layout: lo }), 160);
+  addBlankPrompt(lo);
 });
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
