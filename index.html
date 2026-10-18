@@ -49,6 +49,7 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .pill.add{border-style:dashed;color:var(--muted)}
 .pill.edit{border:none;background:none;color:var(--muted);padding:0 8px;font-size:12px}
 .gpick{display:flex;flex-wrap:wrap;gap:6px}
+#gmList .oarrow svg{width:15px;height:15px}
 .gorder{display:flex;align-items:center;gap:6px}
 .gorder .oarrow{flex:none;font-size:18px;line-height:1}
 .gorder-list{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
@@ -330,6 +331,18 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   </form>
 </dialog>
 
+<dialog id="groupsDlg">
+  <div class="dlg">
+    <h2>그룹</h2>
+    <div class="olist" id="gmList"></div>
+    <button type="button" class="btn press" id="gmNew">+ 새 그룹 만들기</button>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="groupsDlg">닫기</button>
+      <button type="button" class="btn primary press" id="gmSave">순서 저장</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="groupDlg">
   <form class="dlg" id="groupForm">
     <h2 id="groupDlgTitle">새 그룹</h2>
@@ -540,7 +553,7 @@ function renderGroups(fid, admin){
   $("#pills").innerHTML =
     `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
     groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${esc(g.name)}</button>`).join("") +
-    (admin && selGroup ? `<button class="pill edit press" data-gedit="${esc(selGroup)}">편집</button>` : "");
+    "";
 }
 $("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem("pv-gopen", gOpen ? "1" : "0"); } catch(_) {} render(); };
 $("#pills").addEventListener("click", e => {
@@ -566,6 +579,45 @@ async function migrateOldGroups(){
   migrating = false;
 }
 let editingGroup = null, gSel = new Set(), gOrderIds = [];
+// ---------- 그룹 관리 창: 새 그룹 · 편집 · 순서 ----------
+let gmIds = [];
+function paintManager(){
+  const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
+  $("#gmList").innerHTML = gmIds.length ? gmIds.map((id, i) => `
+    <div class="orow" data-oid="${esc(id)}">
+      <span class="oname">${esc(map[id]?.name || "")}</span>
+      <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
+      <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
+      <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
+    </div>`).join("") : `<div class="empty" style="padding:16px 0">아직 그룹이 없어요</div>`;
+  $("#gmSave").hidden = gmIds.length < 2;
+}
+function openGroupManager(){
+  gmIds = groups().map(g => g.id);
+  paintManager();
+  $("#groupsDlg").showModal();
+}
+$("#gmList").addEventListener("click", e => {
+  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit]"); if (!t) return;
+  if (t.dataset.gedit) { $("#groupsDlg").close(); return setTimeout(() => openGroup(t.dataset.gedit, true), 160); }
+  const from = +(t.dataset.gup ?? t.dataset.gdown), to = t.dataset.gup !== undefined ? from - 1 : from + 1;
+  const before = new Map([...$("#gmList").children].map(el => [el.dataset.oid, el.getBoundingClientRect().top]));
+  const [x] = gmIds.splice(from, 1); gmIds.splice(to, 0, x);
+  paintManager();
+  [...$("#gmList").children].forEach(el => {
+    const dy = before.get(el.dataset.oid) - el.getBoundingClientRect().top; if (!dy) return;
+    el.style.transition = "none"; el.style.transform = `translateY(${dy}px)`;
+    requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
+  });
+});
+$("#gmNew").onclick = () => { $("#groupsDlg").close(); setTimeout(() => openGroup(null, true), 160); };
+$("#gmSave").onclick = async () => {
+  try {
+    const batch = writeBatch(db);
+    gmIds.forEach((id, i) => batch.update(doc(db, "prompts", id), { order: i }));
+    await batch.commit(); $("#groupsDlg").close(); toast("순서를 저장했어요");
+  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+};
 function paintOrder(){
   const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
   $("#gOrder").innerHTML = gOrderIds.map(id => `<span class="pill ${id === editingGroup ? "on" : ""}" data-oid="${esc(id)}">${esc(id === editingGroup ? ($("#gName").value.trim() || map[id]?.name) : map[id]?.name)}</span>`).join("");
@@ -590,7 +642,9 @@ $("#gRight").onclick = () => moveGroup(1);
 function paintPick(){
   $("#gPick").innerHTML = homeFolders().map(f => `<button type="button" class="pill press ${gSel.has(f.id) ? "on" : ""}" data-pick="${esc(f.id)}">${esc(f.name)}</button>`).join("") || `<span class="hint">아직 폴더가 없어요</span>`;
 }
-function openGroup(id){
+let fromManager = false;
+function openGroup(id, viaManager = false){
+  fromManager = viaManager;
   editingGroup = id;
   const g = groupDocs.find(x => x.id === id) || {};
   gSel = new Set(g.folderIds || []);
@@ -598,8 +652,7 @@ function openGroup(id){
   $("#gName").value = g.name || "";
   $("#groupDelBtn").hidden = !id;
   gOrderIds = groups().map(x => x.id);
-  $("#gOrderWrap").hidden = !id || gOrderIds.length < 2;
-  if (id) paintOrder();
+  $("#gOrderWrap").hidden = true;
   paintPick();
   $("#groupDlg").showModal();
 }
@@ -614,22 +667,17 @@ $("#groupForm").addEventListener("submit", e => {
     const name = $("#gName").value.trim(); if (!name) return;
     const data = { name, folderIds: [...gSel], updated: serverTimestamp() };
     try {
-      if (editingGroup) {
-        const batch = writeBatch(db);
-        batch.update(doc(db, "prompts", editingGroup), data);
-        gOrderIds.forEach((gid, i) => { if (gid !== editingGroup) batch.update(doc(db, "prompts", gid), { order: i }); });
-        batch.update(doc(db, "prompts", editingGroup), { order: gOrderIds.indexOf(editingGroup) });
-        await batch.commit();
-      }
+      if (editingGroup) await updateDoc(doc(db, "prompts", editingGroup), data);
       else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
       if (!gOpen) { gOpen = true; try { localStorage.setItem("pv-gopen", "1"); } catch(_) {} }
       $("#groupDlg").close(); toast("저장됐어요"); render();
+      if (fromManager) setTimeout(openGroupManager, 200);
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
   });
 });
 $("#groupDelBtn").onclick = async () => {
   if (!confirm("이 그룹을 지울까요? 폴더는 그대로 남아요.")) return;
-  try { await deleteDoc(doc(db, "prompts", editingGroup)); selGroup = null; $("#groupDlg").close(); toast("삭제했어요"); }
+  try { await deleteDoc(doc(db, "prompts", editingGroup)); selGroup = null; $("#groupDlg").close(); toast("삭제했어요"); if (fromManager) setTimeout(openGroupManager, 200); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
@@ -980,7 +1028,7 @@ function openMenu(){
   const fid = currentFolderId();
   const cur = folderDocs.find(d => d.id === fid);
   const items = !fid
-    ? [["group", "새 그룹", "폴더를 묶어서 골라보기"], ["new", "새 폴더", "프롬프트를 넣는 폴더"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    ? [["group", "그룹", "새 그룹 · 편집 · 순서"], ["new", "새 폴더", "프롬프트를 넣는 폴더"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
     : isGroup(cur)
     ? [["new", "새 폴더", "이 그룹 안에 폴더 추가"], ...(childFolders(fid).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
     : [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
@@ -995,7 +1043,7 @@ $("#menu").addEventListener("click", e => {
   closeMenu();
   const fid = currentFolderId();
   if (k === "new") openFolder(null, fid);
-  if (k === "group") openGroup(null);
+  if (k === "group") openGroupManager();
   if (k === "order") startReorder("prompts");
   if (k === "forder") startReorder("folders");
   if (k === "tpl") {
