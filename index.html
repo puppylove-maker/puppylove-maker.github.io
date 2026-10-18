@@ -15,7 +15,7 @@
 [hidden]{display:none!important}
 button,input,textarea,select{outline:none}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;min-height:100vh;display:flex;flex-direction:column}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;min-height:calc(100vh / var(--z,1));display:flex;flex-direction:column}
 main{flex:1}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
 .title{display:flex;align-items:center;gap:2px;min-width:0}
@@ -38,8 +38,6 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 /* 박스 디자인: 오버레이 */
 .lo-overlay .pimg{margin-bottom:0}
 .ov-cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:30px 10px 10px 14px;background:linear-gradient(to top,rgba(255,255,255,.92),rgba(255,255,255,0))}
-.ov-cap .sbody{flex:1;min-width:0;display:grid;gap:1px}
-.ov-cap .ptitle{max-width:none}
 .ov-cap .phint{color:#777}
 .lo-overlay .pimg.no-pic{aspect-ratio:auto;min-height:110px;background:var(--soft)}
 /* 박스 디자인: 가로형 */
@@ -88,7 +86,7 @@ dialog.closing{animation:pop-out .16s var(--ease) forwards}
 dialog.closing::backdrop{opacity:0;transition:opacity .16s}
 @keyframes pop-out{to{opacity:0;transform:translateY(6px) scale(.98)}}
 
-.item{display:grid}
+.item{display:grid;grid-template-columns:minmax(0,1fr);min-width:0}
 .expand{display:grid;grid-template-rows:0fr;transition:grid-template-rows .36s var(--ease),opacity .3s var(--ease),margin .36s var(--ease);opacity:0}
 .expand>div{overflow:hidden}
 .item.open .expand{grid-template-rows:1fr;opacity:1;margin-top:4px}
@@ -121,17 +119,26 @@ textarea.short{min-height:70px}
 
 .folder{position:relative;display:block;width:100%;aspect-ratio:4/1;padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer}
 
-.plist{display:grid;gap:16px;align-items:start}
+.plist{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
 @media (min-width:720px){
+  .wrap{max-width:820px}
   .plist{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
-  #view>.list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #view>.list{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
   .wrap{padding:36px 28px 48px}
   h1{font-size:20px}
 }
-@media (min-width:1040px){.plist{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* PC: 크게, 화면 가운데에 */
+@media (min-width:900px){
+  .wrap{justify-content:center;padding-top:48px;padding-bottom:48px}
+  main{flex:0 0 auto}
+  footer{padding-top:48px}
+}
+@media (min-width:1400px){html{zoom:1.2;--z:1.2}}
+@media (min-width:1700px){html{zoom:1.4;--z:1.4}}
+@media (min-width:2100px){html{zoom:1.65;--z:1.65}}
 .pimg{position:relative;aspect-ratio:2/1;border-radius:14px;overflow:hidden;cursor:pointer;margin-bottom:4px}
 .pbar{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:14px;cursor:pointer;min-height:48px}
-.ptitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.ptitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;min-width:0;flex:0 1 auto}
 .phint{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .phint .h-close{display:none}
 .item.open .phint .h-open{display:none}
@@ -383,11 +390,11 @@ function promptHtml(p, admin){
   if (lo === "overlay") {
     inner = `<div class="box pimg press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">
       ${mediaHtml(p)}${edit(!!p.image)}
-      <div class="ov-cap"><div class="sbody">${title}${hintHtml(p)}</div>${copy}</div></div>`;
+      <div class="ov-cap">${title}${hintHtml(p)}${copy}</div></div>`;
   } else if (lo === "side") {
     inner = `<div class="box pside press" data-tog="${p.id}">
       <div class="sthumb">${mediaHtml(p)}</div>
-      <div class="sbody">${title}${hintHtml(p)}</div>${edit(false)}${copy}</div>`;
+      ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press" data-tog="${p.id}">
       ${title}<div class="tsnip">${esc(p.content)}</div>
