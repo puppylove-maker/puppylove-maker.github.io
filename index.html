@@ -58,6 +58,15 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .lo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .lo-card{display:grid;gap:8px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;font:inherit;font-size:12px;color:var(--sub);cursor:pointer;text-align:left}
 .lo-card.on{border-color:#bdbdbd;background:var(--soft)}
+/* 수정 창 안의 작은 디자인 선택 */
+.lo-grid.compact{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lo-grid.compact .lo-card{padding:6px;gap:5px;border-radius:10px;font-size:11px;text-align:center}
+.lo-grid.compact .lo-card .d{display:none}
+.lo-grid.compact .mini{height:40px}
+.lo-grid.compact .mini .im{height:22px}.lo-grid.compact .mini .bar{height:9px}
+.lo-grid.compact .mini.ov .im{height:38px}.lo-grid.compact .mini.ov .bar{bottom:6px;height:7px}
+.lo-grid.compact .mini.sd{grid-template-columns:16px 1fr;height:40px}.lo-grid.compact .mini.sd .im{height:16px}.lo-grid.compact .mini.sd .bar{height:7px}
+.lo-grid.compact .mini.tx .bar{height:7px}.lo-grid.compact .mini.tx .ln{height:4px}
 .mini{display:grid;gap:3px;height:62px;align-content:start}
 .mini i{display:block;background:#e4e4e4;border-radius:5px}
 .mini .im{height:36px}.mini .bar{height:14px;background:#efefef}
@@ -176,7 +185,7 @@ dialog::backdrop{background:rgba(0,0,0,.25)}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 .dlg{padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .dlg h2{margin:0;font-size:15px;font-weight:700}
-label{font-size:12px;color:var(--sub);display:grid;gap:5px}
+label,.field{font-size:12px;color:var(--sub);display:grid;gap:5px}
 .picker{position:relative;border:1px dashed #d4d4d4;border-radius:12px;background:var(--soft);overflow:hidden;color:var(--muted);font-size:13px;touch-action:none;user-select:none;-webkit-user-select:none}
 .picker.r21{aspect-ratio:2/1}
 .picker.r41{aspect-ratio:4/1}
@@ -236,10 +245,10 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <h2 id="folderDlgTitle">새 폴더</h2>
     <div class="picker r41" id="fPicker"></div>
     <div class="tools" id="fTools"></div>
-    <label>글씨 배경<div class="seg" id="fGrad"></div></label>
+    <div class="field">글씨 배경<div class="seg" id="fGrad"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
-    <label>PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></label>
+    <div class="field">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
 
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
@@ -259,6 +268,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>안내 문구 (비우면 안 보여요)<input id="pHint"></label>
     <label>프롬프트<textarea id="pBody" placeholder="복사될 프롬프트 내용"></textarea></label>
+    <div class="field">박스 디자인<div class="lo-grid compact" id="pLayout"></div></div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -668,8 +678,10 @@ let curPc = "row";
 function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pc === v)); }
 $("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
 let curLayout = "stack";
+document.addEventListener("click", e => { const b = e.target.closest("#pLayout [data-lo]"); if (b) setLayout(b.dataset.lo); });
 function setLayout(lo){
   curLayout = lo;
+  $("#pLayout").innerHTML = loCards(lo);
   const pk = $("#pPicker");
   pk.classList.toggle("r21", lo !== "side"); pk.classList.toggle("r11", lo === "side");
   pk.hidden = $("#pTools").hidden = lo === "text";
@@ -679,11 +691,11 @@ function setLayout(lo){
 // ---------- + 메뉴 ----------
 const LAYOUTS = [
   { id: "stack",   name: "기본",       desc: "위 이미지 + 아래 제목줄", mini: `<div class="mini"><i class="im"></i><i class="bar"></i></div>` },
-  { id: "overlay", name: "이미지 위 제목", desc: "이미지 안에 제목·복사", mini: `<div class="mini ov"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "overlay", name: "이미지 위", desc: "이미지 안에 제목·복사", mini: `<div class="mini ov"><i class="im"></i><i class="bar"></i></div>` },
   { id: "side",    name: "가로형",      desc: "왼쪽 작은 이미지",     mini: `<div class="mini sd"><i class="im"></i><i class="bar"></i></div>` },
   { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
 ];
-const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><br>${l.desc}</span></button>`).join("");
+const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><span class="d"><br>${l.desc}</span></span></button>`).join("");
 function openMenu(){
   const fid = currentFolderId();
   const items = fid
