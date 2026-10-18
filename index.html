@@ -22,8 +22,20 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .row{display:flex;gap:6px;align-items:center}
 .desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:-4px 0 14px}
 
-.press{transition:transform .18s var(--ease),background-color .18s var(--ease),border-color .18s var(--ease),opacity .18s}
-.press:active{transform:scale(.97)}
+.press{transition:transform .38s cubic-bezier(.34,1.56,.64,1),background-color .18s var(--ease),border-color .18s var(--ease),opacity .18s;touch-action:manipulation}
+.press.is-pressed{transform:scale(.95);transition:transform .12s var(--ease),background-color .12s,opacity .12s}
+.card.press.is-pressed,.folder.press.is-pressed{transform:scale(.975)}
+#view.enter{animation:enter .32s var(--ease)}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+dialog.closing{animation:pop-out .16s var(--ease) forwards}
+dialog.closing::backdrop{opacity:0;transition:opacity .16s}
+@keyframes pop-out{to{opacity:0;transform:translateY(6px) scale(.98)}}
+/* 더블탭 펼침 */
+.item{display:grid}
+.expand{display:grid;grid-template-rows:0fr;transition:grid-template-rows .36s var(--ease),opacity .3s var(--ease),margin .36s var(--ease);opacity:0}
+.expand>div{overflow:hidden}
+.item.open .expand{grid-template-rows:1fr;opacity:1;margin-top:8px}
+.expand-inner{white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.6;color:var(--sub);background:var(--soft);border-radius:12px;padding:12px 14px}
 
 .btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .btn:hover{background:var(--soft)}
@@ -187,6 +199,7 @@ const col = collection(db, "prompts");
 
 const $ = s => document.querySelector(s);
 let docs = [], user = null, editingFolder = null, editingPrompt = null, viewing = null;
+const openItems = new Set();
 const isAdmin = () => !!user && ADMINS.includes(user.email);
 const UNSORTED = "_unsorted";
 
@@ -251,15 +264,36 @@ function render(){
   $("#view").innerHTML = `<div class="list">${items.map(p => {
     const label = p.title || (!p.image ? p.content : "");
     return `
+    <div class="item ${openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">
     <div class="box card press ${gradClass(p)}" data-view="${p.id}">
       ${mediaHtml(p)}
       ${label ? `<div class="cap">${esc(label)}</div>` : ""}
       ${admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(!!p.image)}</button>` : ""}
       <button class="copy-btn press" data-copy="${p.id}">복사</button>
+    </div>
+    <div class="expand"><div><div class="expand-inner">${esc(p.content)}</div></div></div>
     </div>`; }).join("")}</div>`;
 }
 
-window.addEventListener("hashchange", () => { render(); window.scrollTo(0,0); });
+window.addEventListener("hashchange", () => {
+  render(); window.scrollTo(0,0);
+  const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
+});
+
+// 누를 때 부드럽게 들어갔다 튕기듯 돌아오는 효과
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".press"); if (!el || el.disabled) return;
+  el.classList.add("is-pressed");
+  const up = () => { el.classList.remove("is-pressed"); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
+  window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+});
+// 다이얼로그 닫힐 때도 부드럽게
+const _close = HTMLDialogElement.prototype.close;
+HTMLDialogElement.prototype.close = function(...a){
+  if (!this.open || this.classList.contains("closing")) return _close.apply(this, a);
+  this.classList.add("closing");
+  setTimeout(() => { this.classList.remove("closing"); _close.apply(this, a); }, 150);
+};
 $("#backBtn").onclick = () => { location.hash = ""; };
 
 $("#view").addEventListener("click", e => {
@@ -268,8 +302,17 @@ $("#view").addEventListener("click", e => {
   if (t.dataset.edit) return openPrompt(t.dataset.edit);
   if (t.dataset.copy) return copyText(docs.find(x => x.id === t.dataset.copy)?.content || "");
   if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
-  if (t.dataset.view) openView(t.dataset.view);
+  if (t.dataset.view) {
+    const now = Date.now();
+    if (lastTap.id === t.dataset.view && now - lastTap.t < 320) {
+      const id = t.dataset.view, el = document.getElementById("it-" + id);
+      openItems.has(id) ? openItems.delete(id) : openItems.add(id);
+      el?.classList.toggle("open", openItems.has(id));
+      lastTap = { id: null, t: 0 };
+    } else lastTap = { id: t.dataset.view, t: now };
+  }
 });
+let lastTap = { id: null, t: 0 };
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
 
 function openView(id){
