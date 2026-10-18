@@ -253,6 +253,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   </main>
   <footer>
     <span class="who" id="who" hidden></span>
+    <button class="link press" id="optBtn" hidden>이미지 가볍게 변환</button>
     <button class="link press" id="backupBtn" hidden>백업</button>
     <button class="link press" id="loginBtn" hidden>관리자 로그인</button>
     <button class="link press" id="logoutBtn" hidden>로그아웃</button>
@@ -331,7 +332,7 @@ const ADMINS = ["j03243619@gmail.com"];
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -363,7 +364,8 @@ function imgStyle(o){
   const x = num(o.imgX, 50), y = num(o.imgY, 50), z = num(o.zoom, 1);
   return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
 }
-const mediaHtml = o => o.image ? `<div class="media"><img src="${o.image}" alt="" loading="lazy" style="${imgStyle(o)}"></div>` : "";
+const viewStyle = o => o.baked ? "" : imgStyle(o);
+const mediaHtml = o => o.image ? `<div class="media"><img src="${o.image}" alt="" loading="lazy" style="${viewStyle(o)}"></div>` : "";
 const gradClass = o => o.image ? "g-" + (o.grad || "white") : "no-img";
 const pencil = light => `<svg viewBox="0 0 24 24" fill="none" stroke="${light ? "#fff" : "#8a8a8a"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 
@@ -411,6 +413,8 @@ function render(){
   $("#backBtn").hidden = !fid;
   $("#plusBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
+  let optDone = false; try { optDone = localStorage.getItem("pv-opt-v1") === "1"; } catch(_) {}
+  $("#optBtn").hidden = !admin || optDone;
   $("#desc").hidden = true;
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
 
@@ -489,7 +493,7 @@ function renderReorder(){
       <span class="row"><button class="btn sm press" id="oCancel">취소</button><button class="btn sm primary press" id="oDone">완료</button></span></div>
     <div class="olist">${rows.map((o, i) => `
       <div class="orow" data-oid="${o.id}">
-        ${o.image ? `<img class="othumb" src="${o.image}" alt="" style="${imgStyle(o)}">` : `<span class="othumb"></span>`}
+        ${o.image ? `<img class="othumb" src="${o.image}" alt="" style="${viewStyle(o)}">` : `<span class="othumb"></span>`}
         <span class="oname">${esc(o.name || o.title || "제목 없음")}</span>
         <button class="oarrow press" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
         <button class="oarrow press" data-down="${i}" ${i === rows.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
@@ -538,8 +542,8 @@ async function finishReorder(save){
       const batch = writeBatch(db);
       reorder.ids.forEach((id, i) => batch.update(doc(db, "prompts", id), { order: i }));
       for (const id of reorder.removed) {
-        batch.delete(doc(db, "prompts", id));
-        if (isFolders) (await getDocs(query(col, where("folderId", "==", id)))).docs.forEach(d => batch.delete(d.ref));
+        batch.delete(doc(db, "prompts", id)); batch.delete(ORIG(id));
+        if (isFolders) (await getDocs(query(col, where("folderId", "==", id)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); });
       }
       await batch.commit(); toast(n ? "저장하고 삭제했어요" : "순서를 저장했어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
@@ -689,6 +693,45 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
 const fEditor = makeEditor("fPicker", "fTools", "fGrad", 1600, 1600);
 const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
+// ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
+const ORIG = id => doc(db, "prompts", id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
+const bakeSize = (kind, layout) => kind === "folder" ? [1400, 350] : layout === "side" ? [500, 500] : [1200, 600];
+async function bake(src, W, H, x = 50, y = 50, z = 1){
+  const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingQuality = "high";
+  // 화면의 object-fit:cover + object-position + 확대와 똑같이 계산
+  const s = Math.max(W / im.width, H / im.height), dw = im.width * s, dh = im.height * s;
+  const ox = (W - dw) * x / 100, oy = (H - dh) * y / 100, Ox = W * x / 100, Oy = H * y / 100;
+  ctx.drawImage(im, Ox + (ox - Ox) * z, Oy + (oy - Oy) * z, dw * z, dh * z);
+  let q = .88, out = c.toDataURL("image/jpeg", q);
+  while (out.length > 200000 && q > .6) { q -= .05; out = c.toDataURL("image/jpeg", q); }
+  return out;
+}
+// 저장 데이터 만들기: 화면용(잘린 것) + 원본 따로
+async function withBaked(id, kind, layout, ed){
+  const d = ed.data();
+  if (!d.image) return { data: { ...d, image: "", baked: false }, orig: null };
+  const [W, H] = bakeSize(kind, layout);
+  const shown = await bake(d.image, W, H, d.imgX, d.imgY, d.zoom);
+  return { data: { ...d, image: shown, baked: true }, orig: d.image };
+}
+async function saveOrig(id, orig){
+  if (orig) await setDoc(ORIG(id), { type: "orig", image: orig });
+  else await deleteDoc(ORIG(id)).catch(() => {});
+}
+// 수정 창 열 때 원본 불러오기
+async function loadOriginal(id, o, ed){
+  if (!o.image || !o.baked) { ed.load(o); return; }
+  ed.load({ ...o, imgX: 50, imgY: 50, zoom: 1 }); // 원본 오기 전 잠깐
+  try {
+    const snap = await getDoc(ORIG(id));
+    if (snap.exists()) ed.load({ ...o, image: snap.data().image });
+  } catch(_) {}
+}
+
 async function resizeImage(file, maxW, maxH){
   const url = URL.createObjectURL(file);
   try {
@@ -788,7 +831,7 @@ function openFolder(id){
   $("#fName").value = f.name || "";
   $("#fDesc").value = f.desc || "";
   setPc(f.pcLayout || "row");
-  fEditor.load(f);
+  id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
 }
@@ -799,7 +842,7 @@ function openPrompt(id, preset){
   $("#pTitle").value = p.title || "";
   $("#pBody").value = p.content || "";
   $("#pHint").value = p.hint === undefined ? DEFAULT_HINT : p.hint;
-  pEditor.load(p);
+  id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
   $("#loAcc").classList.remove("open");
   $("#promptDelBtn").hidden = !id;
@@ -814,13 +857,16 @@ $("#folderForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("folderSave", async () => {
     const name = $("#fName").value.trim(); if (!name) return;
-    const data = { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, ...fEditor.data(), updated: serverTimestamp() };
     try {
-      if (editingFolder) await updateDoc(doc(db, "prompts", editingFolder), data);
+      const ref = editingFolder ? doc(db, "prompts", editingFolder) : doc(col);
+      const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
+      const data = { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, ...img, updated: serverTimestamp() };
+      if (editingFolder) await updateDoc(ref, data);
       else {
         const last = folders().at(-1);
-        await addDoc(col, { type: "folder", created: serverTimestamp(), order: last ? folderKey(last) + 1 : 0, ...data });
+        await setDoc(ref, { type: "folder", created: serverTimestamp(), order: last ? folderKey(last) + 1 : 0, ...data });
       }
+      await saveOrig(ref.id, orig);
       $("#folderDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
   });
@@ -829,8 +875,9 @@ $("#folderDelBtn").onclick = async () => {
   try {
     const inside = (await getDocs(query(col, where("folderId", "==", editingFolder)))).docs;
     if (!confirm(inside.length ? `이 폴더와 안의 프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
-    await Promise.all(inside.map(d => deleteDoc(d.ref)));
+    await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), deleteDoc(ORIG(d.id)).catch(() => {})]));
     await deleteDoc(doc(db, "prompts", editingFolder));
+    await deleteDoc(ORIG(editingFolder)).catch(() => {});
     $("#folderDlg").close(); location.hash = ""; toast("삭제했어요");
   } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
@@ -838,28 +885,54 @@ $("#folderDelBtn").onclick = async () => {
 $("#promptForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("promptSave", async () => {
-    const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, hint: $("#pHint").value.trim(), layout: curLayout, ...pEditor.data(), updated: serverTimestamp() };
     try {
-      if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
+      const ref = editingPrompt ? doc(db, "prompts", editingPrompt) : doc(col);
+      const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
+      const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
-        await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: last ? promptKey(last) + 1 : 0, ...data });
+        await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: last ? promptKey(last) + 1 : 0, ...data });
       }
+      await saveOrig(ref.id, orig);
       $("#promptDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
   });
 });
 $("#promptDelBtn").onclick = async () => {
   if (!confirm("이 프롬프트를 삭제할까요?")) return;
-  try { await deleteDoc(doc(db, "prompts", editingPrompt)); $("#promptDlg").close(); toast("삭제했어요"); }
+  try { await deleteDoc(doc(db, "prompts", editingPrompt)); deleteDoc(ORIG(editingPrompt)).catch(() => {}); $("#promptDlg").close(); toast("삭제했어요"); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+};
+
+// ---------- 이미 올린 이미지 한 번에 변환 ----------
+$("#optBtn").onclick = async () => {
+  if (!confirm("이미 올린 이미지를 박스 모양대로 잘라 가볍게 바꿀까요? 원본은 따로 보관돼요.")) return;
+  const btn = $("#optBtn"); btn.disabled = true;
+  try {
+    const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(d => d.image && !d.baked && d.type !== "orig");
+    let n = 0;
+    for (const o of all) {
+      const [W, H] = bakeSize(o.type === "folder" ? "folder" : "prompt", o.layout);
+      const shown = await bake(o.image, W, H, num(o.imgX, 50), num(o.imgY, 50), num(o.zoom, 1));
+      await setDoc(ORIG(o.id), { type: "orig", image: o.image });
+      await updateDoc(doc(db, "prompts", o.id), { image: shown, baked: true });
+      toast(`변환 중 ${++n}/${all.length}`);
+    }
+    try { localStorage.setItem("pv-opt-v1", "1"); } catch(_) {}
+    btn.hidden = true;
+    toast(all.length ? `이미지 ${all.length}개를 가볍게 바꿨어요` : "바꿀 이미지가 없어요");
+  } catch(_) { toast("변환 중 문제가 생겼어요. 다시 눌러주세요"); }
+  btn.disabled = false;
 };
 
 // ---------- 백업 (이때만 전체를 받아요) ----------
 $("#backupBtn").onclick = async () => {
   try {
     const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }));
-    const strip = o => { const { id, created, updated, type, folderId, ...rest } = o; return rest; };
+    const origOf = id => all.find(d => d.id === id + "_orig")?.image;
+    const strip = o => { const { id, created, updated, type, folderId, ...rest } = o; const original = origOf(id); return original ? { ...rest, original } : rest; };
     const data = all.filter(d => d.type === "folder").sort((a,b) => folderKey(a) - folderKey(b))
       .map(f => ({ ...strip(f), prompts: all.filter(p => p.folderId === f.id && p.type !== "folder").sort((a,b) => promptKey(a) - promptKey(b)).map(strip) }));
     const a = document.createElement("a");
