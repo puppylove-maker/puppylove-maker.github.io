@@ -184,7 +184,14 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 .picker .empty-hint{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer}
 .picker.has{cursor:grab;border-style:solid}
 .picker .drag-hint{position:absolute;left:8px;top:8px;font-size:11px;background:rgba(255,255,255,.9);color:var(--sub);padding:2px 8px;border-radius:999px;pointer-events:none}
-.tools{display:flex;gap:6px;align-items:center}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tools .zoom-row{display:flex;align-items:center;gap:8px;flex:1 1 100%;font-size:12px;color:var(--muted)}
+.align{display:grid;grid-template-columns:repeat(3,22px);grid-template-rows:repeat(3,22px);gap:3px;padding:4px;background:var(--soft);border-radius:8px;flex:none}
+.align button{border:none;border-radius:5px;background:#fff;cursor:pointer;padding:0;display:grid;place-items:center}
+.align button::after{content:"";width:6px;height:6px;border-radius:50%;background:#cfcfcf}
+.align button.on::after{background:#777}
+.align-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
 .tools input[type=range]{flex:1;padding:0;border:none;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:#e6e6e6}
 .tools input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .tools input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0}
@@ -512,6 +519,10 @@ async function copyText(text){
   toast("복사됐어요");
 }
 
+// 이미지 우클릭·길게 눌러 저장 막기
+document.addEventListener("contextmenu", e => { if (e.target.closest("img, .media, .picker")) e.preventDefault(); });
+document.addEventListener("dragstart", e => { if (e.target.tagName === "IMG") e.preventDefault(); });
+
 // 누를 때 들어갔다 튕기듯 돌아오는 효과
 document.addEventListener("pointerdown", e => {
   const el = e.target.closest(".press"); if (!el || el.disabled) return;
@@ -535,10 +546,12 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
   tools.innerHTML = `
     <button type="button" class="btn sm press" data-act="pick">이미지 선택</button>
     <button type="button" class="btn sm ghost press" data-act="remove">제거</button>
-    <input type="range" min="1" max="3" step="0.01" aria-label="확대">`;
+    <span class="align-wrap" data-el="alignWrap"><span>정렬</span><span class="align">${[0,50,100].map(y => [0,50,100].map(x => `<button type="button" data-ax="${x}" data-ay="${y}" aria-label="정렬"></button>`).join("")).join("")}</span></span>
+    <span class="zoom-row" data-el="zoomRow"><span>확대</span><input type="range" min="1" max="3" step="0.01" aria-label="확대"></span>`;
   gradEl.innerHTML = `<button type="button" data-g="white">흰색</button><button type="button" data-g="black">검은색</button><button type="button" data-g="none">없음</button>`;
   const range = tools.querySelector("input");
-  const applyImg = () => { const im = picker.querySelector("img"); if (im) im.style.cssText = imgStyle(st); };
+  const markAlign = () => tools.querySelectorAll("[data-ax]").forEach(b => b.classList.toggle("on", +b.dataset.ax === Math.round(st.imgX) && +b.dataset.ay === Math.round(st.imgY)));
+  const applyImg = () => { const im = picker.querySelector("img"); if (im) im.style.cssText = imgStyle(st); markAlign(); };
 
   function paint(){
     if (st.image) {
@@ -550,7 +563,9 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
     }
     tools.querySelector('[data-act="remove"]').hidden = !st.image;
     tools.querySelector('[data-act="pick"]').textContent = st.image ? "이미지 변경" : "이미지 선택";
-    range.hidden = !st.image; range.value = st.zoom;
+    tools.querySelector('[data-el="zoomRow"]').hidden = !st.image; range.value = st.zoom;
+    tools.querySelector('[data-el="alignWrap"]').hidden = !st.image;
+    markAlign();
     gradEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.g === st.grad));
   }
   const pick = () => { fileTarget = api; $("#fileIn").click(); };
@@ -558,6 +573,8 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
     const a = e.target.closest("[data-act]")?.dataset.act;
     if (a === "pick") pick();
     if (a === "remove") { st.image = ""; paint(); }
+    const ab = e.target.closest("[data-ax]");
+    if (ab) { st.imgX = +ab.dataset.ax; st.imgY = +ab.dataset.ay; applyImg(); }
   });
   gradEl.addEventListener("click", e => { const g = e.target.closest("[data-g]")?.dataset.g; if (g) { st.grad = g; paint(); } });
   range.addEventListener("input", () => { st.zoom = +range.value; applyImg(); });
