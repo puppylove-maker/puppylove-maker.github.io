@@ -7,99 +7,123 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
 :root{
-  --bg:#ffffff;--text:#111111;--sub:#555555;--muted:#999999;--line:#ececec;--soft:#f5f5f5;--danger:#c0392b;
+  --bg:#ffffff;--text:#111111;--sub:#555555;--muted:#9a9a9a;--line:#ececec;--soft:#f5f5f5;--danger:#c0392b;
+  --ease:cubic-bezier(.2,.8,.2,1);
   color-scheme:light;
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+button,input,textarea{outline:none}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;min-height:32px}
-.title{display:flex;align-items:center;gap:4px;min-width:0}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
+.title{display:flex;align-items:center;gap:2px;min-width:0}
 h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.back{border:none;background:none;font:inherit;font-size:22px;line-height:1;padding:2px 6px 4px 0;cursor:pointer;color:var(--text)}
-.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
+.row{display:flex;gap:6px;align-items:center}
+
+/* 눌림 애니메이션 */
+.press{transition:transform .18s var(--ease),background-color .18s var(--ease),border-color .18s var(--ease)}
+.press:active{transform:scale(.97)}
+
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .btn:hover{background:var(--soft)}
 .btn.primary{background:var(--text);border-color:var(--text);color:#fff}
 .btn.primary:hover{background:#333}
-.btn.ghost{border-color:transparent;color:var(--sub)}
+.btn.ghost{border-color:transparent;color:var(--sub);background:transparent}
+.btn.ghost:hover{background:var(--soft)}
 .btn.danger{color:var(--danger)}
-.btn.sm{height:26px;padding:0 8px;font-size:12px}
-input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
-input:focus,textarea:focus{outline:none;border-color:var(--text)}
-textarea{min-height:200px;resize:vertical;line-height:1.55}
-.search{height:36px;margin-bottom:10px;background:var(--soft);border-color:var(--soft)}
-.search:focus{background:var(--bg)}
-.box{border:1px solid var(--line);border-radius:12px;background:var(--bg);transition:border-color .15s}
-.box:hover{border-color:#cfcfcf}
-.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.folder{padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;min-height:76px;display:flex;flex-direction:column;justify-content:space-between}
-.folder-name{font-size:14px;font-weight:600;word-break:break-word}
-.folder-count{font-size:12px;color:var(--muted);margin-top:6px}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn:disabled{opacity:.5}
+
+input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;transition:border-color .15s}
+input:focus,textarea:focus{border-color:var(--text)}
+textarea{min-height:180px;resize:vertical;line-height:1.55}
+
+.box{border:1px solid var(--line);border-radius:14px;background:var(--bg)}
 .list{display:grid;gap:8px}
-.item{padding:14px}
-.item-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.item-title{font-size:14px;font-weight:600;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.body{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+
+/* 폴더: 한 줄에 하나 */
+.folder{display:flex;align-items:center;gap:12px;width:100%;padding:10px;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.folder:hover{border-color:#d6d6d6}
+.thumb{width:52px;height:52px;border-radius:10px;background:var(--soft);object-fit:cover;flex:none;display:block}
+.folder-name{flex:1;min-width:0;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chev{color:#c4c4c4;font-size:20px;line-height:1;padding-right:4px}
+
+/* 프롬프트 */
+.item{padding:12px;display:grid;gap:10px}
+.item-img{width:100%;max-height:260px;object-fit:cover;border-radius:10px;display:block;background:var(--soft)}
+.body{white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:14px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .body.open{display:block}
-.empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
-.status{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:4px}
-.who{font-size:11px;color:var(--muted);text-align:right;margin:-8px 0 10px}
-dialog{border:none;border-radius:12px;padding:0;width:min(520px,calc(100% - 24px));background:var(--bg);color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,.12)}
-dialog::backdrop{background:rgba(0,0,0,.3)}
-.dlg{padding:16px;display:grid;gap:10px}
+.item-actions{display:flex;justify-content:flex-end;gap:6px}
+
+.empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
+.status{font-size:12px;color:var(--muted);min-height:0}
+.who{font-size:11px;color:var(--muted);text-align:right;margin:-10px 0 12px}
+
+/* 다이얼로그 */
+dialog{border:none;border-radius:16px;padding:0;width:min(480px,calc(100% - 24px));background:var(--bg);color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.14)}
+dialog[open]{animation:pop .22s var(--ease)}
+dialog::backdrop{background:rgba(0,0,0,.28)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.dlg{padding:16px;display:grid;gap:12px}
 .dlg h2{margin:0;font-size:15px;font-weight:700}
-label{font-size:12px;color:var(--sub);display:grid;gap:4px}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:#fff;padding:8px 14px;border-radius:6px;font-size:13px;opacity:0;transition:.2s;pointer-events:none}
-.toast.show{opacity:1}
+label{font-size:12px;color:var(--sub);display:grid;gap:5px}
+.picker{position:relative;border:1px dashed #d4d4d4;border-radius:12px;background:var(--soft);min-height:110px;display:grid;place-items:center;cursor:pointer;overflow:hidden;color:var(--muted);font-size:13px}
+.picker img{width:100%;max-height:220px;object-fit:cover;display:block}
+.picker-x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:none;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;cursor:pointer}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:var(--text);color:#fff;padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.22s var(--ease);pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="title">
-      <button class="back" id="backBtn" hidden aria-label="뒤로">‹</button>
+      <button class="back press" id="backBtn" hidden aria-label="뒤로">‹</button>
       <h1 id="pageTitle">프롬프트 보관함</h1>
     </div>
-    <div class="row" style="flex-wrap:nowrap">
-      <button class="btn ghost" id="folderEditBtn" hidden>편집</button>
-      <button class="btn ghost" id="backupBtn" hidden>백업</button>
-      <button class="btn ghost" id="logoutBtn" hidden>로그아웃</button>
-      <button class="btn" id="loginBtn" hidden>로그인</button>
-      <button class="btn primary" id="addBtn" hidden>추가</button>
+    <div class="row">
+      <button class="btn ghost press" id="folderEditBtn" hidden>편집</button>
+      <button class="btn ghost press" id="backupBtn" hidden>백업</button>
+      <button class="btn ghost press" id="logoutBtn" hidden>로그아웃</button>
+      <button class="btn press" id="loginBtn" hidden>로그인</button>
+      <button class="btn primary press" id="addBtn" hidden>추가</button>
     </div>
   </header>
   <div class="who" id="who" hidden></div>
-
-  <input class="search" id="q" placeholder="검색">
   <div class="status" id="status"></div>
   <div id="view"></div>
 </div>
 
+<!-- 폴더 -->
 <dialog id="folderDlg">
   <form class="dlg" id="folderForm">
     <h2 id="folderDlgTitle">새 폴더</h2>
-    <label>이름<input id="fName" required placeholder="예: 글쓰기, 코딩"></label>
+    <div class="picker press" id="fPicker" data-input="fFile"></div>
+    <input type="file" id="fFile" accept="image/*" hidden>
+    <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <div class="row" style="justify-content:space-between">
-      <button type="button" class="btn danger" id="folderDelBtn" hidden>삭제</button>
+      <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
-        <button type="button" class="btn" data-close="folderDlg">취소</button>
-        <button type="submit" class="btn primary">저장</button>
+        <button type="button" class="btn press" data-close="folderDlg">취소</button>
+        <button type="submit" class="btn primary press" id="folderSave">저장</button>
       </div>
     </div>
   </form>
 </dialog>
 
+<!-- 프롬프트 -->
 <dialog id="promptDlg">
   <form class="dlg" id="promptForm">
     <h2 id="promptDlgTitle">새 프롬프트</h2>
-    <label>제목<input id="pTitle" required></label>
-    <label>프롬프트 내용<textarea id="pBody" required></textarea></label>
+    <div class="picker press" id="pPicker" data-input="pFile"></div>
+    <input type="file" id="pFile" accept="image/*" hidden>
+    <label>프롬프트<textarea id="pBody" required placeholder="프롬프트 내용을 입력하세요"></textarea></label>
     <div class="row" style="justify-content:space-between">
-      <button type="button" class="btn danger" id="promptDelBtn" hidden>삭제</button>
+      <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
-        <button type="button" class="btn" data-close="promptDlg">취소</button>
-        <button type="submit" class="btn primary">저장</button>
+        <button type="button" class="btn press" data-close="promptDlg">취소</button>
+        <button type="submit" class="btn primary press" id="promptSave">저장</button>
       </div>
     </div>
   </form>
@@ -128,6 +152,7 @@ const col = collection(db, "prompts"); // 폴더와 프롬프트를 한 곳에 �
 
 const $ = s => document.querySelector(s);
 let docs = [], user = null, editingFolder = null, editingPrompt = null;
+const img = { fFile: null, pFile: null }; // 다이얼로그에서 고른 이미지 (dataURL / "" = 제거 / null = 그대로)
 const isAdmin = () => !!user && ADMINS.includes(user.email);
 const UNSORTED = "_unsorted";
 
@@ -141,6 +166,7 @@ const folderIds = () => new Set(folders().map(f => f.id));
 const inFolder = (p, fid) => fid === UNSORTED ? !folderIds().has(p.folderId) : p.folderId === fid;
 const currentFolderId = () => { const m = location.hash.match(/^#\/f\/(.+)$/); return m ? decodeURIComponent(m[1]) : null; };
 
+// ---------- 화면 ----------
 function render(){
   const fid = currentFolderId();
   const admin = isAdmin();
@@ -148,24 +174,21 @@ function render(){
   $("#addBtn").hidden = !admin;
   $("#backBtn").hidden = !fid;
   $("#folderEditBtn").hidden = !admin || !fid || fid === UNSORTED;
-  const q = $("#q").value.trim().toLowerCase();
-  const match = p => [p.title, p.content].join(" ").toLowerCase().includes(q);
 
   if (!fid) {
     $("#pageTitle").textContent = "프롬프트 보관함";
     $("#addBtn").textContent = "새 폴더";
-    let list = folders().map(f => ({ id: f.id, name: f.name }));
+    const list = folders().map(f => ({ id: f.id, name: f.name, image: f.image }));
     if (prompts().some(p => inFolder(p, UNSORTED))) list.push({ id: UNSORTED, name: "미분류" });
-    list = list.map(f => ({ ...f, count: prompts().filter(p => inFolder(p, f.id)).length }));
-    if (q) list = list.filter(f => f.name.toLowerCase().includes(q) || prompts().some(p => inFolder(p, f.id) && match(p)));
     if (!list.length) {
-      $("#view").innerHTML = `<div class="empty">${q ? "검색 결과가 없어요" : (admin ? "‘새 폴더’를 눌러 첫 폴더를 만들어보세요." : "아직 폴더가 없어요.")}</div>`;
+      $("#view").innerHTML = `<div class="empty">${admin ? "‘새 폴더’를 눌러 첫 폴더를 만들어보세요." : "아직 폴더가 없어요."}</div>`;
       return;
     }
-    $("#view").innerHTML = `<div class="folders">${list.map(f => `
-      <button class="box folder" data-open="${esc(f.id)}">
+    $("#view").innerHTML = `<div class="list">${list.map(f => `
+      <button class="box folder press" data-open="${esc(f.id)}">
+        ${f.image ? `<img class="thumb" src="${f.image}" alt="">` : `<span class="thumb"></span>`}
         <span class="folder-name">${esc(f.name)}</span>
-        <span class="folder-count">프롬프트 ${f.count}개</span>
+        <span class="chev">›</span>
       </button>`).join("")}</div>`;
     return;
   }
@@ -177,27 +200,26 @@ function render(){
   }
   $("#pageTitle").textContent = folder ? folder.name : "미분류";
   $("#addBtn").textContent = "추가";
-  const items = prompts().filter(p => inFolder(p, fid)).filter(p => !q || match(p)).sort((a,b) => ts(b.updated) - ts(a.updated));
+  const items = prompts().filter(p => inFolder(p, fid)).sort((a,b) => ts(b.updated) - ts(a.updated));
   if (!items.length) {
-    $("#view").innerHTML = `<div class="empty">${q ? "검색 결과가 없어요" : (admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요.")}</div>`;
+    $("#view").innerHTML = `<div class="empty">${admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
     return;
   }
   $("#view").innerHTML = `<div class="list">${items.map(p => `
     <div class="box item">
-      <div class="item-top">
-        <p class="item-title">${esc(p.title)}</p>
-        <div class="row" style="flex-wrap:nowrap">
-          ${admin ? `<button class="btn sm ghost" data-edit="${p.id}">수정</button>` : ""}
-          <button class="btn sm" data-copy="${p.id}">복사</button>
-        </div>
-      </div>
+      ${p.image ? `<img class="item-img" src="${p.image}" alt="">` : ""}
+      ${p.title ? `<div style="font-weight:600">${esc(p.title)}</div>` : ""}
       <div class="body" data-more="1">${esc(p.content)}</div>
+      <div class="item-actions">
+        ${admin ? `<button class="btn sm ghost press" data-edit="${p.id}">수정</button>` : ""}
+        <button class="btn sm press" data-copy="${p.id}">복사</button>
+      </div>
     </div>`).join("")}</div>`;
 }
 
-window.addEventListener("hashchange", () => { $("#q").value = ""; render(); window.scrollTo(0,0); });
+// ---------- 이동 / 클릭 ----------
+window.addEventListener("hashchange", () => { render(); window.scrollTo(0,0); });
 $("#backBtn").onclick = () => { location.hash = ""; };
-$("#q").addEventListener("input", render);
 
 $("#view").addEventListener("click", async e => {
   const t = e.target.closest("[data-open],[data-copy],[data-more],[data-edit]");
@@ -214,34 +236,82 @@ $("#view").addEventListener("click", async e => {
 });
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
 
+// ---------- 이미지 선택 ----------
+function showPicker(pickerId, src){
+  const el = $("#" + pickerId);
+  el.innerHTML = src ? `<img src="${src}" alt=""><button type="button" class="picker-x" aria-label="이미지 제거">×</button>` : `<span>이미지 추가 (선택)</span>`;
+}
+document.querySelectorAll(".picker").forEach(el => {
+  el.addEventListener("click", e => {
+    const inputId = el.dataset.input;
+    if (e.target.closest(".picker-x")) { img[inputId] = ""; showPicker(el.id, ""); return; }
+    $("#" + inputId).click();
+  });
+});
+async function resizeImage(file, max = 1000){
+  const url = URL.createObjectURL(file);
+  try {
+    const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const scale = Math.min(1, max / Math.max(im.width, im.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(im.width * scale); c.height = Math.round(im.height * scale);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    let q = .82, out = c.toDataURL("image/jpeg", q);
+    while (out.length > 700000 && q > .4) { q -= .12; out = c.toDataURL("image/jpeg", q); }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+["fFile","pFile"].forEach(id => {
+  $("#" + id).addEventListener("change", async e => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      img[id] = await resizeImage(f);
+      showPicker(id === "fFile" ? "fPicker" : "pPicker", img[id]);
+    } catch(_) { toast("이미지를 불러오지 못했어요"); }
+  });
+});
+
+// ---------- 추가 / 편집 열기 ----------
 $("#addBtn").onclick = () => currentFolderId() ? openPrompt(null) : openFolder(null);
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
 function openFolder(id){
-  editingFolder = id;
+  editingFolder = id; img.fFile = null;
   const f = docs.find(d => d.id === id);
   $("#folderDlgTitle").textContent = id ? "폴더 편집" : "새 폴더";
   $("#fName").value = f ? f.name : "";
+  showPicker("fPicker", f?.image || "");
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
 }
 function openPrompt(id){
-  editingPrompt = id;
-  const p = docs.find(d => d.id === id) || { title:"", content:"" };
+  editingPrompt = id; img.pFile = null;
+  const p = docs.find(d => d.id === id) || {};
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
-  $("#pTitle").value = p.title || ""; $("#pBody").value = p.content || "";
+  $("#pBody").value = p.content || "";
+  showPicker("pPicker", p.image || "");
   $("#promptDelBtn").hidden = !id;
   $("#promptDlg").showModal();
 }
 
-$("#folderForm").addEventListener("submit", async e => {
+// ---------- 저장 / 삭제 ----------
+async function withBusy(btnId, fn){
+  const b = $("#" + btnId); b.disabled = true;
+  try { await fn(); } finally { b.disabled = false; }
+}
+$("#folderForm").addEventListener("submit", e => {
   e.preventDefault();
-  const name = $("#fName").value.trim(); if (!name) return;
-  try {
-    if (editingFolder) await updateDoc(doc(db, "prompts", editingFolder), { name, updated: serverTimestamp() });
-    else await addDoc(col, { type: "folder", name, created: serverTimestamp(), updated: serverTimestamp() });
-    $("#folderDlg").close(); toast("저장됐어요");
-  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  withBusy("folderSave", async () => {
+    const name = $("#fName").value.trim(); if (!name) return;
+    const data = { name, updated: serverTimestamp() };
+    if (img.fFile !== null) data.image = img.fFile;
+    try {
+      if (editingFolder) await updateDoc(doc(db, "prompts", editingFolder), data);
+      else await addDoc(col, { type: "folder", created: serverTimestamp(), image: "", ...data });
+      $("#folderDlg").close(); toast("저장됐어요");
+    } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  });
 });
 $("#folderDelBtn").onclick = async () => {
   const inside = prompts().filter(p => p.folderId === editingFolder);
@@ -253,17 +323,20 @@ $("#folderDelBtn").onclick = async () => {
   } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
-$("#promptForm").addEventListener("submit", async e => {
+$("#promptForm").addEventListener("submit", e => {
   e.preventDefault();
-  const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, updated: serverTimestamp() };
-  try {
-    if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
-    else {
-      const fid = currentFolderId();
-      await addDoc(col, { type: "prompt", folderId: fid === UNSORTED ? null : fid, ...data });
-    }
-    $("#promptDlg").close(); toast("저장됐어요");
-  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  withBusy("promptSave", async () => {
+    const data = { content: $("#pBody").value, updated: serverTimestamp() };
+    if (img.pFile !== null) data.image = img.pFile;
+    try {
+      if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
+      else {
+        const fid = currentFolderId();
+        await addDoc(col, { type: "prompt", folderId: fid === UNSORTED ? null : fid, image: "", ...data });
+      }
+      $("#promptDlg").close(); toast("저장됐어요");
+    } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  });
 });
 $("#promptDelBtn").onclick = async () => {
   if (!confirm("이 프롬프트를 삭제할까요?")) return;
@@ -271,9 +344,10 @@ $("#promptDelBtn").onclick = async () => {
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
+// ---------- 백업 ----------
 $("#backupBtn").onclick = () => {
-  const pack = (fid, name) => ({ folder: name, prompts: prompts().filter(p => inFolder(p, fid)).map(p => ({ title: p.title, content: p.content })) });
-  const data = folders().map(f => pack(f.id, f.name));
+  const pack = (fid, name, image) => ({ folder: name, image: image || "", prompts: prompts().filter(p => inFolder(p, fid)).map(p => ({ image: p.image || "", content: p.content })) });
+  const data = folders().map(f => pack(f.id, f.name, f.image));
   if (prompts().some(p => inFolder(p, UNSORTED))) data.push(pack(UNSORTED, "미분류"));
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
@@ -281,6 +355,7 @@ $("#backupBtn").onclick = () => {
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
 
+// ---------- 로그인 ----------
 onAuthStateChanged(auth, u => {
   user = u;
   $("#loginBtn").hidden = !!u;
@@ -299,6 +374,7 @@ $("#loginBtn").onclick = async () => {
 };
 $("#logoutBtn").onclick = () => signOut(auth);
 
+// ---------- 데이터 ----------
 $("#status").textContent = "불러오는 중…";
 onSnapshot(col, snap => {
   docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
