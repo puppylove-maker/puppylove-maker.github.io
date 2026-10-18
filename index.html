@@ -16,7 +16,7 @@
 button,input,textarea,select{outline:none}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;min-height:calc(100vh / var(--z,1));display:flex;flex-direction:column}
-main{flex:1}
+main{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:6vh}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
 .title{display:flex;align-items:center;gap:2px;min-width:0}
 h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -125,6 +125,8 @@ textarea.short{min-height:70px}
   /* 2칸씩, 마지막이 홀수면 가운데 */
   .plist{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px}
   .plist>.item{width:calc(50% - 10px)}
+  #view.pc-col .plist{flex-direction:column;align-items:center}
+  #view.pc-col .plist>.item{width:min(100%,560px)}
   #view>.list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
   #view>.list>.folder{width:calc(50% - 7px)}
   .wrap{padding:36px 28px 48px}
@@ -133,7 +135,7 @@ textarea.short{min-height:70px}
 /* PC: 크게, 화면 가운데에 */
 @media (min-width:900px){
   .wrap{justify-content:center;padding-top:48px;padding-bottom:48px}
-  main{flex:0 0 auto}
+  main{flex:0 0 auto;padding-bottom:0}
   footer{padding-top:48px}
 }
 @media (min-width:1400px){html{zoom:1.2;--z:1.2}}
@@ -227,6 +229,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     <label>글씨 배경<div class="seg" id="fGrad"></div></label>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
+    <label>PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></label>
 
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
@@ -346,6 +349,7 @@ function render(){
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
 
   if (!fid) {
+    $("#view").classList.remove("pc-col");
     $("#pageTitle").textContent = "프롬프트 보관함";
     const list = folders();
     if (reorder) return renderReorder();
@@ -368,6 +372,7 @@ function render(){
     $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
   $("#pageTitle").textContent = folder.name;
+  $("#view").classList.toggle("pc-col", folder.pcLayout === "col");
   if (folder.desc) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
   const items = prompts();
   if (reorder) return renderReorder();
@@ -615,6 +620,9 @@ async function addBlankPrompt(lo){
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
 }
+let curPc = "row";
+function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pc === v)); }
+$("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
 let curLayout = "stack";
 function setLayout(lo){
   curLayout = lo;
@@ -667,6 +675,7 @@ function openFolder(id){
   $("#folderDlgTitle").textContent = id ? "폴더 편집" : "새 폴더";
   $("#fName").value = f.name || "";
   $("#fDesc").value = f.desc || "";
+  setPc(f.pcLayout || "row");
   fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
@@ -692,7 +701,7 @@ $("#folderForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("folderSave", async () => {
     const name = $("#fName").value.trim(); if (!name) return;
-    const data = { name, desc: $("#fDesc").value.trim(), ...fEditor.data(), updated: serverTimestamp() };
+    const data = { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, ...fEditor.data(), updated: serverTimestamp() };
     try {
       if (editingFolder) await updateDoc(doc(db, "prompts", editingFolder), data);
       else {
