@@ -41,7 +41,9 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .gacc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease),margin .32s var(--ease)}
 .gacc>div{overflow:hidden}
 .gacc.open{grid-template-rows:1fr;margin-top:-10px;margin-bottom:14px}
-.pills{display:flex;flex-wrap:wrap;gap:6px;padding:2px 0}
+.pills{display:flex;flex-wrap:nowrap;gap:6px;padding:2px 16px 2px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.pills::-webkit-scrollbar{display:none}
+.pills .pill{flex:none;scroll-snap-align:start}
 .pill{height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--sub);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .pill.on{background:#f1f1f1;border-color:#f1f1f1;color:var(--text);font-weight:600}
 .pill.add{border-style:dashed;color:var(--muted)}
