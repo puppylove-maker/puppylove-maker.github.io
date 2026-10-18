@@ -130,6 +130,7 @@ input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);bo
 input:focus,textarea:focus{border-color:#cfcfcf}
 textarea{min-height:140px;resize:vertical;line-height:1.55}
 textarea.short{min-height:70px}
+textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 
 .box{border:1px solid var(--line);border-radius:14px;background:var(--soft)}
 .list{display:grid;gap:10px}
@@ -305,6 +306,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <h2>새 프롬프트</h2>
     <label>제목<input id="nTitle" placeholder="새 프롬프트"></label>
     <label>부제목 (비우면 안 보여요)<input id="nHint"></label>
+    <label>프롬프트<textarea id="nBody" class="scroll-box" placeholder="복사될 프롬프트 내용"></textarea></label>
     <div class="field">박스 디자인<div class="lo-grid" id="tplList"></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="tplDlg">취소</button>
@@ -710,11 +712,11 @@ $("#fileIn").addEventListener("change", async e => {
 });
 
 // ---------- 추가 / 편집 ----------
-async function addBlankPrompt(lo, title, hint){
+async function addBlankPrompt(lo, title, hint, body = ""){
   try {
     const last = prompts().at(-1);
     const ref = await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), updated: serverTimestamp(),
-      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: "", image: "", imgX: 50, imgY: 50, zoom: 1 });
+      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: body, image: "", imgX: 50, imgY: 50, zoom: 1 });
     toast("추가됐어요");
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
@@ -763,7 +765,7 @@ $("#menu").addEventListener("click", e => {
   if (k === "tpl") {
     newLo = "stack";
     $("#tplList").innerHTML = loCards(newLo);
-    $("#nTitle").value = ""; $("#nHint").value = DEFAULT_HINT;
+    $("#nTitle").value = ""; $("#nHint").value = DEFAULT_HINT; $("#nBody").value = "";
     $("#tplDlg").showModal();
   }
 });
@@ -773,9 +775,9 @@ $("#tplList").addEventListener("click", e => {
   newLo = lo; $("#tplList").innerHTML = loCards(lo);
 });
 $("#nAdd").onclick = () => {
-  const title = $("#nTitle").value.trim(), hint = $("#nHint").value.trim();
+  const title = $("#nTitle").value.trim(), hint = $("#nHint").value.trim(), body = $("#nBody").value;
   $("#tplDlg").close();
-  addBlankPrompt(newLo, title, hint);
+  addBlankPrompt(newLo, title, hint, body);
 };
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
