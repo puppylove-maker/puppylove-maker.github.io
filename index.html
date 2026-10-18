@@ -284,7 +284,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="picker r21" id="pPicker"></div>
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
-    <label>안내 문구 (비우면 안 보여요)<input id="pHint"></label>
+    <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
     <label>프롬프트<textarea id="pBody" placeholder="복사될 프롬프트 내용"></textarea></label>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -302,9 +302,14 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 
 <dialog id="tplDlg">
   <div class="dlg">
-    <h2>어떤 박스를 추가할까요?</h2>
-    <div class="lo-grid" id="tplList"></div>
-    <div class="row" style="justify-content:flex-end"><button type="button" class="btn press" data-close="tplDlg">닫기</button></div>
+    <h2>새 프롬프트</h2>
+    <label>제목<input id="nTitle" placeholder="새 프롬프트"></label>
+    <label>부제목 (비우면 안 보여요)<input id="nHint"></label>
+    <div class="field">박스 디자인<div class="lo-grid" id="tplList"></div></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="tplDlg">취소</button>
+      <button type="button" class="btn primary press" id="nAdd">추가</button>
+    </div>
   </div>
 </dialog>
 
@@ -705,11 +710,11 @@ $("#fileIn").addEventListener("change", async e => {
 });
 
 // ---------- 추가 / 편집 ----------
-async function addBlankPrompt(lo){
+async function addBlankPrompt(lo, title, hint){
   try {
     const last = prompts().at(-1);
     const ref = await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), updated: serverTimestamp(),
-      order: last ? promptKey(last) + 1 : 0, layout: lo, title: "새 프롬프트", content: "", image: "", imgX: 50, imgY: 50, zoom: 1 });
+      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: "", image: "", imgX: 50, imgY: 50, zoom: 1 });
     toast("추가됐어요");
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
@@ -741,7 +746,7 @@ const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card pr
 function openMenu(){
   const fid = currentFolderId();
   const items = fid
-    ? [["tpl", "새 프롬프트", "박스 디자인 골라서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    ? [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
     : [["new", "새 폴더", "폴더 추가"], ...(folders().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
   $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
@@ -756,15 +761,22 @@ $("#menu").addEventListener("click", e => {
   if (k === "new") fid ? openPrompt(null) : openFolder(null);
   if (k === "order") startReorder();
   if (k === "tpl") {
-    $("#tplList").innerHTML = loCards(null);
+    newLo = "stack";
+    $("#tplList").innerHTML = loCards(newLo);
+    $("#nTitle").value = ""; $("#nHint").value = DEFAULT_HINT;
     $("#tplDlg").showModal();
   }
 });
+let newLo = "stack";
 $("#tplList").addEventListener("click", e => {
   const lo = e.target.closest("[data-lo]")?.dataset.lo; if (!lo) return;
-  $("#tplDlg").close();
-  addBlankPrompt(lo);
+  newLo = lo; $("#tplList").innerHTML = loCards(lo);
 });
+$("#nAdd").onclick = () => {
+  const title = $("#nTitle").value.trim(), hint = $("#nHint").value.trim();
+  $("#tplDlg").close();
+  addBlankPrompt(newLo, title, hint);
+};
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
 function openFolder(id){
