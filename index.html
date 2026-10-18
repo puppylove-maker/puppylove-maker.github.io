@@ -383,7 +383,7 @@ function render(){
   }
   $("#pageTitle").textContent = folder.name;
   $("#view").classList.toggle("pc-col", folder.pcLayout === "col");
-  if (folder.desc) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
+  if (folder.desc && !reorder) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
   const items = prompts();
   if (reorder) return renderReorder();
   if (!promptsReady) { $("#view").innerHTML = `<div class="status">불러오는 중…</div>`; return; }
@@ -469,8 +469,10 @@ function removeRow(id){
 function startReorder(){
   const list = currentFolderId() ? prompts() : folders();
   reorder = { ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
+  history.pushState({ reorder: 1 }, ""); // 뒤로가기 누르면 정리하기만 닫히게
   render(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
+window.addEventListener("popstate", () => { if (reorder) { reorder = null; render(); } });
 
 async function finishReorder(save){
   if (save) {
@@ -487,6 +489,7 @@ async function finishReorder(save){
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
   }
   reorder = null; render();
+  if (history.state?.reorder) history.back();
 }
 
 // ---------- 이동 / 클릭 ----------
@@ -495,7 +498,7 @@ function onRoute(){
   const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
 }
 window.addEventListener("hashchange", onRoute);
-$("#backBtn").onclick = () => { location.hash = ""; };
+$("#backBtn").onclick = () => { if (reorder) history.back(); else location.hash = ""; };
 
 $("#view").addEventListener("click", e => {
   const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-tog],[data-up],[data-down],[data-del],#oDone,#oCancel");
