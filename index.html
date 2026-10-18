@@ -640,8 +640,8 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
   return api;
 }
 // 화면에 보이는 크기에 맞춰 작게 저장 (폴더 4:1, 프롬프트 2:1)
-const fEditor = makeEditor("fPicker", "fTools", "fGrad", 1000, 500);
-const pEditor = makeEditor("pPicker", "pTools", null, 1000, 1000);
+const fEditor = makeEditor("fPicker", "fTools", "fGrad", 1600, 1600);
+const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 async function resizeImage(file, maxW, maxH){
   const url = URL.createObjectURL(file);
@@ -653,8 +653,9 @@ async function resizeImage(file, maxW, maxH){
     const ctx = c.getContext("2d");
     ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height); // 투명 배경(PNG)은 흰색으로
     ctx.drawImage(im, 0, 0, c.width, c.height);
-    let q = .8, out = c.toDataURL("image/jpeg", q);
-    while (out.length > 140000 && q > .45) { q -= .07; out = c.toDataURL("image/jpeg", q); }
+    // 화질 우선: 0.9에서 시작해 너무 클 때만 조금씩 낮춤 (최대 약 0.3MB)
+    let q = .9, out = c.toDataURL("image/jpeg", q);
+    while (out.length > 420000 && q > .6) { q -= .05; out = c.toDataURL("image/jpeg", q); }
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
