@@ -183,14 +183,16 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 .picker.r11{aspect-ratio:1/1;width:50%}
 .picker .empty-hint{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer}
 .picker.has{cursor:grab;border-style:solid}
+.nudge{position:absolute;width:30px;height:30px;border-radius:50%;border:1px solid rgba(0,0,0,.06);background:rgba(255,255,255,.9);color:#666;display:grid;place-items:center;cursor:pointer;padding:0;z-index:2;transition:transform .15s var(--ease),background .15s}
+.nudge:active{transform:scale(.9);background:#fff}
+.nudge svg{width:16px;height:16px}
+.n-up{top:6px;left:50%;margin-left:-15px}
+.n-down{bottom:6px;left:50%;margin-left:-15px}.n-down svg{transform:rotate(180deg)}
+.n-left{left:6px;top:50%;margin-top:-15px}.n-left svg{transform:rotate(-90deg)}
+.n-right{right:6px;top:50%;margin-top:-15px}.n-right svg{transform:rotate(90deg)}
 .picker .drag-hint{position:absolute;left:8px;top:8px;font-size:11px;background:rgba(255,255,255,.9);color:var(--sub);padding:2px 8px;border-radius:999px;pointer-events:none}
 .tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .tools .zoom-row{display:flex;align-items:center;gap:8px;flex:1 1 100%;font-size:12px;color:var(--muted)}
-.align{display:grid;grid-template-columns:repeat(3,22px);grid-template-rows:repeat(3,22px);gap:3px;padding:4px;background:var(--soft);border-radius:8px;flex:none}
-.align button{border:none;border-radius:5px;background:#fff;cursor:pointer;padding:0;display:grid;place-items:center}
-.align button::after{content:"";width:6px;height:6px;border-radius:50%;background:#cfcfcf}
-.align button.on::after{background:#777}
-.align-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
 img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
 .tools input[type=range]{flex:1;padding:0;border:none;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:#e6e6e6}
 .tools input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -540,23 +542,26 @@ HTMLDialogElement.prototype.close = function(...a){
 
 // ---------- 이미지 편집기: 드래그로 위치, 슬라이더로 확대 ----------
 let fileTarget = null;
+const ARW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
 function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
   const st = { image:"", imgX:50, imgY:50, zoom:1, grad:"white" };
   const picker = $("#" + pickerId), tools = $("#" + toolsId), gradEl = gradId ? $("#" + gradId) : document.createElement("div");
   tools.innerHTML = `
     <button type="button" class="btn sm press" data-act="pick">이미지 선택</button>
     <button type="button" class="btn sm ghost press" data-act="remove">제거</button>
-    <span class="align-wrap" data-el="alignWrap"><span>정렬</span><span class="align">${[0,50,100].map(y => [0,50,100].map(x => `<button type="button" data-ax="${x}" data-ay="${y}" aria-label="정렬"></button>`).join("")).join("")}</span></span>
     <span class="zoom-row" data-el="zoomRow"><span>확대</span><input type="range" min="1" max="3" step="0.01" aria-label="확대"></span>`;
   gradEl.innerHTML = `<button type="button" data-g="white">흰색</button><button type="button" data-g="black">검은색</button><button type="button" data-g="none">없음</button>`;
   const range = tools.querySelector("input");
-  const markAlign = () => tools.querySelectorAll("[data-ax]").forEach(b => b.classList.toggle("on", +b.dataset.ax === Math.round(st.imgX) && +b.dataset.ay === Math.round(st.imgY)));
-  const applyImg = () => { const im = picker.querySelector("img"); if (im) im.style.cssText = imgStyle(st); markAlign(); };
+  const applyImg = () => { const im = picker.querySelector("img"); if (im) im.style.cssText = imgStyle(st); };
 
   function paint(){
     if (st.image) {
       picker.classList.add("has");
-      picker.innerHTML = `<div class="media"><img src="${st.image}" alt="" draggable="false" style="${imgStyle(st)}"></div><span class="drag-hint">드래그로 위치 조절</span>`;
+      picker.innerHTML = `<div class="media"><img src="${st.image}" alt="" draggable="false" style="${imgStyle(st)}"></div>
+        <button type="button" class="nudge n-up" data-nx="0" data-ny="1" aria-label="위로">${ARW}</button>
+        <button type="button" class="nudge n-down" data-nx="0" data-ny="-1" aria-label="아래로">${ARW}</button>
+        <button type="button" class="nudge n-left" data-nx="1" data-ny="0" aria-label="왼쪽으로">${ARW}</button>
+        <button type="button" class="nudge n-right" data-nx="-1" data-ny="0" aria-label="오른쪽으로">${ARW}</button>`;
     } else {
       picker.classList.remove("has");
       picker.innerHTML = `<div class="empty-hint">이미지 추가 (선택)</div>`;
@@ -564,8 +569,7 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
     tools.querySelector('[data-act="remove"]').hidden = !st.image;
     tools.querySelector('[data-act="pick"]').textContent = st.image ? "이미지 변경" : "이미지 선택";
     tools.querySelector('[data-el="zoomRow"]').hidden = !st.image; range.value = st.zoom;
-    tools.querySelector('[data-el="alignWrap"]').hidden = !st.image;
-    markAlign();
+
     gradEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.g === st.grad));
   }
   const pick = () => { fileTarget = api; $("#fileIn").click(); };
@@ -573,16 +577,33 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
     const a = e.target.closest("[data-act]")?.dataset.act;
     if (a === "pick") pick();
     if (a === "remove") { st.image = ""; paint(); }
-    const ab = e.target.closest("[data-ax]");
-    if (ab) { st.imgX = +ab.dataset.ax; st.imgY = +ab.dataset.ay; applyImg(); }
   });
   gradEl.addEventListener("click", e => { const g = e.target.closest("[data-g]")?.dataset.g; if (g) { st.grad = g; paint(); } });
   range.addEventListener("input", () => { st.zoom = +range.value; applyImg(); });
   picker.addEventListener("click", () => { if (!st.image) pick(); });
 
+  // 화살표: 누르면 한 칸, 꾹 누르면 계속 이동
+  let hold = null;
+  const nudge = (nx, ny) => {
+    const step = 4 / st.zoom;
+    st.imgX = Math.max(0, Math.min(100, st.imgX + nx * step));
+    st.imgY = Math.max(0, Math.min(100, st.imgY + ny * step));
+    applyImg();
+  };
+  picker.addEventListener("pointerdown", e => {
+    const b = e.target.closest(".nudge"); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const nx = +b.dataset.nx, ny = +b.dataset.ny;
+    nudge(nx, ny);
+    clearInterval(hold); clearTimeout(hold);
+    hold = setTimeout(() => { hold = setInterval(() => nudge(nx, ny), 60); }, 350);
+    const stop = () => { clearTimeout(hold); clearInterval(hold); window.removeEventListener("pointerup", stop); window.removeEventListener("pointercancel", stop); };
+    window.addEventListener("pointerup", stop); window.addEventListener("pointercancel", stop);
+  }, true);
+
   let drag = null;
   picker.addEventListener("pointerdown", e => {
-    if (!st.image) return;
+    if (!st.image || e.target.closest(".nudge")) return;
     drag = { x: e.clientX, y: e.clientY, ox: st.imgX, oy: st.imgY, w: picker.clientWidth, h: picker.clientHeight };
     picker.setPointerCapture(e.pointerId);
   });
