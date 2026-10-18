@@ -22,7 +22,9 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;mar
 h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;align-items:center}
-.desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:-4px 0 14px}
+.desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
+.title-edit{border:none;background:none;padding:4px;margin-left:4px;cursor:pointer;display:grid;place-items:center;flex:none}
+.title-edit svg{width:16px;height:16px}
 
 /* 관리 줄 (폴더 편집 / 순서 바꾸기) */
 .admin-bar{display:flex;gap:4px;margin:-6px 0 12px}
@@ -130,20 +132,18 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     <div class="title">
       <button class="back press" id="backBtn" hidden aria-label="뒤로">‹</button>
       <h1 id="pageTitle">프롬프트 보관함</h1>
+      <button class="title-edit press" id="folderEditBtn" hidden aria-label="폴더 편집"><svg viewBox="0 0 24 24" fill="none" stroke="#a0a0a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
     </div>
     <button class="btn primary press" id="addBtn" hidden>추가</button>
   </header>
   <main>
     <div class="desc" id="desc" hidden></div>
-    <div class="admin-bar" id="adminBar" hidden>
-      <button class="link press" id="folderEditBtn">폴더 편집</button>
-      <button class="link press" id="reorderBtn">순서 바꾸기</button>
-    </div>
     <div class="status" id="status"></div>
     <div id="view"></div>
   </main>
   <footer>
     <span class="who" id="who" hidden></span>
+    <button class="link press" id="reorderBtn" hidden>폴더 순서 바꾸기</button>
     <button class="link press" id="backupBtn" hidden>백업</button>
     <button class="link press" id="loginBtn" hidden>관리자 로그인</button>
     <button class="link press" id="logoutBtn" hidden>로그아웃</button>
@@ -158,6 +158,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     <label>글씨 배경<div class="seg" id="fGrad"></div></label>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
+    <button type="button" class="btn press" id="promptReorderBtn" hidden>프롬프트 순서 바꾸기</button>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -264,14 +265,14 @@ function render(){
   $("#addBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
   $("#desc").hidden = true;
-  $("#adminBar").hidden = !admin || !!reorder;
-  $("#folderEditBtn").hidden = !fid;
+  $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
+  $("#reorderBtn").hidden = true;
 
   if (!fid) {
     $("#pageTitle").textContent = "프롬프트 보관함";
     $("#addBtn").textContent = "새 폴더";
     const list = folders();
-    $("#reorderBtn").hidden = list.length < 2;
+    $("#reorderBtn").hidden = !admin || list.length < 2 || !!reorder;
     if (reorder) return renderReorder();
     if (!foldersReady) { $("#view").innerHTML = ""; return; }
     if (!list.length) {
@@ -289,13 +290,12 @@ function render(){
   const folder = folderDocs.find(d => d.id === fid);
   if (!folder) {
     $("#pageTitle").textContent = foldersReady ? "폴더를 찾을 수 없어요" : "";
-    $("#view").innerHTML = ""; $("#addBtn").hidden = true; $("#adminBar").hidden = true; return;
+    $("#view").innerHTML = ""; $("#addBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
   $("#pageTitle").textContent = folder.name;
   if (folder.desc) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
   $("#addBtn").textContent = "추가";
   const items = prompts();
-  $("#reorderBtn").hidden = items.length < 2;
   if (reorder) return renderReorder();
   if (!promptsReady) { $("#view").innerHTML = `<div class="status">불러오는 중…</div>`; return; }
   if (!items.length) {
@@ -344,11 +344,13 @@ function moveRow(from, to){
     requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
   });
 }
-$("#reorderBtn").onclick = () => {
+function startReorder(){
   const list = currentFolderId() ? prompts() : folders();
   reorder = { ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])) };
-  render();
-};
+  render(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+$("#reorderBtn").onclick = startReorder;
+$("#promptReorderBtn").onclick = () => { $("#folderDlg").close(); setTimeout(startReorder, 160); };
 async function finishReorder(save){
   if (save) {
     try {
@@ -502,6 +504,7 @@ function openFolder(id){
   $("#fDesc").value = f.desc || "";
   fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
+  $("#promptReorderBtn").hidden = !id || prompts().length < 2;
   $("#folderDlg").showModal();
 }
 function openPrompt(id){
