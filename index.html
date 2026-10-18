@@ -49,6 +49,11 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .pill.add{border-style:dashed;color:var(--muted)}
 .pill.edit{border:none;background:none;color:var(--muted);padding:0 8px;font-size:12px}
 .gpick{display:flex;flex-wrap:wrap;gap:6px}
+.gorder{display:flex;align-items:center;gap:6px}
+.gorder .oarrow{flex:none;font-size:18px;line-height:1}
+.gorder-list{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.gorder-list::-webkit-scrollbar{display:none}
+.gorder-list .pill{flex:none;height:28px;font-size:12px;cursor:default;display:inline-flex;align-items:center;transition:transform .25s var(--ease)}
 /* + 메뉴 */
 .menu{position:absolute;top:42px;right:0;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:6px;z-index:20;opacity:0;transform:translateY(-6px) scale(.97);transform-origin:top right;pointer-events:none;transition:opacity .18s var(--ease),transform .22s var(--ease)}
 .menu.show{opacity:1;transform:none;pointer-events:auto}
@@ -330,6 +335,13 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <h2 id="groupDlgTitle">새 그룹</h2>
     <label>이름<input id="gName" required placeholder="그룹 이름"></label>
     <div class="field">넣을 폴더 (눌러서 선택)<div class="gpick" id="gPick"></div></div>
+    <div class="field" id="gOrderWrap">순서
+      <div class="gorder">
+        <button type="button" class="oarrow press" id="gLeft" aria-label="앞으로">‹</button>
+        <div class="gorder-list" id="gOrder"></div>
+        <button type="button" class="oarrow press" id="gRight" aria-label="뒤로">›</button>
+      </div>
+    </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="groupDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -553,7 +565,28 @@ async function migrateOldGroups(){
   } catch(_) {}
   migrating = false;
 }
-let editingGroup = null, gSel = new Set();
+let editingGroup = null, gSel = new Set(), gOrderIds = [];
+function paintOrder(){
+  const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
+  $("#gOrder").innerHTML = gOrderIds.map(id => `<span class="pill ${id === editingGroup ? "on" : ""}" data-oid="${esc(id)}">${esc(id === editingGroup ? ($("#gName").value.trim() || map[id]?.name) : map[id]?.name)}</span>`).join("");
+  const i = gOrderIds.indexOf(editingGroup);
+  $("#gLeft").disabled = i <= 0; $("#gRight").disabled = i === gOrderIds.length - 1;
+  $("#gOrder").querySelector(".on")?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+}
+function moveGroup(d){
+  const i = gOrderIds.indexOf(editingGroup), j = i + d;
+  if (i < 0 || j < 0 || j >= gOrderIds.length) return;
+  const before = new Map([...$("#gOrder").children].map(el => [el.dataset.oid, el.getBoundingClientRect().left]));
+  [gOrderIds[i], gOrderIds[j]] = [gOrderIds[j], gOrderIds[i]];
+  paintOrder();
+  [...$("#gOrder").children].forEach(el => {
+    const dx = before.get(el.dataset.oid) - el.getBoundingClientRect().left; if (!dx) return;
+    el.style.transition = "none"; el.style.transform = `translateX(${dx}px)`;
+    requestAnimationFrame(() => { el.style.transition = ""; el.style.transform = ""; });
+  });
+}
+$("#gLeft").onclick = () => moveGroup(-1);
+$("#gRight").onclick = () => moveGroup(1);
 function paintPick(){
   $("#gPick").innerHTML = homeFolders().map(f => `<button type="button" class="pill press ${gSel.has(f.id) ? "on" : ""}" data-pick="${esc(f.id)}">${esc(f.name)}</button>`).join("") || `<span class="hint">아직 폴더가 없어요</span>`;
 }
@@ -564,6 +597,9 @@ function openGroup(id){
   $("#groupDlgTitle").textContent = id ? "그룹 편집" : "새 그룹";
   $("#gName").value = g.name || "";
   $("#groupDelBtn").hidden = !id;
+  gOrderIds = groups().map(x => x.id);
+  $("#gOrderWrap").hidden = !id || gOrderIds.length < 2;
+  if (id) paintOrder();
   paintPick();
   $("#groupDlg").showModal();
 }
@@ -578,7 +614,13 @@ $("#groupForm").addEventListener("submit", e => {
     const name = $("#gName").value.trim(); if (!name) return;
     const data = { name, folderIds: [...gSel], updated: serverTimestamp() };
     try {
-      if (editingGroup) await updateDoc(doc(db, "prompts", editingGroup), data);
+      if (editingGroup) {
+        const batch = writeBatch(db);
+        batch.update(doc(db, "prompts", editingGroup), data);
+        gOrderIds.forEach((gid, i) => { if (gid !== editingGroup) batch.update(doc(db, "prompts", gid), { order: i }); });
+        batch.update(doc(db, "prompts", editingGroup), { order: gOrderIds.indexOf(editingGroup) });
+        await batch.commit();
+      }
       else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
       if (!gOpen) { gOpen = true; try { localStorage.setItem("pv-gopen", "1"); } catch(_) {} }
       $("#groupDlg").close(); toast("저장됐어요"); render();
