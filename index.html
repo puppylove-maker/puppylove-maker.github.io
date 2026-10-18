@@ -126,6 +126,7 @@ dialog.closing::backdrop{opacity:0;transition:opacity .16s}
 .btn.sm{height:28px;padding:0 9px;font-size:12px}
 .btn:disabled{opacity:.5}
 
+select{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center;background-size:16px}
 input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;transition:border-color .15s}
 input:focus,textarea:focus{border-color:#cfcfcf}
 textarea{min-height:140px;resize:vertical;line-height:1.55}
@@ -194,6 +195,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 
 .skel{background:linear-gradient(90deg,#f3f3f3 0%,#fafafa 50%,#f3f3f3 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-color:#f0f0f0}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+#view>.list+.plist{margin-top:20px}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted)}
 .who{font-size:11px;color:var(--muted);text-align:center}
@@ -268,6 +270,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">글씨 배경<div class="seg" id="fGrad"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
+    <label>위치<select id="fParent"></select></label>
     <div class="field">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
 
     <div class="row" style="justify-content:space-between">
@@ -359,6 +362,11 @@ const folderKey = f => num(f.order, ts(f.created) / 1e3);
 const promptKey = p => num(p.order, ts(p.created || p.updated) / 1e3);
 const folders = () => [...folderDocs].sort((a,b) => folderKey(a) - folderKey(b));
 const prompts = () => [...promptDocs].sort((a,b) => promptKey(a) - promptKey(b));
+// 폴더 안의 폴더
+const parentOf = f => f?.parentId || null;
+const childFolders = pid => folders().filter(f => parentOf(f) === (pid || null));
+const descendants = id => childFolders(id).flatMap(c => [c.id, ...descendants(c.id)]);
+const folderPath = f => { const names = []; let cur = f; while (cur) { names.unshift(cur.name); cur = folderDocs.find(d => d.id === parentOf(cur)); } return names.join(" › "); };
 
 function imgStyle(o){
   const x = num(o.imgX, 50), y = num(o.imgY, 50), z = num(o.zoom, 1);
@@ -421,18 +429,14 @@ function render(){
   if (!fid) {
     $("#view").classList.remove("pc-col");
     $("#pageTitle").textContent = "프롬프트 보관함";
-    const list = folders();
+    const list = childFolders(null);
     if (reorder) return renderReorder();
     if (!foldersReady) { $("#view").innerHTML = ""; return; }
     if (!list.length) {
       $("#view").innerHTML = `<div class="empty">${admin ? "‘새 폴더’를 눌러 첫 폴더를 만들어보세요." : "아직 폴더가 없어요."}</div>`;
       return;
     }
-    $("#view").innerHTML = `<div class="list">${list.map(f => `
-      <button class="box folder press ${gradClass(f)}" data-open="${esc(f.id)}">
-        ${mediaHtml(f)}
-        <span class="cap">${esc(f.name)}</span>
-      </button>`).join("")}</div>`;
+    $("#view").innerHTML = folderListHtml(list);
     return;
   }
 
@@ -444,14 +448,22 @@ function render(){
   $("#pageTitle").textContent = folder.name;
   $("#view").classList.toggle("pc-col", folder.pcLayout === "col");
   if (folder.desc && !reorder) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
-  const items = prompts();
+  const items = prompts(), subs = childFolders(fid);
   if (reorder) return renderReorder();
-  if (!promptsReady) { $("#view").innerHTML = `<div class="plist">${`<div class="item"><div class="box skel" style="aspect-ratio:2/1"></div><div class="box skel" style="height:48px;margin-top:4px"></div></div>`.repeat(2)}</div>`; return; }
-  if (!items.length) {
-    $("#view").innerHTML = `<div class="empty">${admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
+  if (!promptsReady && !subs.length) { $("#view").innerHTML = `<div class="plist">${`<div class="item"><div class="box skel" style="aspect-ratio:2/1"></div><div class="box skel" style="height:48px;margin-top:4px"></div></div>`.repeat(2)}</div>`; return; }
+  if (!items.length && !subs.length) {
+    $("#view").innerHTML = `<div class="empty">${admin ? "‘+’를 눌러 프롬프트나 폴더를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
     return;
   }
-  $("#view").innerHTML = `<div class="plist">${items.map(p => promptHtml(p, admin)).join("")}</div>`;
+  $("#view").innerHTML = (subs.length ? folderListHtml(subs) : "") +
+    (items.length ? `<div class="plist">${items.map(p => promptHtml(p, admin)).join("")}</div>` : "");
+}
+function folderListHtml(list){
+  return `<div class="list">${list.map(f => `
+    <button class="box folder press ${gradClass(f)}" data-open="${esc(f.id)}">
+      ${mediaHtml(f)}
+      <span class="cap">${esc(f.name)}</span>
+    </button>`).join("")}</div>`;
 }
 
 // ---------- 프롬프트 박스 (디자인별) ----------
@@ -526,9 +538,10 @@ function removeRow(id){
   };
   if (el) { el.classList.add("leaving"); setTimeout(go, 200); } else go();
 }
-function startReorder(){
-  const list = currentFolderId() ? prompts() : folders();
-  reorder = { ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
+function startReorder(kind){
+  const fid = currentFolderId();
+  const list = kind === "folders" ? childFolders(fid) : prompts();
+  reorder = { kind, ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
   history.pushState({ reorder: 1 }, ""); // 뒤로가기 누르면 정리하기만 닫히게
   render(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -536,14 +549,17 @@ window.addEventListener("popstate", () => { if (reorder) { reorder = null; rende
 
 async function finishReorder(save){
   if (save) {
-    const n = reorder.removed.size, isFolders = !currentFolderId();
-    if (n && !confirm(isFolders ? `폴더 ${n}개와 그 안의 프롬프트를 모두 삭제할까요?` : `프롬프트 ${n}개를 삭제할까요?`)) return;
+    const n = reorder.removed.size, isFolders = reorder.kind === "folders";
+    if (n && !confirm(isFolders ? `폴더 ${n}개와 그 안의 폴더·프롬프트를 모두 삭제할까요?` : `프롬프트 ${n}개를 삭제할까요?`)) return;
     try {
       const batch = writeBatch(db);
       reorder.ids.forEach((id, i) => batch.update(doc(db, "prompts", id), { order: i }));
       for (const id of reorder.removed) {
         batch.delete(doc(db, "prompts", id)); batch.delete(ORIG(id));
-        if (isFolders) (await getDocs(query(col, where("folderId", "==", id)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); });
+        if (isFolders) for (const fid of [id, ...descendants(id)]) {
+          if (fid !== id) { batch.delete(doc(db, "prompts", fid)); batch.delete(ORIG(fid)); }
+          (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); });
+        }
       }
       await batch.commit(); toast(n ? "저장하고 삭제했어요" : "순서를 저장했어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
@@ -558,7 +574,11 @@ function onRoute(){
   const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
 }
 window.addEventListener("hashchange", onRoute);
-$("#backBtn").onclick = () => { if (reorder) history.back(); else location.hash = ""; };
+$("#backBtn").onclick = () => {
+  if (reorder) return history.back();
+  const f = folderDocs.find(d => d.id === currentFolderId());
+  location.hash = parentOf(f) ? "#/f/" + encodeURIComponent(parentOf(f)) : "";
+};
 
 $("#view").addEventListener("click", e => {
   const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-tog],[data-up],[data-down],[data-del],#oDone,#oCancel");
@@ -791,8 +811,10 @@ const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card pr
 function openMenu(){
   const fid = currentFolderId();
   const items = fid
-    ? [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
-    : [["new", "새 폴더", "폴더 추가"], ...(folders().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
+    ? [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ["new", "새 폴더", "이 폴더 안에 폴더 추가"],
+       ...(prompts().length ? [["order", "프롬프트 정리하기", "순서 바꾸기 · 삭제"]] : []),
+       ...(childFolders(fid).length ? [["forder", "폴더 정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    : [["new", "새 폴더", "폴더 추가"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
   $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
 }
@@ -803,8 +825,9 @@ $("#menu").addEventListener("click", e => {
   const k = e.target.closest("[data-m]")?.dataset.m; if (!k) return;
   closeMenu();
   const fid = currentFolderId();
-  if (k === "new") fid ? openPrompt(null) : openFolder(null);
-  if (k === "order") startReorder();
+  if (k === "new") openFolder(null, fid);
+  if (k === "order") startReorder("prompts");
+  if (k === "forder") startReorder("folders");
   if (k === "tpl") {
     newLo = "stack";
     $("#tplList").innerHTML = loCards(newLo);
@@ -824,9 +847,14 @@ $("#nAdd").onclick = () => {
 };
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
-function openFolder(id){
+function openFolder(id, newParent = null){
   editingFolder = id;
   const f = folderDocs.find(d => d.id === id) || {};
+  // 위치: 첫 화면 또는 다른 폴더 안 (자기 자신·하위 폴더는 제외)
+  const blocked = id ? new Set([id, ...descendants(id)]) : new Set();
+  const cur = id ? parentOf(f) : newParent;
+  $("#fParent").innerHTML = `<option value="">첫 화면</option>` + folders().filter(o => !blocked.has(o.id))
+    .map(o => `<option value="${esc(o.id)}" ${o.id === cur ? "selected" : ""}>${esc(folderPath(o))}</option>`).join("");
   $("#folderDlgTitle").textContent = id ? "폴더 편집" : "새 폴더";
   $("#fName").value = f.name || "";
   $("#fDesc").value = f.desc || "";
@@ -860,10 +888,10 @@ $("#folderForm").addEventListener("submit", e => {
     try {
       const ref = editingFolder ? doc(db, "prompts", editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
-      const data = { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, ...img, updated: serverTimestamp() };
+      const data = { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, parentId: $("#fParent").value || null, ...img, updated: serverTimestamp() };
       if (editingFolder) await updateDoc(ref, data);
       else {
-        const last = folders().at(-1);
+        const last = childFolders(data.parentId).at(-1);
         await setDoc(ref, { type: "folder", created: serverTimestamp(), order: last ? folderKey(last) + 1 : 0, ...data });
       }
       await saveOrig(ref.id, orig);
@@ -873,12 +901,14 @@ $("#folderForm").addEventListener("submit", e => {
 });
 $("#folderDelBtn").onclick = async () => {
   try {
-    const inside = (await getDocs(query(col, where("folderId", "==", editingFolder)))).docs;
-    if (!confirm(inside.length ? `이 폴더와 안의 프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
+    const ids = [editingFolder, ...descendants(editingFolder)];
+    const inside = (await Promise.all(ids.map(fid => getDocs(query(col, where("folderId", "==", fid)))))).flatMap(s => s.docs);
+    const subN = ids.length - 1;
+    if (!confirm(subN || inside.length ? `이 폴더와 안의 ${subN ? `폴더 ${subN}개, ` : ""}프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
+    const parent = parentOf(folderDocs.find(d => d.id === editingFolder));
     await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), deleteDoc(ORIG(d.id)).catch(() => {})]));
-    await deleteDoc(doc(db, "prompts", editingFolder));
-    await deleteDoc(ORIG(editingFolder)).catch(() => {});
-    $("#folderDlg").close(); location.hash = ""; toast("삭제했어요");
+    await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, "prompts", fid)), deleteDoc(ORIG(fid)).catch(() => {})]));
+    $("#folderDlg").close(); location.hash = parent ? "#/f/" + encodeURIComponent(parent) : ""; toast("삭제했어요");
   } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
