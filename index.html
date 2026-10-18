@@ -58,6 +58,7 @@ label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
     <div class="row">
       <span class="who" id="who"></span>
       <button class="btn primary" id="addBtn" hidden>+ 새 프롬프트</button>
+      <button class="btn" id="backupBtn" hidden>백업 저장</button>
       <button class="btn" id="loginBtn" hidden>Google 로그인</button>
       <button class="btn" id="logoutBtn" hidden>로그아웃</button>
     </div>
@@ -92,10 +93,10 @@ label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
 // ================== 설정 ==================
 // Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)에서 복사한 값을 넣으세요.
 const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  appId: ""
+  apiKey: "AIzaSyAyOmjnKoXiyKXyUCnvqRkADH25ZgnWgwY",
+  authDomain: "puppylove-b7026.firebaseapp.com",
+  projectId: "puppylove-b7026",
+  appId: "1:1025480055512:web:28c07922509a8b922255ad"
 };
 // 수정 권한을 줄 구글 계정 이메일
 const ADMINS = ["j03243619@gmail.com"];
@@ -116,6 +117,7 @@ const ts = v => v?.toMillis ? v.toMillis() : (typeof v === "number" ? v : 0);
 
 function render(){
   $("#addBtn").hidden = !isAdmin();
+  $("#backupBtn").hidden = !isAdmin();
   const cats = ["전체", ...[...new Set(prompts.map(p => p.category).filter(Boolean))].sort()];
   if (!cats.includes(activeCat)) activeCat = "전체";
   $("#chips").innerHTML = cats.map(c => `<button class="chip ${c===activeCat?"on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
@@ -169,6 +171,13 @@ function openEdit(id){
   $("#editDlg").showModal();
 }
 $("#addBtn").onclick = () => openEdit(null);
+$("#backupBtn").onclick = () => {
+  const data = prompts.map(p => ({ title: p.title, category: p.category || "", content: p.content, updated: ts(p.updated) }));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+  a.download = `프롬프트_백업_${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
 $("#cancelBtn").onclick = () => $("#editDlg").close();
 
 // ---------- Firebase 미설정이면 prompts.json만 보여줌 ----------
