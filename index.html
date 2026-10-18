@@ -23,8 +23,23 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;align-items:center}
 .desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
-.title-edit{border:none;background:none;padding:4px;margin-left:4px;cursor:pointer;display:grid;place-items:center;flex:none}
-.title-edit svg{width:16px;height:16px}
+.hbtns{display:flex;gap:6px;position:relative;flex:none}
+.icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:#777;display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:16px;height:16px}
+.icon-btn.plus{background:#f1f1f1;border-color:#f1f1f1;color:#333}
+.icon-btn.plus svg{transition:transform .3s var(--ease)}
+.icon-btn.plus.on svg{transform:rotate(45deg)}
+/* + 메뉴 */
+.menu{position:absolute;top:42px;right:0;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:6px;z-index:20;opacity:0;transform:translateY(-6px) scale(.97);transform-origin:top right;pointer-events:none;transition:opacity .18s var(--ease),transform .22s var(--ease)}
+.menu.show{opacity:1;transform:none;pointer-events:auto}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:none;background:none;padding:10px 12px;border-radius:10px;font:inherit;font-size:14px;color:var(--text);cursor:pointer;text-align:left}
+.menu button:hover{background:var(--soft)}
+.menu small{font-size:11px;color:var(--muted);margin-top:1px}
+/* 템플릿 */
+.tpl-list{display:grid;gap:8px;max-height:60vh;overflow:auto}
+.tpl{display:grid;gap:3px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
+.tpl b{font-size:14px}
+.tpl span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* 관리 줄 (폴더 편집 / 순서 바꾸기) */
 .admin-bar{display:flex;gap:4px;margin:-6px 0 12px}
@@ -132,9 +147,12 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     <div class="title">
       <button class="back press" id="backBtn" hidden aria-label="뒤로">‹</button>
       <h1 id="pageTitle">프롬프트 보관함</h1>
-      <button class="title-edit press" id="folderEditBtn" hidden aria-label="폴더 편집"><svg viewBox="0 0 24 24" fill="none" stroke="#a0a0a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
     </div>
-    <button class="btn primary press" id="addBtn" hidden>추가</button>
+    <div class="hbtns">
+      <button class="icon-btn press" id="folderEditBtn" hidden aria-label="폴더 편집"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="icon-btn plus press" id="plusBtn" hidden aria-label="추가"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="menu" id="menu"></div>
+    </div>
   </header>
   <main>
     <div class="desc" id="desc" hidden></div>
@@ -143,7 +161,6 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
   </main>
   <footer>
     <span class="who" id="who" hidden></span>
-    <button class="link press" id="reorderBtn" hidden>폴더 순서 바꾸기</button>
     <button class="link press" id="backupBtn" hidden>백업</button>
     <button class="link press" id="loginBtn" hidden>관리자 로그인</button>
     <button class="link press" id="logoutBtn" hidden>로그아웃</button>
@@ -158,7 +175,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
     <label>글씨 배경<div class="seg" id="fGrad"></div></label>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
-    <button type="button" class="btn press" id="promptReorderBtn" hidden>프롬프트 순서 바꾸기</button>
+
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
@@ -184,6 +201,14 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
       </div>
     </div>
   </form>
+</dialog>
+
+<dialog id="tplDlg">
+  <div class="dlg">
+    <h2>템플릿으로 만들기</h2>
+    <div class="tpl-list" id="tplList"></div>
+    <div class="row" style="justify-content:flex-end"><button type="button" class="btn press" data-close="tplDlg">닫기</button></div>
+  </div>
 </dialog>
 
 <input type="file" id="fileIn" accept="image/*" hidden>
@@ -262,17 +287,14 @@ function render(){
   const fid = currentFolderId();
   const admin = isAdmin();
   $("#backBtn").hidden = !fid;
-  $("#addBtn").hidden = !admin || !!reorder;
+  $("#plusBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
   $("#desc").hidden = true;
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
-  $("#reorderBtn").hidden = true;
 
   if (!fid) {
     $("#pageTitle").textContent = "프롬프트 보관함";
-    $("#addBtn").textContent = "새 폴더";
     const list = folders();
-    $("#reorderBtn").hidden = !admin || list.length < 2 || !!reorder;
     if (reorder) return renderReorder();
     if (!foldersReady) { $("#view").innerHTML = ""; return; }
     if (!list.length) {
@@ -290,11 +312,10 @@ function render(){
   const folder = folderDocs.find(d => d.id === fid);
   if (!folder) {
     $("#pageTitle").textContent = foldersReady ? "폴더를 찾을 수 없어요" : "";
-    $("#view").innerHTML = ""; $("#addBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
+    $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
   $("#pageTitle").textContent = folder.name;
   if (folder.desc) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
-  $("#addBtn").textContent = "추가";
   const items = prompts();
   if (reorder) return renderReorder();
   if (!promptsReady) { $("#view").innerHTML = `<div class="status">불러오는 중…</div>`; return; }
@@ -349,8 +370,7 @@ function startReorder(){
   reorder = { ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])) };
   render(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
-$("#reorderBtn").onclick = startReorder;
-$("#promptReorderBtn").onclick = () => { $("#folderDlg").close(); setTimeout(startReorder, 160); };
+
 async function finishReorder(save){
   if (save) {
     try {
@@ -493,7 +513,43 @@ $("#fileIn").addEventListener("change", async e => {
 });
 
 // ---------- 추가 / 편집 ----------
-$("#addBtn").onclick = () => currentFolderId() ? openPrompt(null) : openFolder(null);
+// ---------- + 메뉴 ----------
+const TEMPLATES = [
+  { title: "캐릭터 이미지", content: "[캐릭터 설명: 나이, 성별, 분위기]\n헤어: [색, 길이, 스타일]\n의상: [옷 설명]\n포즈/구도: [전신, 상반신, 클로즈업 등]\n배경: [배경 설명]\n화풍: [수채화, 애니메이션, 반실사 등]\n고품질, 섬세한 디테일" },
+  { title: "캐릭터 시트", content: "character reference sheet, [캐릭터 설명],\nfront view, side view, back view,\nvarious expressions, full body and close-up,\nclean white background, consistent design,\n[화풍] style, high quality" },
+  { title: "배경 이미지", content: "[장소] 배경, [시간대: 낮/노을/밤], [날씨],\n[분위기: 따뜻한, 쓸쓸한, 몽환적인],\n[시점: 아이레벨, 하이앵글, 와이드샷],\n인물 없음, [화풍], 고해상도" },
+  { title: "글쓰기 초안", content: "다음 조건으로 글을 써줘.\n주제: [주제]\n독자: [누가 읽는지]\n톤: [친근하게 / 전문적으로]\n분량: [글자 수]\n꼭 들어갈 내용: [핵심 포인트]" },
+  { title: "번역·다듬기", content: "아래 글을 자연스러운 [언어]로 번역해줘.\n직역보다 원문의 뉘앙스와 말투를 살려줘.\n\n[원문]" },
+  { title: "요약", content: "아래 내용을 [3줄 / 5개 항목]으로 요약해줘.\n핵심 결론을 맨 앞에, 숫자와 고유명사는 그대로 살려줘.\n\n[내용]" },
+  { title: "역할 지정", content: "너는 [역할: 예) 10년차 일러스트레이터]야.\n[상황 설명]\n이 관점에서 [요청 내용]을 해줘.\n답변은 [형식: 목록 / 표 / 짧은 문단]으로." }
+];
+function openMenu(){
+  const fid = currentFolderId();
+  const items = fid
+    ? [["new", "새 프롬프트", "빈 프롬프트 추가"], ["tpl", "템플릿으로 만들기", "자주 쓰는 형식에서 시작"], ...(prompts().length > 1 ? [["order", "순서 바꾸기", "프롬프트 순서 정하기"]] : [])]
+    : [["new", "새 폴더", "폴더 추가"], ...(folders().length > 1 ? [["order", "순서 바꾸기", "폴더 순서 정하기"]] : [])];
+  $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
+  $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
+}
+function closeMenu(){ $("#menu").classList.remove("show"); $("#plusBtn").classList.remove("on"); }
+$("#plusBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.contains("show") ? closeMenu() : openMenu(); };
+document.addEventListener("click", e => { if (!e.target.closest("#menu,#plusBtn")) closeMenu(); });
+$("#menu").addEventListener("click", e => {
+  const k = e.target.closest("[data-m]")?.dataset.m; if (!k) return;
+  closeMenu();
+  const fid = currentFolderId();
+  if (k === "new") fid ? openPrompt(null) : openFolder(null);
+  if (k === "order") startReorder();
+  if (k === "tpl") {
+    $("#tplList").innerHTML = TEMPLATES.map((t, i) => `<button class="tpl press" data-t="${i}"><b>${esc(t.title)}</b><span>${esc(t.content.split("\n")[0])}</span></button>`).join("");
+    $("#tplDlg").showModal();
+  }
+});
+$("#tplList").addEventListener("click", e => {
+  const i = e.target.closest("[data-t]")?.dataset.t; if (i == null) return;
+  $("#tplDlg").close();
+  setTimeout(() => openPrompt(null, TEMPLATES[+i]), 160);
+});
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
 function openFolder(id){
@@ -504,12 +560,11 @@ function openFolder(id){
   $("#fDesc").value = f.desc || "";
   fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
-  $("#promptReorderBtn").hidden = !id || prompts().length < 2;
   $("#folderDlg").showModal();
 }
-function openPrompt(id){
+function openPrompt(id, preset){
   editingPrompt = id;
-  const p = promptDocs.find(d => d.id === id) || {};
+  const p = promptDocs.find(d => d.id === id) || preset || {};
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
   $("#pBody").value = p.content || "";
