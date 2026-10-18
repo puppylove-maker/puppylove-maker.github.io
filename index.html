@@ -15,7 +15,7 @@
 [hidden]{display:none!important}
 button,input,textarea,select{outline:none}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-.wrap{max-width:640px;margin:0 auto;padding:20px 16px 40px;min-height:100vh;display:flex;flex-direction:column}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;min-height:100vh;display:flex;flex-direction:column}
 main{flex:1}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
 .title{display:flex;align-items:center;gap:2px;min-width:0}
@@ -24,9 +24,9 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .row{display:flex;gap:6px;align-items:center}
 .desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
 .hbtns{display:flex;gap:6px;position:relative;flex:none}
-.icon-btn{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:#777;display:grid;place-items:center;cursor:pointer}
-.icon-btn svg{width:16px;height:16px}
-.icon-btn.plus{background:#f1f1f1;border-color:#f1f1f1;color:#333}
+.icon-btn{width:34px;height:34px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:20px;height:20px}
+.icon-btn.plus{color:#555}
 .icon-btn.plus svg{transition:transform .3s var(--ease)}
 .icon-btn.plus.on svg{transform:rotate(45deg)}
 /* + 메뉴 */
@@ -35,6 +35,35 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .menu button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:none;background:none;padding:10px 12px;border-radius:10px;font:inherit;font-size:14px;color:var(--text);cursor:pointer;text-align:left}
 .menu button:hover{background:var(--soft)}
 .menu small{font-size:11px;color:var(--muted);margin-top:1px}
+/* 박스 디자인: 오버레이 */
+.lo-overlay .pimg{margin-bottom:0}
+.ov-cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:30px 10px 10px 14px;background:linear-gradient(to top,rgba(255,255,255,.92),rgba(255,255,255,0))}
+.ov-cap .ptitle{flex:1;max-width:none}
+.lo-overlay .pimg.no-pic{aspect-ratio:auto;min-height:110px;background:var(--soft)}
+/* 박스 디자인: 가로형 */
+.pside{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 8px;border-radius:14px;cursor:pointer}
+.sthumb{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;background:#e9e9e9;flex:none}
+.sbody{flex:1;min-width:0;display:grid;gap:2px}
+.sbody .ptitle{max-width:none}
+.pside .edit-ic{position:static;width:28px;height:28px}
+.pside .edit-ic svg{filter:none}
+/* 박스 디자인: 텍스트 카드 */
+.ptext{display:grid;gap:8px;padding:14px;border-radius:14px;cursor:pointer;position:relative}
+.ptext .ptitle{max-width:none;padding-right:30px}
+.tsnip{font-size:13px;color:var(--sub);white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.55}
+.ptext .tfoot{display:flex;justify-content:space-between;align-items:center}
+.ptext .edit-ic{top:8px;right:8px}
+.ptext .edit-ic svg{filter:none}
+/* 디자인 미리보기 (템플릿 고르기) */
+.lo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lo-card{display:grid;gap:8px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;font:inherit;font-size:12px;color:var(--sub);cursor:pointer;text-align:left}
+.lo-card.on{border-color:#bdbdbd;background:var(--soft)}
+.mini{display:grid;gap:3px;height:62px;align-content:start}
+.mini i{display:block;background:#e4e4e4;border-radius:5px}
+.mini .im{height:36px}.mini .bar{height:14px;background:#efefef}
+.mini.ov{position:relative}.mini.ov .im{height:56px}.mini.ov .bar{position:absolute;left:4px;right:4px;bottom:9px;height:10px;background:#fafafa}
+.mini.sd{grid-template-columns:28px 1fr;align-items:center;height:62px;align-content:center}.mini.sd .im{height:28px}.mini.sd .bar{height:10px}
+.mini.tx .bar{height:10px}.mini.tx .ln{height:6px;background:#efefef}
 /* 템플릿 */
 .tpl-list{display:grid;gap:8px;max-height:60vh;overflow:auto}
 .tpl{display:grid;gap:3px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
@@ -90,7 +119,14 @@ textarea.short{min-height:70px}
 
 .folder{position:relative;display:block;width:100%;aspect-ratio:4/1;padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer}
 
-.plist{display:grid;gap:16px}
+.plist{display:grid;gap:16px;align-items:start}
+@media (min-width:720px){
+  .plist{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+  #view>.list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wrap{padding:36px 28px 48px}
+  h1{font-size:20px}
+}
+@media (min-width:1040px){.plist{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .pimg{position:relative;aspect-ratio:2/1;border-radius:14px;overflow:hidden;cursor:pointer;margin-bottom:4px}
 .pbar{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:14px;cursor:pointer;min-height:48px}
 .ptitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
@@ -127,6 +163,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 .picker{position:relative;border:1px dashed #d4d4d4;border-radius:12px;background:var(--soft);overflow:hidden;color:var(--muted);font-size:13px;touch-action:none;user-select:none;-webkit-user-select:none}
 .picker.r21{aspect-ratio:2/1}
 .picker.r41{aspect-ratio:4/1}
+.picker.r11{aspect-ratio:1/1;width:50%}
 .picker .empty-hint{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer}
 .picker.has{cursor:grab;border-style:solid}
 .picker .drag-hint{position:absolute;left:8px;top:8px;font-size:11px;background:rgba(255,255,255,.9);color:var(--sub);padding:2px 8px;border-radius:999px;pointer-events:none}
@@ -189,6 +226,7 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 <dialog id="promptDlg">
   <form class="dlg" id="promptForm">
     <h2 id="promptDlgTitle">새 프롬프트</h2>
+    <label>박스 디자인<div class="lo-grid" id="pLayout"></div></label>
     <div class="picker r21" id="pPicker"></div>
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
@@ -205,8 +243,8 @@ label{font-size:12px;color:var(--sub);display:grid;gap:5px}
 
 <dialog id="tplDlg">
   <div class="dlg">
-    <h2>템플릿으로 만들기</h2>
-    <div class="tpl-list" id="tplList"></div>
+    <h2>박스 디자인 고르기</h2>
+    <div class="lo-grid" id="tplList"></div>
     <div class="row" style="justify-content:flex-end"><button type="button" class="btn press" data-close="tplDlg">닫기</button></div>
   </div>
 </dialog>
@@ -247,7 +285,7 @@ const currentFolderId = () => { const m = location.hash.match(/^#\/f\/(.+)$/); r
 
 // 정렬: 순서(order)가 있으면 그 순서, 없으면 폴더는 만든 순 / 프롬프트는 최신이 위
 const folderKey = f => num(f.order, ts(f.created) / 1e3);
-const promptKey = p => num(p.order, -ts(p.created || p.updated) / 1e3);
+const promptKey = p => num(p.order, ts(p.created || p.updated) / 1e3);
 const folders = () => [...folderDocs].sort((a,b) => folderKey(a) - folderKey(b));
 const prompts = () => [...promptDocs].sort((a,b) => promptKey(a) - promptKey(b));
 
@@ -323,20 +361,35 @@ function render(){
     $("#view").innerHTML = `<div class="empty">${admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요."}</div>`;
     return;
   }
-  $("#view").innerHTML = `<div class="plist">${items.map(p => `
-    <div class="item ${openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">
-      ${p.image ? `<div class="box pimg press" data-tog="${p.id}">
-        ${mediaHtml(p)}
-        ${admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(true)}</button>` : ""}
-      </div>` : ""}
-      <div class="box pbar press" data-tog="${p.id}">
-        <span class="ptitle">${esc(p.title || "제목 없음")}</span>
-        <span class="phint"><span class="h-open">눌러서 전체 프롬프트 보기</span><span class="h-close">눌러서 접기</span></span>
-        ${!p.image && admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(false)}</button>` : ""}
-        <button class="copy-btn press" data-copy="${p.id}">복사</button>
-      </div>
-      <div class="expand"><div><div class="expand-inner">${esc(p.content)}</div></div></div>
-    </div>`).join("")}</div>`;
+  $("#view").innerHTML = `<div class="plist">${items.map(p => promptHtml(p, admin)).join("")}</div>`;
+}
+
+// ---------- 프롬프트 박스 (디자인별) ----------
+const HINT = `<span class="phint"><span class="h-open">눌러서 전체 프롬프트 보기</span><span class="h-close">눌러서 접기</span></span>`;
+function promptHtml(p, admin){
+  const lo = p.layout || "stack";
+  const title = `<span class="ptitle">${esc(p.title || "제목 없음")}</span>`;
+  const copy = `<button class="copy-btn press" data-copy="${p.id}">복사</button>`;
+  const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
+  let inner;
+  if (lo === "overlay") {
+    inner = `<div class="box pimg press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">
+      ${mediaHtml(p)}${edit(!!p.image)}
+      <div class="ov-cap">${title}${copy}</div></div>`;
+  } else if (lo === "side") {
+    inner = `<div class="box pside press" data-tog="${p.id}">
+      <div class="sthumb">${mediaHtml(p)}</div>
+      <div class="sbody">${title}${HINT}</div>${edit(false)}${copy}</div>`;
+  } else if (lo === "text") {
+    inner = `<div class="box ptext press" data-tog="${p.id}">
+      ${title}<div class="tsnip">${esc(p.content)}</div>
+      <div class="tfoot">${HINT}${copy}</div>${edit(false)}</div>`;
+  } else {
+    inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
+      <div class="box pbar press" data-tog="${p.id}">${title}${HINT}${p.image ? "" : edit(false)}${copy}</div>`;
+  }
+  return `<div class="item lo-${lo} ${openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
+    <div class="expand"><div><div class="expand-inner">${esc(p.content)}</div></div></div></div>`;
 }
 
 // ---------- 순서 바꾸기 ----------
@@ -513,20 +566,28 @@ $("#fileIn").addEventListener("change", async e => {
 });
 
 // ---------- 추가 / 편집 ----------
+let curLayout = "stack";
+function setLayout(lo){
+  curLayout = lo;
+  $("#pLayout").innerHTML = loCards(lo);
+  const pk = $("#pPicker");
+  pk.classList.toggle("r21", lo !== "side"); pk.classList.toggle("r11", lo === "side");
+  pk.hidden = $("#pTools").hidden = lo === "text";
+}
+$("#pLayout").addEventListener("click", e => { const lo = e.target.closest("[data-lo]")?.dataset.lo; if (lo) setLayout(lo); });
+
 // ---------- + 메뉴 ----------
-const TEMPLATES = [
-  { title: "캐릭터 이미지", content: "[캐릭터 설명: 나이, 성별, 분위기]\n헤어: [색, 길이, 스타일]\n의상: [옷 설명]\n포즈/구도: [전신, 상반신, 클로즈업 등]\n배경: [배경 설명]\n화풍: [수채화, 애니메이션, 반실사 등]\n고품질, 섬세한 디테일" },
-  { title: "캐릭터 시트", content: "character reference sheet, [캐릭터 설명],\nfront view, side view, back view,\nvarious expressions, full body and close-up,\nclean white background, consistent design,\n[화풍] style, high quality" },
-  { title: "배경 이미지", content: "[장소] 배경, [시간대: 낮/노을/밤], [날씨],\n[분위기: 따뜻한, 쓸쓸한, 몽환적인],\n[시점: 아이레벨, 하이앵글, 와이드샷],\n인물 없음, [화풍], 고해상도" },
-  { title: "글쓰기 초안", content: "다음 조건으로 글을 써줘.\n주제: [주제]\n독자: [누가 읽는지]\n톤: [친근하게 / 전문적으로]\n분량: [글자 수]\n꼭 들어갈 내용: [핵심 포인트]" },
-  { title: "번역·다듬기", content: "아래 글을 자연스러운 [언어]로 번역해줘.\n직역보다 원문의 뉘앙스와 말투를 살려줘.\n\n[원문]" },
-  { title: "요약", content: "아래 내용을 [3줄 / 5개 항목]으로 요약해줘.\n핵심 결론을 맨 앞에, 숫자와 고유명사는 그대로 살려줘.\n\n[내용]" },
-  { title: "역할 지정", content: "너는 [역할: 예) 10년차 일러스트레이터]야.\n[상황 설명]\n이 관점에서 [요청 내용]을 해줘.\n답변은 [형식: 목록 / 표 / 짧은 문단]으로." }
+const LAYOUTS = [
+  { id: "stack",   name: "기본",       desc: "위 이미지 + 아래 제목줄", mini: `<div class="mini"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "overlay", name: "이미지 위 제목", desc: "이미지 안에 제목·복사", mini: `<div class="mini ov"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "side",    name: "가로형",      desc: "왼쪽 작은 이미지",     mini: `<div class="mini sd"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
 ];
+const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><br>${l.desc}</span></button>`).join("");
 function openMenu(){
   const fid = currentFolderId();
   const items = fid
-    ? [["new", "새 프롬프트", "빈 프롬프트 추가"], ["tpl", "템플릿으로 만들기", "자주 쓰는 형식에서 시작"], ...(prompts().length > 1 ? [["order", "순서 바꾸기", "프롬프트 순서 정하기"]] : [])]
+    ? [["new", "새 프롬프트", "빈 프롬프트 추가"], ["tpl", "디자인 골라서 만들기", "박스 디자인 템플릿"], ...(prompts().length > 1 ? [["order", "순서 바꾸기", "프롬프트 순서 정하기"]] : [])]
     : [["new", "새 폴더", "폴더 추가"], ...(folders().length > 1 ? [["order", "순서 바꾸기", "폴더 순서 정하기"]] : [])];
   $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
@@ -541,14 +602,14 @@ $("#menu").addEventListener("click", e => {
   if (k === "new") fid ? openPrompt(null) : openFolder(null);
   if (k === "order") startReorder();
   if (k === "tpl") {
-    $("#tplList").innerHTML = TEMPLATES.map((t, i) => `<button class="tpl press" data-t="${i}"><b>${esc(t.title)}</b><span>${esc(t.content.split("\n")[0])}</span></button>`).join("");
+    $("#tplList").innerHTML = loCards(null);
     $("#tplDlg").showModal();
   }
 });
 $("#tplList").addEventListener("click", e => {
-  const i = e.target.closest("[data-t]")?.dataset.t; if (i == null) return;
+  const lo = e.target.closest("[data-lo]")?.dataset.lo; if (!lo) return;
   $("#tplDlg").close();
-  setTimeout(() => openPrompt(null, TEMPLATES[+i]), 160);
+  setTimeout(() => openPrompt(null, { layout: lo }), 160);
 });
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
@@ -569,6 +630,7 @@ function openPrompt(id, preset){
   $("#pTitle").value = p.title || "";
   $("#pBody").value = p.content || "";
   pEditor.load(p);
+  setLayout(p.layout || "stack");
   $("#promptDelBtn").hidden = !id;
   $("#promptDlg").showModal();
 }
@@ -605,12 +667,12 @@ $("#folderDelBtn").onclick = async () => {
 $("#promptForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("promptSave", async () => {
-    const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, ...pEditor.data(), updated: serverTimestamp() };
+    const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, layout: curLayout, ...pEditor.data(), updated: serverTimestamp() };
     try {
       if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
       else {
-        const first = prompts()[0]; // 새 프롬프트는 맨 위에
-        await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: first ? promptKey(first) - 1 : 0, ...data });
+        const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
+        await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: last ? promptKey(last) + 1 : 0, ...data });
       }
       $("#promptDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
