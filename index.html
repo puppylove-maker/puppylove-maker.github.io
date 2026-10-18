@@ -18,7 +18,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.55}
 .wrap{max-width:860px;margin:0 auto;padding:28px 16px 80px}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
 h1{font-size:1.5rem;margin:0}
 .btn{border:1px solid var(--line);background:var(--card);color:var(--text);padding:8px 14px;border-radius:10px;font:inherit;font-size:.9rem;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
@@ -26,9 +26,9 @@ h1{font-size:1.5rem;margin:0}
 .btn.danger{color:var(--danger)}
 .btn.sm{padding:5px 10px;font-size:.82rem}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-input,textarea,select{width:100%;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+input,textarea{width:100%;font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 input:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
-textarea{min-height:180px;resize:vertical}
+textarea{min-height:200px;resize:vertical}
 .search{margin-bottom:12px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
 .chip{border:none;background:var(--chip);color:var(--muted);padding:6px 12px;border-radius:999px;font:inherit;font-size:.85rem;cursor:pointer}
@@ -37,17 +37,16 @@ textarea{min-height:180px;resize:vertical}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
 .card h3{margin:0 0 4px;font-size:1.05rem}
 .cat{font-size:.78rem;color:var(--accent);background:var(--accent-soft);padding:2px 8px;border-radius:6px}
-.body{white-space:pre-wrap;word-break:break-word;color:var(--muted);font-size:.92rem;margin:10px 0 12px;max-height:7.5em;overflow:hidden;position:relative}
+.body{white-space:pre-wrap;word-break:break-word;color:var(--muted);font-size:.92rem;margin:10px 0 12px;max-height:7.5em;overflow:hidden}
 .body.open{max-height:none}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .empty{text-align:center;color:var(--muted);padding:48px 0}
 .status{font-size:.85rem;color:var(--muted);margin-bottom:12px;min-height:1.2em}
+.who{font-size:.8rem;color:var(--muted)}
 dialog{border:none;border-radius:16px;padding:0;width:min(560px,calc(100% - 32px));background:var(--card);color:var(--text)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 .dlg{padding:20px;display:grid;gap:12px}
 .dlg h2{margin:0;font-size:1.15rem}
 label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
-.hint{font-size:.8rem;color:var(--muted)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:.9rem;opacity:0;transition:.2s;pointer-events:none}
 .toast.show{opacity:1}
 </style>
@@ -57,8 +56,10 @@ label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
   <header>
     <h1>📚 프롬프트 보관함</h1>
     <div class="row">
+      <span class="who" id="who"></span>
       <button class="btn primary" id="addBtn" hidden>+ 새 프롬프트</button>
-      <button class="btn" id="settingsBtn">⚙︎</button>
+      <button class="btn" id="loginBtn" hidden>Google 로그인</button>
+      <button class="btn" id="logoutBtn" hidden>로그아웃</button>
     </div>
   </header>
 
@@ -68,9 +69,8 @@ label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
   <div class="list" id="list"></div>
 </div>
 
-<!-- 프롬프트 편집 -->
 <dialog id="editDlg">
-  <form class="dlg" method="dialog" id="editForm">
+  <form class="dlg" id="editForm">
     <h2 id="editTitle">새 프롬프트</h2>
     <label>제목<input id="fTitle" required></label>
     <label>카테고리<input id="fCat" list="catList" placeholder="예: 글쓰기, 코딩"></label>
@@ -86,115 +86,36 @@ label{font-size:.85rem;color:var(--muted);display:grid;gap:4px}
   </form>
 </dialog>
 
-<!-- 설정 -->
-<dialog id="setDlg">
-  <form class="dlg" method="dialog" id="setForm">
-    <h2>관리자 설정</h2>
-    <p class="hint">GitHub 토큰을 넣으면 이 기기에서 프롬프트를 추가·수정할 수 있어요. 토큰은 이 브라우저에만 저장되고, 다른 방문자는 보기만 가능해요.</p>
-    <label>GitHub 아이디<input id="sOwner"></label>
-    <label>저장소 이름<input id="sRepo"></label>
-    <label>브랜치<input id="sBranch" placeholder="main"></label>
-    <label>토큰 (Fine-grained, Contents: Read and write)<input id="sToken" type="password" placeholder="github_pat_..."></label>
-    <div class="row" style="justify-content:space-between">
-      <button type="button" class="btn danger" id="logoutBtn">토큰 지우기</button>
-      <div class="row">
-        <button type="button" class="btn" id="setCancel">닫기</button>
-        <button type="submit" class="btn primary">저장</button>
-      </div>
-    </div>
-  </form>
-</dialog>
-
 <div class="toast" id="toast"></div>
 
-<script>
-const FILE = "prompts.json";
+<script type="module">
+// ================== 설정 ==================
+// Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)에서 복사한 값을 넣으세요.
+const firebaseConfig = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  appId: ""
+};
+// 수정 권한을 줄 구글 계정 이메일
+const ADMINS = ["j03243619@gmail.com"];
+// ==========================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
 const $ = s => document.querySelector(s);
+let prompts = [], activeCat = "전체", editingId = null, user = null;
+const isAdmin = () => !!user && ADMINS.includes(user.email);
 
-// ---------- 설정 ----------
-function guessRepo(){
-  const h = location.hostname, p = location.pathname.split("/").filter(Boolean);
-  if (h.endsWith(".github.io")) {
-    const owner = h.replace(".github.io","");
-    return { owner, repo: p[0] && !p[0].includes(".") ? p[0] : h };
-  }
-  return { owner:"", repo:"" };
-}
-function loadCfg(){
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem("pv-cfg") || "{}"); } catch(e){}
-  const g = guessRepo();
-  return { owner: saved.owner || g.owner, repo: saved.repo || g.repo, branch: saved.branch || "main", token: saved.token || "" };
-}
-function saveCfg(c){ try { localStorage.setItem("pv-cfg", JSON.stringify(c)); } catch(e){} }
-let cfg = loadCfg();
-
-// ---------- 상태 ----------
-let prompts = [], sha = null, activeCat = "전체", editingId = null;
-
-function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
 function setStatus(m){ $("#status").textContent = m || ""; }
-const apiUrl = () => `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${FILE}?ref=${cfg.branch}`;
-const authHeaders = () => cfg.token ? { Authorization: `Bearer ${cfg.token}` } : {};
-
-// ---------- 불러오기 ----------
-async function load(){
-  setStatus("불러오는 중…");
-  try {
-    if (!cfg.owner || !cfg.repo) throw new Error("no repo");
-    // API로 최신 내용 + sha를 받아옴 (Pages 캐시 우회)
-    const r = await fetch(apiUrl(), { headers: { Accept:"application/vnd.github+json", ...authHeaders() }, cache:"no-store" });
-    if (r.status === 404) { prompts = []; sha = null; }
-    else if (!r.ok) throw new Error(r.status);
-    else {
-      const j = await r.json(); sha = j.sha;
-      const raw = new TextDecoder().decode(Uint8Array.from(atob(j.content.replace(/\n/g,"")), c=>c.charCodeAt(0)));
-      prompts = JSON.parse(raw || "[]");
-    }
-  } catch(e) {
-    // 실패하면 사이트에 배포된 파일로
-    try { const r = await fetch(FILE, { cache:"no-store" }); prompts = r.ok ? await r.json() : []; }
-    catch(_) { prompts = []; }
-  }
-  setStatus("");
-  render();
-}
-
-// ---------- 저장 ----------
-async function persist(message){
-  if (!cfg.token) { toast("설정에서 토큰을 먼저 넣어주세요"); return false; }
-  setStatus("저장 중…");
-  const json = JSON.stringify(prompts, null, 2);
-  const bytes = new TextEncoder().encode(json);
-  let bin = ""; bytes.forEach(b => bin += String.fromCharCode(b));
-  const put = async () => fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${FILE}`, {
-    method:"PUT",
-    headers:{ Accept:"application/vnd.github+json", "Content-Type":"application/json", ...authHeaders() },
-    body: JSON.stringify({ message, content: btoa(bin), branch: cfg.branch, ...(sha ? { sha } : {}) })
-  });
-  let r = await put();
-  if (r.status === 409 || r.status === 422) {
-    // sha가 오래됐으면 최신 sha로 재시도
-    const g = await fetch(apiUrl(), { headers:{ Accept:"application/vnd.github+json", ...authHeaders() }, cache:"no-store" });
-    if (g.ok) { sha = (await g.json()).sha; r = await put(); }
-  }
-  setStatus("");
-  if (!r.ok) {
-    const msg = r.status === 401 ? "토큰이 올바르지 않아요" : r.status === 403 || r.status === 404 ? "저장소 권한을 확인해주세요" : "저장 실패 ("+r.status+")";
-    toast(msg); return false;
-  }
-  sha = (await r.json()).content.sha;
-  toast("저장됐어요 ✓");
-  return true;
-}
-
-// ---------- 화면 ----------
-function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+const ts = v => v?.toMillis ? v.toMillis() : (typeof v === "number" ? v : 0);
 
 function render(){
-  const isAdmin = !!cfg.token;
-  $("#addBtn").hidden = !isAdmin;
-
+  $("#addBtn").hidden = !isAdmin();
   const cats = ["전체", ...[...new Set(prompts.map(p => p.category).filter(Boolean))].sort()];
   if (!cats.includes(activeCat)) activeCat = "전체";
   $("#chips").innerHTML = cats.map(c => `<button class="chip ${c===activeCat?"on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
@@ -204,35 +125,33 @@ function render(){
   const items = prompts
     .filter(p => activeCat === "전체" || p.category === activeCat)
     .filter(p => !q || [p.title, p.content, p.category].join(" ").toLowerCase().includes(q))
-    .sort((a,b) => (b.updated||0) - (a.updated||0));
+    .sort((a,b) => ts(b.updated) - ts(a.updated));
 
   if (!items.length) {
-    $("#list").innerHTML = `<div class="empty">${prompts.length ? "검색 결과가 없어요" : (isAdmin ? "아직 프롬프트가 없어요. ‘+ 새 프롬프트’로 추가해보세요!" : "아직 프롬프트가 없어요.")}</div>`;
+    $("#list").innerHTML = `<div class="empty">${prompts.length ? "검색 결과가 없어요" : (isAdmin() ? "아직 프롬프트가 없어요. ‘+ 새 프롬프트’로 추가해보세요!" : "아직 프롬프트가 없어요.")}</div>`;
     return;
   }
   $("#list").innerHTML = items.map(p => `
     <div class="card">
-      <div class="top">
-        <div><h3>${esc(p.title)}</h3>${p.category ? `<span class="cat">${esc(p.category)}</span>` : ""}</div>
-      </div>
+      <h3>${esc(p.title)}</h3>${p.category ? `<span class="cat">${esc(p.category)}</span>` : ""}
       <div class="body" data-id="${p.id}">${esc(p.content)}</div>
       <div class="row">
         <button class="btn sm primary" data-copy="${p.id}">복사</button>
         <button class="btn sm" data-more="${p.id}">펼치기</button>
-        ${isAdmin ? `<button class="btn sm" data-edit="${p.id}">수정</button>` : ""}
+        ${isAdmin() ? `<button class="btn sm" data-edit="${p.id}">수정</button>` : ""}
       </div>
     </div>`).join("");
 }
 
-// ---------- 이벤트 ----------
 $("#q").addEventListener("input", render);
 $("#chips").addEventListener("click", e => { const c = e.target.dataset.c; if (c) { activeCat = c; render(); } });
 $("#list").addEventListener("click", async e => {
   const t = e.target;
   if (t.dataset.copy) {
     const p = prompts.find(x => x.id === t.dataset.copy);
-    try { await navigator.clipboard.writeText(p.content); toast("복사됐어요"); }
-    catch(_) { const ta=document.createElement("textarea"); ta.value=p.content; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); toast("복사됐어요"); }
+    try { await navigator.clipboard.writeText(p.content); }
+    catch(_) { const ta=document.createElement("textarea"); ta.value=p.content; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+    toast("복사됐어요");
   }
   if (t.dataset.more) {
     const b = document.querySelector(`.body[data-id="${t.dataset.more}"]`);
@@ -252,38 +171,57 @@ function openEdit(id){
 $("#addBtn").onclick = () => openEdit(null);
 $("#cancelBtn").onclick = () => $("#editDlg").close();
 
-$("#editForm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const data = { title: $("#fTitle").value.trim(), category: $("#fCat").value.trim(), content: $("#fBody").value, updated: Date.now() };
-  const backup = JSON.parse(JSON.stringify(prompts));
-  if (editingId) Object.assign(prompts.find(x => x.id === editingId), data);
-  else prompts.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), ...data });
-  $("#saveBtn").disabled = true;
-  const ok = await persist(`${editingId ? "수정" : "추가"}: ${data.title}`);
-  $("#saveBtn").disabled = false;
-  if (ok) { $("#editDlg").close(); render(); } else prompts = backup;
-});
+// ---------- Firebase 미설정이면 prompts.json만 보여줌 ----------
+if (!firebaseConfig.apiKey) {
+  try { const r = await fetch("prompts.json", { cache:"no-store" }); prompts = r.ok ? (await r.json()).map((p,i)=>({id:p.id||String(i),...p})) : []; } catch(_) {}
+  render();
+} else {
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app), db = getFirestore(app);
+  const col = collection(db, "prompts");
 
-$("#delBtn").onclick = async () => {
-  if (!confirm("이 프롬프트를 삭제할까요?")) return;
-  const backup = prompts.slice(), title = prompts.find(x => x.id === editingId).title;
-  prompts = prompts.filter(x => x.id !== editingId);
-  if (await persist(`삭제: ${title}`)) { $("#editDlg").close(); render(); } else prompts = backup;
-};
+  setStatus("불러오는 중…");
+  onSnapshot(col, snap => {
+    prompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    setStatus(""); render();
+  }, () => setStatus("불러오기에 실패했어요"));
 
-$("#settingsBtn").onclick = () => {
-  $("#sOwner").value = cfg.owner; $("#sRepo").value = cfg.repo; $("#sBranch").value = cfg.branch; $("#sToken").value = cfg.token;
-  $("#setDlg").showModal();
-};
-$("#setCancel").onclick = () => $("#setDlg").close();
-$("#setForm").addEventListener("submit", e => {
-  e.preventDefault();
-  cfg = { owner: $("#sOwner").value.trim(), repo: $("#sRepo").value.trim(), branch: $("#sBranch").value.trim() || "main", token: $("#sToken").value.trim() };
-  saveCfg(cfg); $("#setDlg").close(); toast("설정 저장됨"); load();
-});
-$("#logoutBtn").onclick = () => { cfg.token = ""; saveCfg(cfg); $("#sToken").value = ""; toast("토큰을 지웠어요"); render(); };
+  onAuthStateChanged(auth, u => {
+    user = u;
+    $("#loginBtn").hidden = !!u;
+    $("#logoutBtn").hidden = !u;
+    $("#who").textContent = u ? (isAdmin() ? u.email : u.email + " (보기 전용)") : "";
+    render();
+  });
 
-load();
+  $("#loginBtn").onclick = async () => {
+    const provider = new GoogleAuthProvider();
+    try { await signInWithPopup(auth, provider); }
+    catch (e) {
+      if (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") signInWithRedirect(auth, provider);
+      else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("로그인 실패: " + e.code);
+    }
+  };
+  $("#logoutBtn").onclick = () => signOut(auth);
+
+  $("#editForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const data = { title: $("#fTitle").value.trim(), category: $("#fCat").value.trim(), content: $("#fBody").value, updated: serverTimestamp() };
+    $("#saveBtn").disabled = true;
+    try {
+      if (editingId) await updateDoc(doc(db, "prompts", editingId), data);
+      else await addDoc(col, data);
+      $("#editDlg").close(); toast("저장됐어요 ✓");
+    } catch (err) { toast("저장 실패: 권한을 확인해주세요"); }
+    $("#saveBtn").disabled = false;
+  });
+
+  $("#delBtn").onclick = async () => {
+    if (!confirm("이 프롬프트를 삭제할까요?")) return;
+    try { await deleteDoc(doc(db, "prompts", editingId)); $("#editDlg").close(); toast("삭제했어요"); }
+    catch (err) { toast("삭제 실패: 권한을 확인해주세요"); }
+  };
+}
 </script>
 </body>
 </html>
