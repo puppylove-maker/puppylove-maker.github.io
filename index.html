@@ -13,8 +13,10 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
-header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
-h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;min-height:32px}
+.title{display:flex;align-items:center;gap:4px;min-width:0}
+h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back{border:none;background:none;font:inherit;font-size:22px;line-height:1;padding:2px 6px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:6px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
 .btn:hover{background:var(--soft)}
@@ -28,21 +30,22 @@ input:focus,textarea:focus{outline:none;border-color:var(--text)}
 textarea{min-height:200px;resize:vertical;line-height:1.55}
 .search{height:36px;margin-bottom:10px;background:var(--soft);border-color:var(--soft)}
 .search:focus{background:var(--bg)}
-.chips{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
-.chip{border:1px solid var(--line);background:var(--bg);color:var(--sub);height:26px;padding:0 10px;border-radius:999px;font:inherit;font-size:12px;cursor:pointer}
-.chip.on{background:var(--text);border-color:var(--text);color:#fff}
-.list{display:grid;gap:8px;margin-top:8px}
-.item{padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);transition:border-color .15s}
-.item:hover{border-color:#cfcfcf}
+.box{border:1px solid var(--line);border-radius:12px;background:var(--bg);transition:border-color .15s}
+.box:hover{border-color:#cfcfcf}
+.folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.folder{padding:14px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;min-height:76px;display:flex;flex-direction:column;justify-content:space-between}
+.folder-name{font-size:14px;font-weight:600;word-break:break-word}
+.folder-count{font-size:12px;color:var(--muted);margin-top:6px}
+.list{display:grid;gap:8px}
+.item{padding:14px}
 .item-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .item-title{font-size:14px;font-weight:600;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cat{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
 .body{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
 .body.open{display:block}
 .empty{text-align:center;color:var(--muted);padding:40px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:4px}
 .who{font-size:11px;color:var(--muted);text-align:right;margin:-8px 0 10px}
-dialog{border:none;border-radius:10px;padding:0;width:min(520px,calc(100% - 24px));background:var(--bg);color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,.12)}
+dialog{border:none;border-radius:12px;padding:0;width:min(520px,calc(100% - 24px));background:var(--bg);color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,.12)}
 dialog::backdrop{background:rgba(0,0,0,.3)}
 .dlg{padding:16px;display:grid;gap:10px}
 .dlg h2{margin:0;font-size:15px;font-weight:700}
@@ -54,8 +57,12 @@ label{font-size:12px;color:var(--sub);display:grid;gap:4px}
 <body>
 <div class="wrap">
   <header>
-    <h1>프롬프트 보관함</h1>
-    <div class="row">
+    <div class="title">
+      <button class="back" id="backBtn" hidden aria-label="뒤로">‹</button>
+      <h1 id="pageTitle">프롬프트 보관함</h1>
+    </div>
+    <div class="row" style="flex-wrap:nowrap">
+      <button class="btn ghost" id="folderEditBtn" hidden>편집</button>
       <button class="btn ghost" id="backupBtn" hidden>백업</button>
       <button class="btn ghost" id="logoutBtn" hidden>로그아웃</button>
       <button class="btn" id="loginBtn" hidden>로그인</button>
@@ -65,23 +72,34 @@ label{font-size:12px;color:var(--sub);display:grid;gap:4px}
   <div class="who" id="who" hidden></div>
 
   <input class="search" id="q" placeholder="검색">
-  <div class="chips" id="chips"></div>
   <div class="status" id="status"></div>
-  <div class="list" id="list"></div>
+  <div id="view"></div>
 </div>
 
-<dialog id="editDlg">
-  <form class="dlg" id="editForm">
-    <h2 id="editTitle">새 프롬프트</h2>
-    <label>제목<input id="fTitle" required></label>
-    <label>카테고리<input id="fCat" list="catList" placeholder="예: 글쓰기, 코딩"></label>
-    <datalist id="catList"></datalist>
-    <label>프롬프트 내용<textarea id="fBody" required></textarea></label>
+<dialog id="folderDlg">
+  <form class="dlg" id="folderForm">
+    <h2 id="folderDlgTitle">새 폴더</h2>
+    <label>이름<input id="fName" required placeholder="예: 글쓰기, 코딩"></label>
     <div class="row" style="justify-content:space-between">
-      <button type="button" class="btn danger" id="delBtn" hidden>삭제</button>
+      <button type="button" class="btn danger" id="folderDelBtn" hidden>삭제</button>
       <div class="row" style="margin-left:auto">
-        <button type="button" class="btn" id="cancelBtn">취소</button>
-        <button type="submit" class="btn primary" id="saveBtn">저장</button>
+        <button type="button" class="btn" data-close="folderDlg">취소</button>
+        <button type="submit" class="btn primary">저장</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="promptDlg">
+  <form class="dlg" id="promptForm">
+    <h2 id="promptDlgTitle">새 프롬프트</h2>
+    <label>제목<input id="pTitle" required></label>
+    <label>프롬프트 내용<textarea id="pBody" required></textarea></label>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger" id="promptDelBtn" hidden>삭제</button>
+      <div class="row" style="margin-left:auto">
+        <button type="button" class="btn" data-close="promptDlg">취소</button>
+        <button type="submit" class="btn primary">저장</button>
       </div>
     </div>
   </form>
@@ -91,14 +109,12 @@ label{font-size:12px;color:var(--sub);display:grid;gap:4px}
 
 <script type="module">
 // ================== 설정 ==================
-// Firebase 콘솔 → 프로젝트 설정 → 내 앱(웹)에서 복사한 값을 넣으세요.
 const firebaseConfig = {
   apiKey: "AIzaSyAyOmjnKoXiyKXyUCnvqRkADH25ZgnWgwY",
   authDomain: "puppylove-b7026.firebaseapp.com",
   projectId: "puppylove-b7026",
   appId: "1:1025480055512:web:28c07922509a8b922255ad"
 };
-// 수정 권한을 줄 구글 계정 이메일
 const ADMINS = ["j03243619@gmail.com"];
 // ==========================================
 
@@ -106,131 +122,189 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app), db = getFirestore(app);
+const col = collection(db, "prompts"); // 폴더와 프롬프트를 한 곳에 저장 (type으로 구분)
+
 const $ = s => document.querySelector(s);
-let prompts = [], activeCat = "전체", editingId = null, user = null;
+let docs = [], user = null, editingFolder = null, editingPrompt = null;
 const isAdmin = () => !!user && ADMINS.includes(user.email);
+const UNSORTED = "_unsorted";
 
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
-function setStatus(m){ $("#status").textContent = m || ""; }
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 const ts = v => v?.toMillis ? v.toMillis() : (typeof v === "number" ? v : 0);
 
+const folders = () => docs.filter(d => d.type === "folder").sort((a,b) => ts(a.created) - ts(b.created));
+const prompts = () => docs.filter(d => d.type !== "folder");
+const folderIds = () => new Set(folders().map(f => f.id));
+const inFolder = (p, fid) => fid === UNSORTED ? !folderIds().has(p.folderId) : p.folderId === fid;
+const currentFolderId = () => { const m = location.hash.match(/^#\/f\/(.+)$/); return m ? decodeURIComponent(m[1]) : null; };
+
 function render(){
-  $("#addBtn").hidden = !isAdmin();
-  $("#backupBtn").hidden = !isAdmin();
-  const cats = ["전체", ...[...new Set(prompts.map(p => p.category).filter(Boolean))].sort()];
-  if (!cats.includes(activeCat)) activeCat = "전체";
-  $("#chips").innerHTML = cats.map(c => `<button class="chip ${c===activeCat?"on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("");
-  $("#catList").innerHTML = cats.slice(1).map(c => `<option value="${esc(c)}">`).join("");
-
+  const fid = currentFolderId();
+  const admin = isAdmin();
+  $("#backupBtn").hidden = !admin || !!fid;
+  $("#addBtn").hidden = !admin;
+  $("#backBtn").hidden = !fid;
+  $("#folderEditBtn").hidden = !admin || !fid || fid === UNSORTED;
   const q = $("#q").value.trim().toLowerCase();
-  const items = prompts
-    .filter(p => activeCat === "전체" || p.category === activeCat)
-    .filter(p => !q || [p.title, p.content, p.category].join(" ").toLowerCase().includes(q))
-    .sort((a,b) => ts(b.updated) - ts(a.updated));
+  const match = p => [p.title, p.content].join(" ").toLowerCase().includes(q);
 
-  if (!items.length) {
-    $("#list").innerHTML = `<div class="empty">${prompts.length ? "검색 결과가 없어요" : (isAdmin() ? "아직 프롬프트가 없어요. ‘추가’를 눌러 시작하세요." : "아직 프롬프트가 없어요.")}</div>`;
+  if (!fid) {
+    $("#pageTitle").textContent = "프롬프트 보관함";
+    $("#addBtn").textContent = "새 폴더";
+    let list = folders().map(f => ({ id: f.id, name: f.name }));
+    if (prompts().some(p => inFolder(p, UNSORTED))) list.push({ id: UNSORTED, name: "미분류" });
+    list = list.map(f => ({ ...f, count: prompts().filter(p => inFolder(p, f.id)).length }));
+    if (q) list = list.filter(f => f.name.toLowerCase().includes(q) || prompts().some(p => inFolder(p, f.id) && match(p)));
+    if (!list.length) {
+      $("#view").innerHTML = `<div class="empty">${q ? "검색 결과가 없어요" : (admin ? "‘새 폴더’를 눌러 첫 폴더를 만들어보세요." : "아직 폴더가 없어요.")}</div>`;
+      return;
+    }
+    $("#view").innerHTML = `<div class="folders">${list.map(f => `
+      <button class="box folder" data-open="${esc(f.id)}">
+        <span class="folder-name">${esc(f.name)}</span>
+        <span class="folder-count">프롬프트 ${f.count}개</span>
+      </button>`).join("")}</div>`;
     return;
   }
-  $("#list").innerHTML = items.map(p => `
-    <div class="item">
+
+  const folder = docs.find(d => d.id === fid);
+  if (fid !== UNSORTED && !folder) {
+    $("#pageTitle").textContent = docs.length ? "폴더를 찾을 수 없어요" : "";
+    $("#view").innerHTML = ""; $("#addBtn").hidden = true; return;
+  }
+  $("#pageTitle").textContent = folder ? folder.name : "미분류";
+  $("#addBtn").textContent = "추가";
+  const items = prompts().filter(p => inFolder(p, fid)).filter(p => !q || match(p)).sort((a,b) => ts(b.updated) - ts(a.updated));
+  if (!items.length) {
+    $("#view").innerHTML = `<div class="empty">${q ? "검색 결과가 없어요" : (admin ? "‘추가’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요.")}</div>`;
+    return;
+  }
+  $("#view").innerHTML = `<div class="list">${items.map(p => `
+    <div class="box item">
       <div class="item-top">
-        <p class="item-title">${esc(p.title)}${p.category ? `<span class="cat">${esc(p.category)}</span>` : ""}</p>
+        <p class="item-title">${esc(p.title)}</p>
         <div class="row" style="flex-wrap:nowrap">
-          ${isAdmin() ? `<button class="btn sm ghost" data-edit="${p.id}">수정</button>` : ""}
+          ${admin ? `<button class="btn sm ghost" data-edit="${p.id}">수정</button>` : ""}
           <button class="btn sm" data-copy="${p.id}">복사</button>
         </div>
       </div>
-      <div class="body" data-more="${p.id}">${esc(p.content)}</div>
-    </div>`).join("");
+      <div class="body" data-more="1">${esc(p.content)}</div>
+    </div>`).join("")}</div>`;
 }
 
+window.addEventListener("hashchange", () => { $("#q").value = ""; render(); window.scrollTo(0,0); });
+$("#backBtn").onclick = () => { location.hash = ""; };
 $("#q").addEventListener("input", render);
-$("#chips").addEventListener("click", e => { const c = e.target.dataset.c; if (c) { activeCat = c; render(); } });
-$("#list").addEventListener("click", async e => {
-  const t = e.target;
+
+$("#view").addEventListener("click", async e => {
+  const t = e.target.closest("[data-open],[data-copy],[data-more],[data-edit]");
+  if (!t) return;
+  if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
+  if (t.dataset.more) t.classList.toggle("open");
+  if (t.dataset.edit) openPrompt(t.dataset.edit);
   if (t.dataset.copy) {
-    const p = prompts.find(x => x.id === t.dataset.copy);
+    const p = docs.find(x => x.id === t.dataset.copy);
     try { await navigator.clipboard.writeText(p.content); }
     catch(_) { const ta=document.createElement("textarea"); ta.value=p.content; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
     toast("복사됐어요");
   }
-  if (t.dataset.more) {
-    t.classList.toggle("open");
-  }
-  if (t.dataset.edit) openEdit(t.dataset.edit);
 });
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
 
-function openEdit(id){
-  editingId = id || null;
-  const p = prompts.find(x => x.id === id) || { title:"", category:"", content:"" };
-  $("#editTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
-  $("#fTitle").value = p.title; $("#fCat").value = p.category || ""; $("#fBody").value = p.content;
-  $("#delBtn").hidden = !id;
-  $("#editDlg").showModal();
+$("#addBtn").onclick = () => currentFolderId() ? openPrompt(null) : openFolder(null);
+$("#folderEditBtn").onclick = () => openFolder(currentFolderId());
+
+function openFolder(id){
+  editingFolder = id;
+  const f = docs.find(d => d.id === id);
+  $("#folderDlgTitle").textContent = id ? "폴더 편집" : "새 폴더";
+  $("#fName").value = f ? f.name : "";
+  $("#folderDelBtn").hidden = !id;
+  $("#folderDlg").showModal();
 }
-$("#addBtn").onclick = () => openEdit(null);
+function openPrompt(id){
+  editingPrompt = id;
+  const p = docs.find(d => d.id === id) || { title:"", content:"" };
+  $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
+  $("#pTitle").value = p.title || ""; $("#pBody").value = p.content || "";
+  $("#promptDelBtn").hidden = !id;
+  $("#promptDlg").showModal();
+}
+
+$("#folderForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("#fName").value.trim(); if (!name) return;
+  try {
+    if (editingFolder) await updateDoc(doc(db, "prompts", editingFolder), { name, updated: serverTimestamp() });
+    else await addDoc(col, { type: "folder", name, created: serverTimestamp(), updated: serverTimestamp() });
+    $("#folderDlg").close(); toast("저장됐어요");
+  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+});
+$("#folderDelBtn").onclick = async () => {
+  const inside = prompts().filter(p => p.folderId === editingFolder);
+  if (!confirm(inside.length ? `이 폴더와 안의 프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
+  try {
+    await Promise.all(inside.map(p => deleteDoc(doc(db, "prompts", p.id))));
+    await deleteDoc(doc(db, "prompts", editingFolder));
+    $("#folderDlg").close(); location.hash = ""; toast("삭제했어요");
+  } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+};
+
+$("#promptForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, updated: serverTimestamp() };
+  try {
+    if (editingPrompt) await updateDoc(doc(db, "prompts", editingPrompt), data);
+    else {
+      const fid = currentFolderId();
+      await addDoc(col, { type: "prompt", folderId: fid === UNSORTED ? null : fid, ...data });
+    }
+    $("#promptDlg").close(); toast("저장됐어요");
+  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+});
+$("#promptDelBtn").onclick = async () => {
+  if (!confirm("이 프롬프트를 삭제할까요?")) return;
+  try { await deleteDoc(doc(db, "prompts", editingPrompt)); $("#promptDlg").close(); toast("삭제했어요"); }
+  catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+};
+
 $("#backupBtn").onclick = () => {
-  const data = prompts.map(p => ({ title: p.title, category: p.category || "", content: p.content, updated: ts(p.updated) }));
+  const pack = (fid, name) => ({ folder: name, prompts: prompts().filter(p => inFolder(p, fid)).map(p => ({ title: p.title, content: p.content })) });
+  const data = folders().map(f => pack(f.id, f.name));
+  if (prompts().some(p => inFolder(p, UNSORTED))) data.push(pack(UNSORTED, "미분류"));
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
   a.download = `프롬프트_백업_${new Date().toISOString().slice(0,10)}.json`;
   a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 };
-$("#cancelBtn").onclick = () => $("#editDlg").close();
 
-// ---------- Firebase 미설정이면 prompts.json만 보여줌 ----------
-if (!firebaseConfig.apiKey) {
-  try { const r = await fetch("prompts.json", { cache:"no-store" }); prompts = r.ok ? (await r.json()).map((p,i)=>({id:p.id||String(i),...p})) : []; } catch(_) {}
+onAuthStateChanged(auth, u => {
+  user = u;
+  $("#loginBtn").hidden = !!u;
+  $("#logoutBtn").hidden = !u;
+  $("#who").hidden = !u || isAdmin();
+  $("#who").textContent = u && !isAdmin() ? u.email + " · 보기 전용" : "";
   render();
-} else {
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app), db = getFirestore(app);
-  const col = collection(db, "prompts");
+});
+$("#loginBtn").onclick = async () => {
+  const provider = new GoogleAuthProvider();
+  try { await signInWithPopup(auth, provider); }
+  catch (e) {
+    if (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") signInWithRedirect(auth, provider);
+    else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("로그인 실패: " + e.code);
+  }
+};
+$("#logoutBtn").onclick = () => signOut(auth);
 
-  setStatus("불러오는 중…");
-  onSnapshot(col, snap => {
-    prompts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    setStatus(""); render();
-  }, () => setStatus("불러오기에 실패했어요"));
-
-  onAuthStateChanged(auth, u => {
-    user = u;
-    $("#loginBtn").hidden = !!u;
-    $("#logoutBtn").hidden = !u;
-    $("#who").hidden = !u || isAdmin(); $("#who").textContent = u && !isAdmin() ? u.email + " · 보기 전용" : "";
-    render();
-  });
-
-  $("#loginBtn").onclick = async () => {
-    const provider = new GoogleAuthProvider();
-    try { await signInWithPopup(auth, provider); }
-    catch (e) {
-      if (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") signInWithRedirect(auth, provider);
-      else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("로그인 실패: " + e.code);
-    }
-  };
-  $("#logoutBtn").onclick = () => signOut(auth);
-
-  $("#editForm").addEventListener("submit", async e => {
-    e.preventDefault();
-    const data = { title: $("#fTitle").value.trim(), category: $("#fCat").value.trim(), content: $("#fBody").value, updated: serverTimestamp() };
-    $("#saveBtn").disabled = true;
-    try {
-      if (editingId) await updateDoc(doc(db, "prompts", editingId), data);
-      else await addDoc(col, data);
-      $("#editDlg").close(); toast("저장됐어요 ✓");
-    } catch (err) { toast("저장 실패: 권한을 확인해주세요"); }
-    $("#saveBtn").disabled = false;
-  });
-
-  $("#delBtn").onclick = async () => {
-    if (!confirm("이 프롬프트를 삭제할까요?")) return;
-    try { await deleteDoc(doc(db, "prompts", editingId)); $("#editDlg").close(); toast("삭제했어요"); }
-    catch (err) { toast("삭제 실패: 권한을 확인해주세요"); }
-  };
-}
+$("#status").textContent = "불러오는 중…";
+onSnapshot(col, snap => {
+  docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  $("#status").textContent = "";
+  render();
+}, () => { $("#status").textContent = "불러오기에 실패했어요"; });
 </script>
 </body>
 </html>
