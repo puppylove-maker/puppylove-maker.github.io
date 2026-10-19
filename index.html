@@ -393,7 +393,7 @@ const firebaseConfig = {
 // 주소별 보관함: 같은 코드로 여러 사람이 각자 보관함을 따로 씀 (데이터·관리자 완전히 분리)
 const SITES = {
   "":        { col: "prompts",         admins: ["j03243619@gmail.com"] },
-  "jaeseok": { col: "prompts_jaeseok", admins: ["jaeseokbabo@gmail.com"] },
+  "callan":  { col: "prompts_jaeseok", admins: ["jaeseokbabo@gmail.com"] },
 };
 const SITE = SITES[location.pathname.split("/").filter(Boolean)[0]] || SITES[""];
 const ADMINS = SITE.admins;
