@@ -390,7 +390,14 @@ const firebaseConfig = {
   projectId: "puppylove-b7026",
   appId: "1:1025480055512:web:28c07922509a8b922255ad"
 };
-const ADMINS = ["j03243619@gmail.com"];
+// 주소별 보관함: 같은 코드로 여러 사람이 각자 보관함을 따로 씀 (데이터·관리자 완전히 분리)
+const SITES = {
+  "":        { col: "prompts",         admins: ["j03243619@gmail.com"] },
+  "jaeseok": { col: "prompts_jaeseok", admins: ["jaeseokbabo@gmail.com"] },
+};
+const SITE = SITES[location.pathname.split("/").filter(Boolean)[0]] || SITES[""];
+const ADMINS = SITE.admins;
+const LS = k => SITE.col + ":" + k; // 기기 저장 키도 보관함별로
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -403,7 +410,7 @@ const auth = getAuth(app);
 let db;
 try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
 catch(_) { db = getFirestore(app); }
-const col = collection(db, "prompts"); // 폴더와 프롬프트를 한 곳에 저장 (type으로 구분)
+const col = collection(db, SITE.col); // 폴더와 프롬프트를 한 곳에 저장 (type으로 구분)
 
 const $ = s => document.querySelector(s);
 let folderDocs = [], promptDocs = [], promptsFor = null, promptsReady = false;
@@ -450,7 +457,7 @@ onSnapshot(query(col, where("type", "==", "folder")), snap => {
 
 // 그룹 (이름 + 넣을 폴더 목록)
 let groupDocs = [], selGroup = null, gOpen = false;
-try { gOpen = localStorage.getItem("pv-gopen") === "1"; } catch(_) {}
+try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
 const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
 onSnapshot(query(col, where("type", "==", "group")), snap => {
   groupDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -494,7 +501,7 @@ function render(){
   $("#backBtn").hidden = !fid;
   $("#plusBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
-  let optDone = false; try { optDone = localStorage.getItem("pv-opt-v1") === "1"; } catch(_) {}
+  let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v1")) === "1"; } catch(_) {}
   $("#optBtn").hidden = !admin || optDone;
   $("#desc").hidden = true;
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
@@ -555,7 +562,7 @@ function renderGroups(fid, admin){
     groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${esc(g.name)}</button>`).join("") +
     "";
 }
-$("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem("pv-gopen", gOpen ? "1" : "0"); } catch(_) {} render(); };
+$("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem(LS("pv-gopen"), gOpen ? "1" : "0"); } catch(_) {} render(); };
 $("#pills").addEventListener("click", e => {
   const t = e.target.closest("[data-g],[data-gadd],[data-gedit]"); if (!t) return;
   if (t.dataset.gadd) return openGroup(null);
@@ -573,7 +580,7 @@ async function migrateOldGroups(){
     for (const g of old) {
       const kids = folderDocs.filter(f => parentOf(f) === g.id).map(f => f.id);
       await setDoc(doc(col), { type: "group", name: g.name, folderIds: kids, created: serverTimestamp(), order: num(g.order, 0), updated: serverTimestamp() });
-      await deleteDoc(doc(db, "prompts", g.id)); deleteDoc(ORIG(g.id)).catch(() => {});
+      await deleteDoc(doc(db, SITE.col, g.id)); deleteDoc(ORIG(g.id)).catch(() => {});
     }
   } catch(_) {}
   migrating = false;
@@ -614,7 +621,7 @@ $("#gmNew").onclick = () => { $("#groupsDlg").close(); setTimeout(() => openGrou
 $("#gmSave").onclick = async () => {
   try {
     const batch = writeBatch(db);
-    gmIds.forEach((id, i) => batch.update(doc(db, "prompts", id), { order: i }));
+    gmIds.forEach((id, i) => batch.update(doc(db, SITE.col, id), { order: i }));
     await batch.commit(); $("#groupsDlg").close(); toast("순서를 저장했어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
 };
@@ -667,9 +674,9 @@ $("#groupForm").addEventListener("submit", e => {
     const name = $("#gName").value.trim(); if (!name) return;
     const data = { name, folderIds: [...gSel], updated: serverTimestamp() };
     try {
-      if (editingGroup) await updateDoc(doc(db, "prompts", editingGroup), data);
+      if (editingGroup) await updateDoc(doc(db, SITE.col, editingGroup), data);
       else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
-      if (!gOpen) { gOpen = true; try { localStorage.setItem("pv-gopen", "1"); } catch(_) {} }
+      if (!gOpen) { gOpen = true; try { localStorage.setItem(LS("pv-gopen"), "1"); } catch(_) {} }
       $("#groupDlg").close(); toast("저장됐어요"); render();
       if (fromManager) setTimeout(openGroupManager, 200);
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
@@ -677,7 +684,7 @@ $("#groupForm").addEventListener("submit", e => {
 });
 $("#groupDelBtn").onclick = async () => {
   if (!confirm("이 그룹을 지울까요? 폴더는 그대로 남아요.")) return;
-  try { await deleteDoc(doc(db, "prompts", editingGroup)); selGroup = null; $("#groupDlg").close(); toast("삭제했어요"); if (fromManager) setTimeout(openGroupManager, 200); }
+  try { await deleteDoc(doc(db, SITE.col, editingGroup)); selGroup = null; $("#groupDlg").close(); toast("삭제했어요"); if (fromManager) setTimeout(openGroupManager, 200); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
@@ -768,12 +775,12 @@ async function finishReorder(save){
     if (n && !confirm(isFolders ? `${n}개를 삭제할까요? 폴더는 안의 프롬프트도 같이 지워지고, 그룹은 안의 폴더가 첫 화면으로 나와요.` : `프롬프트 ${n}개를 삭제할까요?`)) return;
     try {
       const batch = writeBatch(db);
-      reorder.ids.forEach((id, i) => batch.update(doc(db, "prompts", id), { order: i }));
+      reorder.ids.forEach((id, i) => batch.update(doc(db, SITE.col, id), { order: i }));
       for (const id of reorder.removed) {
-        batch.delete(doc(db, "prompts", id)); batch.delete(ORIG(id));
-        if (isFolders && isGroup(reorder.map[id])) { childFolders(id).forEach(k => batch.update(doc(db, "prompts", k.id), { parentId: null })); continue; }
+        batch.delete(doc(db, SITE.col, id)); batch.delete(ORIG(id));
+        if (isFolders && isGroup(reorder.map[id])) { childFolders(id).forEach(k => batch.update(doc(db, SITE.col, k.id), { parentId: null })); continue; }
         if (isFolders) for (const fid of [id, ...descendants(id)]) {
-          if (fid !== id) { batch.delete(doc(db, "prompts", fid)); batch.delete(ORIG(fid)); }
+          if (fid !== id) { batch.delete(doc(db, SITE.col, fid)); batch.delete(ORIG(fid)); }
           (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); });
         }
       }
@@ -930,7 +937,7 @@ const fEditor = makeEditor("fPicker", "fTools", "fGrad", 1600, 1600);
 const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
-const ORIG = id => doc(db, "prompts", id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
+const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
 const bakeSize = (kind, layout) => kind === "folder" ? [1400, 350] : layout === "side" ? [500, 500] : [1200, 600];
 async function bake(src, W, H, x = 50, y = 50, z = 1){
   const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
@@ -1107,7 +1114,7 @@ $("#folderForm").addEventListener("submit", e => {
   withBusy("folderSave", async () => {
     const name = $("#fName").value.trim(); if (!name) return;
     try {
-      const ref = editingFolder ? doc(db, "prompts", editingFolder) : doc(col);
+      const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
       const data = editingIsGroup
         ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, ...img, updated: serverTimestamp() }
@@ -1128,8 +1135,8 @@ $("#folderDelBtn").onclick = async () => {
     const kids = childFolders(editingFolder);
     if (!confirm(kids.length ? `그룹만 지우고, 안의 폴더 ${kids.length}개는 첫 화면으로 꺼낼까요?` : "이 그룹을 삭제할까요?")) return;
     try {
-      await Promise.all(kids.map(k => updateDoc(doc(db, "prompts", k.id), { parentId: null })));
-      await deleteDoc(doc(db, "prompts", editingFolder)); deleteDoc(ORIG(editingFolder)).catch(() => {});
+      await Promise.all(kids.map(k => updateDoc(doc(db, SITE.col, k.id), { parentId: null })));
+      await deleteDoc(doc(db, SITE.col, editingFolder)); deleteDoc(ORIG(editingFolder)).catch(() => {});
       $("#folderDlg").close(); location.hash = ""; toast("삭제했어요");
     } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
     return;
@@ -1141,7 +1148,7 @@ $("#folderDelBtn").onclick = async () => {
     if (!confirm(subN || inside.length ? `이 폴더와 안의 ${subN ? `폴더 ${subN}개, ` : ""}프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
     const parent = parentOf(folderDocs.find(d => d.id === editingFolder));
     await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), deleteDoc(ORIG(d.id)).catch(() => {})]));
-    await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, "prompts", fid)), deleteDoc(ORIG(fid)).catch(() => {})]));
+    await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, SITE.col, fid)), deleteDoc(ORIG(fid)).catch(() => {})]));
     $("#folderDlg").close(); location.hash = parent ? "#/f/" + encodeURIComponent(parent) : ""; toast("삭제했어요");
   } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
@@ -1150,7 +1157,7 @@ $("#promptForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("promptSave", async () => {
     try {
-      const ref = editingPrompt ? doc(db, "prompts", editingPrompt) : doc(col);
+      const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
@@ -1165,7 +1172,7 @@ $("#promptForm").addEventListener("submit", e => {
 });
 $("#promptDelBtn").onclick = async () => {
   if (!confirm("이 프롬프트를 삭제할까요?")) return;
-  try { await deleteDoc(doc(db, "prompts", editingPrompt)); deleteDoc(ORIG(editingPrompt)).catch(() => {}); $("#promptDlg").close(); toast("삭제했어요"); }
+  try { await deleteDoc(doc(db, SITE.col, editingPrompt)); deleteDoc(ORIG(editingPrompt)).catch(() => {}); $("#promptDlg").close(); toast("삭제했어요"); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
@@ -1181,10 +1188,10 @@ $("#optBtn").onclick = async () => {
       const [W, H] = bakeSize(o.type === "folder" ? "folder" : "prompt", o.layout);
       const shown = await bake(o.image, W, H, num(o.imgX, 50), num(o.imgY, 50), num(o.zoom, 1));
       await setDoc(ORIG(o.id), { type: "orig", image: o.image });
-      await updateDoc(doc(db, "prompts", o.id), { image: shown, baked: true });
+      await updateDoc(doc(db, SITE.col, o.id), { image: shown, baked: true });
       toast(`변환 중 ${++n}/${all.length}`);
     }
-    try { localStorage.setItem("pv-opt-v1", "1"); } catch(_) {}
+    try { localStorage.setItem(LS("pv-opt-v1"), "1"); } catch(_) {}
     btn.hidden = true;
     toast(all.length ? `이미지 ${all.length}개를 가볍게 바꿨어요` : "바꿀 이미지가 없어요");
   } catch(_) { toast("변환 중 문제가 생겼어요. 다시 눌러주세요"); }
