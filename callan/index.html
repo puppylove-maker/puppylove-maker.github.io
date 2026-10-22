@@ -50,6 +50,8 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .pill.edit{border:none;background:none;color:var(--muted);padding:0 8px;font-size:12px}
 .gpick{display:flex;flex-wrap:wrap;gap:6px}
 #gmList .oarrow svg{width:15px;height:15px}
+#gmList .orow{gap:6px;padding-left:14px}
+#gmList .oarrow{width:32px;height:32px}
 .gorder{display:flex;align-items:center;gap:6px}
 .gorder .oarrow{flex:none;font-size:18px;line-height:1}
 .gorder-list{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
@@ -597,6 +599,7 @@ function paintManager(){
       <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
       <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
       <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
+      <button type="button" class="oarrow del press" data-gdel="${esc(id)}" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
     </div>`).join("") : `<div class="empty" style="padding:16px 0">아직 그룹이 없어요</div>`;
   $("#gmSave").hidden = gmIds.length < 2;
 }
@@ -606,7 +609,26 @@ function openGroupManager(){
   $("#groupsDlg").showModal();
 }
 $("#gmList").addEventListener("click", e => {
-  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit]"); if (!t) return;
+  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel]"); if (!t) return;
+  if (t.dataset.gdel) {
+    const id = t.dataset.gdel, g = groupDocs.find(x => x.id === id);
+    if (!confirm(`"${g?.name || ""}" 그룹을 지울까요? 폴더는 그대로 남아요.`)) return;
+    const row = t.closest(".orow"); row?.classList.add("leaving");
+    deleteDoc(doc(db, SITE.col, id)).then(() => {
+      if (selGroup === id) selGroup = null;
+      setTimeout(() => {
+        const before = new Map([...$("#gmList").children].map(el => [el.dataset.oid, el.getBoundingClientRect().top]));
+        gmIds = gmIds.filter(x => x !== id); paintManager();
+        [...$("#gmList").children].forEach(el => {
+          const dy = before.get(el.dataset.oid) - el.getBoundingClientRect().top; if (!dy) return;
+          el.style.transition = "none"; el.style.transform = `translateY(${dy}px)`;
+          requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
+        });
+        toast("삭제했어요");
+      }, 200);
+    }).catch(() => { row?.classList.remove("leaving"); toast("삭제 실패: 권한을 확인해주세요"); });
+    return;
+  }
   if (t.dataset.gedit) { $("#groupsDlg").close(); return setTimeout(() => openGroup(t.dataset.gedit, true), 160); }
   const from = +(t.dataset.gup ?? t.dataset.gdown), to = t.dataset.gup !== undefined ? from - 1 : from + 1;
   const before = new Map([...$("#gmList").children].map(el => [el.dataset.oid, el.getBoundingClientRect().top]));
