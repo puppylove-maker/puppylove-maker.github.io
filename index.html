@@ -275,8 +275,10 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .th-text .copy-btn:hover{background:rgba(0,0,0,.05)}
 .th-text .copies{gap:2px}
 .th-text .copy-btn+.copy-btn{border-left:1px solid rgba(0,0,0,.12);border-radius:0 6px 6px 0}
-.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer}
-.chk input{width:18px;height:18px;margin:0;accent-color:#111;flex:none}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;white-space:nowrap}
+.chk input{width:15px;height:15px;margin:0;padding:0;accent-color:#111;flex:none}
+.chk small{font-size:11px;color:var(--muted)}
+.chk-row{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .item.noexp .press{cursor:default}
 .tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .thead{display:flex;align-items:center;gap:6px}
@@ -393,7 +395,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">글씨 배경<div class="seg" id="fGrad"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
-    <label class="chk"><input type="checkbox" id="fHidden">비공개 (로그인했을 때만 보여요)</label>
+    <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <label id="fParentWrap">위치<select id="fParent"></select></label>
     <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
 
@@ -414,8 +416,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
-    <label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 프롬프트 보기</label>
-    <label class="chk"><input type="checkbox" id="pHidden">비공개 (로그인했을 때만 보여요)</label>
+    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -448,7 +449,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <h2 id="groupDlgTitle">새 그룹</h2>
     <label>이름<input id="gName" required placeholder="그룹 이름"></label>
     <div class="field">넣을 폴더 (눌러서 선택)<div class="gpick" id="gPick"></div></div>
-    <label class="chk"><input type="checkbox" id="gHidden">비공개 (로그인했을 때만 보여요)</label>
+    <label class="chk"><input type="checkbox" id="gHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <div class="field" id="gOrderWrap">순서
       <div class="gorder">
         <button type="button" class="oarrow press" id="gLeft" aria-label="앞으로">‹</button>
