@@ -205,6 +205,17 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .edit-ic svg{width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .pbar .edit-ic{position:static;width:28px;height:28px}
 .pbar .edit-ic svg{filter:none}
+.copies{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:none;max-width:70%}
+.texts{display:grid;gap:10px}
+.tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.thead{display:flex;align-items:center;gap:6px}
+.thead input{flex:1;min-width:0;padding:6px 9px;font-size:12px}
+.thead .oarrow{width:30px;height:30px;flex:none}
+.tblock textarea{min-height:110px}
+.tblock textarea.scroll-box{min-height:0;height:96px}
+.add-text{justify-self:start}
+.ex-label{font-size:11px;font-weight:700;color:var(--text);margin:8px 0 2px}
+.ex-label:first-child{margin-top:0}
 .copy-btn{flex:none;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#111;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
 
 /* 순서 바꾸기 */
@@ -318,7 +329,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
-    <label>프롬프트<textarea id="pBody" placeholder="복사될 프롬프트 내용"></textarea></label>
+    <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
       <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div></div></div>
@@ -373,7 +384,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">박스 디자인<div class="lo-grid" id="tplList"></div></div>
     <label>제목<input id="nTitle" placeholder="새 프롬프트"></label>
     <label>부제목 (비우면 안 보여요)<input id="nHint"></label>
-    <label>프롬프트<textarea id="nBody" class="scroll-box" placeholder="복사될 프롬프트 내용"></textarea></label>
+    <div class="field">프롬프트 텍스트<div class="texts" id="nTexts"></div><button type="button" class="btn sm press add-text" data-addtext="nTexts">+ 텍스트 칸 추가</button></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="tplDlg">취소</button>
       <button type="button" class="btn primary press" id="nAdd">추가</button>
@@ -716,10 +727,41 @@ const DEFAULT_HINT = "눌러서 전체 프롬프트 보기";
 const hintHtml = p => (p.hint === undefined || p.hint === DEFAULT_HINT)
   ? `<span class="phint"><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">눌러서 접기</span></span>`
   : `<span class="phint">${esc(p.hint)}</span>`;
+// 한 프롬프트 안의 여러 텍스트 칸: [{label, content}]
+const textsOf = p => (p.texts && p.texts.length) ? p.texts : [{ label: p.copyLabel || "복사", content: p.content || "" }];
+const TRASH = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
+function textBlockHtml(t, scroll){
+  return `<div class="tblock"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
+    <textarea class="tbody ${scroll ? "scroll-box" : ""}" placeholder="복사될 프롬프트 내용">${esc(t.content || "")}</textarea></div>`;
+}
+function fillTexts(id, texts){
+  const box = document.getElementById(id);
+  box.innerHTML = texts.map(t => textBlockHtml(t, id === "nTexts")).join("");
+  syncTextBtns(box);
+}
+function syncTextBtns(box){ const bs = box.querySelectorAll("[data-rmtext]"); bs.forEach(b => b.hidden = bs.length < 2); }
+function readTexts(id){
+  const out = [...document.getElementById(id).querySelectorAll(".tblock")]
+    .map(b => ({ label: b.querySelector(".tlabel").value.trim() || "복사", content: b.querySelector(".tbody").value }));
+  return out.length ? out : [{ label: "복사", content: "" }];
+}
+document.addEventListener("click", e => {
+  const add = e.target.closest("[data-addtext]");
+  if (add) {
+    const box = document.getElementById(add.dataset.addtext);
+    const n = box.querySelectorAll(".tblock").length;
+    box.insertAdjacentHTML("beforeend", textBlockHtml({ label: n ? "" : "복사", content: "" }, add.dataset.addtext === "nTexts"));
+    syncTextBtns(box); box.lastElementChild.querySelector(".tlabel").focus();
+    return;
+  }
+  const rm = e.target.closest("[data-rmtext]");
+  if (rm) { const box = rm.closest(".texts"); rm.closest(".tblock").remove(); syncTextBtns(box); }
+});
+
 function promptHtml(p, admin){
   const lo = p.layout || "stack";
   const title = `<span class="ptitle">${esc(p.title || "제목 없음")}</span>`;
-  const copy = `<button class="copy-btn press" data-copy="${p.id}">복사</button>`;
+  const copy = `<span class="copies">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}">${esc(t.label || "복사")}</button>`).join("")}</span>`;
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
   let inner;
   if (lo === "overlay") {
@@ -738,7 +780,7 @@ function promptHtml(p, admin){
       <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
   }
   return `<div class="item lo-${lo} ${openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
-    <div class="expand"><div><div class="expand-inner">${esc(p.content)}</div></div></div></div>`;
+    <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
 }
 
 // ---------- 순서 바꾸기 ----------
@@ -834,7 +876,7 @@ $("#view").addEventListener("click", e => {
   if (t.dataset.up) return moveRow(+t.dataset.up, +t.dataset.up - 1);
   if (t.dataset.down) return moveRow(+t.dataset.down, +t.dataset.down + 1);
   if (t.dataset.edit) return openPrompt(t.dataset.edit);
-  if (t.dataset.copy) return copyText(promptDocs.find(x => x.id === t.dataset.copy)?.content || "");
+  if (t.dataset.copy) { const pd = promptDocs.find(x => x.id === t.dataset.copy); return copyText(pd ? (textsOf(pd)[+t.dataset.i || 0]?.content || "") : ""); }
   if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
   if (t.dataset.tog) {
     const id = t.dataset.tog;
@@ -1020,11 +1062,11 @@ $("#fileIn").addEventListener("change", async e => {
 });
 
 // ---------- 추가 / 편집 ----------
-async function addBlankPrompt(lo, title, hint, body = ""){
+async function addBlankPrompt(lo, title, hint, texts = [{ label: "복사", content: "" }]){
   try {
     const last = prompts().at(-1);
     const ref = await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), updated: serverTimestamp(),
-      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: body, image: "", imgX: 50, imgY: 50, zoom: 1 });
+      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: texts[0].content, texts, image: "", imgX: 50, imgY: 50, zoom: 1 });
     toast("추가됐어요");
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
@@ -1078,7 +1120,7 @@ $("#menu").addEventListener("click", e => {
   if (k === "tpl") {
     newLo = "stack";
     $("#tplList").innerHTML = loCards(newLo);
-    $("#nTitle").value = ""; $("#nHint").value = DEFAULT_HINT; $("#nBody").value = "";
+    $("#nTitle").value = ""; $("#nHint").value = DEFAULT_HINT; fillTexts("nTexts", [{ label: "복사", content: "" }]);
     $("#tplDlg").showModal();
   }
 });
@@ -1088,9 +1130,9 @@ $("#tplList").addEventListener("click", e => {
   newLo = lo; $("#tplList").innerHTML = loCards(lo);
 });
 $("#nAdd").onclick = () => {
-  const title = $("#nTitle").value.trim(), hint = $("#nHint").value.trim(), body = $("#nBody").value;
+  const title = $("#nTitle").value.trim(), hint = $("#nHint").value.trim(), texts = readTexts("nTexts");
   $("#tplDlg").close();
-  addBlankPrompt(newLo, title, hint, body);
+  addBlankPrompt(newLo, title, hint, texts);
 };
 $("#folderEditBtn").onclick = () => openFolder(currentFolderId());
 
@@ -1118,7 +1160,7 @@ function openPrompt(id, preset){
   const p = promptDocs.find(d => d.id === id) || preset || {};
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
-  $("#pBody").value = p.content || "";
+  fillTexts("pTexts", textsOf(p));
   $("#pHint").value = p.hint === undefined ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
@@ -1181,7 +1223,8 @@ $("#promptForm").addEventListener("submit", e => {
     try {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
-      const data = { title: $("#pTitle").value.trim(), content: $("#pBody").value, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const texts = readTexts("pTexts");
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
