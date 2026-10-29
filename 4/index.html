@@ -98,7 +98,7 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .acc.open .acc-body{grid-template-rows:1fr}
 .acc .lo-grid{padding:0 10px 10px}
 /* 수정 창 안의 작은 디자인 선택 */
-.lo-grid.compact{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lo-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .lo-grid.compact .lo-card{padding:6px;gap:5px;border-radius:10px;font-size:11px;text-align:center}
 .lo-grid.compact .lo-card .d{display:none}
 .lo-grid.compact .mini{height:40px}
@@ -112,6 +112,8 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .mini.ov{position:relative}.mini.ov .im{height:56px}.mini.ov .bar{position:absolute;left:4px;right:4px;bottom:9px;height:10px;background:#fafafa}
 .mini.sd{grid-template-columns:28px 1fr;align-items:center;height:62px;align-content:center}.mini.sd .im{height:28px}.mini.sd .bar{height:10px}
 .mini.tx .bar{height:10px}.mini.tx .ln{height:6px;background:#efefef}
+.mini.tl{grid-template-columns:repeat(2,1fr);gap:4px}.mini.tl.t3{grid-template-columns:repeat(3,1fr)}.mini.tl .im{height:46px}
+.lo-grid.compact .mini.tl .im{height:36px}
 /* 템플릿 */
 .tpl-list{display:grid;gap:8px;max-height:60vh;overflow:auto}
 .tpl{display:grid;gap:3px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
@@ -172,12 +174,27 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .folder.group{overflow:visible;box-shadow:0 5px 0 -2px #fff,0 5px 0 -1px var(--line),0 10px 0 -4px #fff,0 10px 0 -3px #ececec;margin-bottom:8px}
 .folder.group .media{border-radius:13px}
 
-.plist{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+.plist{display:flex;flex-wrap:wrap;align-items:flex-start;row-gap:16px;column-gap:12px}
+.plist>.item{width:100%}
+.plist>.item.lo-tall2{width:calc((100% - 12px) / 2)}
+.plist>.item.lo-tall3{width:calc((100% - 24px) / 3)}
+/* 세로형 카드 */
+.ptall{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;cursor:pointer}
+.ptall.no-pic{display:grid;place-items:center}
+.tall-info{display:grid;gap:6px;padding:8px 2px 0;min-width:0}
+.tall-info .ptitle{max-width:none;font-size:13px}
+.lo-tall3 .tall-info .ptitle{font-size:12px}
+.plist .item .tall-info .copies{display:flex;flex-wrap:wrap;gap:4px;max-width:none;width:100%;margin:0;overflow:visible;justify-content:flex-start}
+.plist .item .tall-info .copy-btn{flex:1 1 40%;min-width:0;height:28px;padding:0 6px;font-size:11.5px}
+.plist .item.lo-tall3 .tall-info .copy-btn{height:26px;font-size:11px;padding:0 4px}
 @media (min-width:720px){
   .wrap{max-width:820px}
   /* 2칸씩, 마지막이 홀수면 가운데 */
   .plist{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px}
   .plist>.item{width:calc(50% - 10px)}
+  .plist{column-gap:20px;row-gap:20px}
+  .plist>.item.lo-tall2{width:calc((100% - 40px) / 3)}
+  .plist>.item.lo-tall3{width:calc((100% - 60px) / 4)}
   #view.pc-col .plist{flex-direction:column;align-items:center}
   #view.pc-col .plist>.item{width:min(100%,560px)}
   #view>.list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
@@ -303,6 +320,7 @@ label,.field{font-size:12px;color:var(--sub);display:grid;gap:5px}
 .picker.r21{aspect-ratio:2/1}
 .picker.r41{aspect-ratio:4/1}
 .picker.r11{aspect-ratio:1/1;width:50%}
+.picker.r34{aspect-ratio:3/4;width:50%}
 .picker .empty-hint{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer}
 .picker.has{cursor:grab;border-style:solid}
 .nudge{position:absolute;width:30px;height:30px;border:none;background:none;color:#fff;display:grid;place-items:center;cursor:pointer;padding:0;z-index:2;transition:transform .15s var(--ease)}
@@ -896,6 +914,9 @@ function promptHtml(p, admin){
     inner = `<div class="box pside press" data-tog="${p.id}">
       <div class="sthumb">${mediaHtml(p)}</div>
       <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
+  } else if (lo === "tall2" || lo === "tall3") {
+    inner = `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
+      <div class="tall-info">${title}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press" data-tog="${p.id}">
       ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
@@ -1127,7 +1148,7 @@ const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
 const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
-const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : [1200, 600];
+const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : (layout === "tall2" || layout === "tall3") ? [600, 800] : [1200, 600];
 async function bake(src, W, H, x = 50, y = 50, z = 1){
   const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
   const c = document.createElement("canvas"); c.width = W; c.height = H;
@@ -1210,7 +1231,8 @@ function setLayout(lo){
   $("#pLayout").innerHTML = loCards(lo);
   $("#loCur").textContent = LAYOUTS.find(l => l.id === lo)?.name || "";
   const pk = $("#pPicker");
-  pk.classList.toggle("r21", lo !== "side"); pk.classList.toggle("r11", lo === "side");
+  const tall = lo === "tall2" || lo === "tall3";
+  pk.classList.toggle("r21", lo !== "side" && !tall); pk.classList.toggle("r11", lo === "side"); pk.classList.toggle("r34", tall);
   pk.hidden = $("#pTools").hidden = lo === "text";
 }
 
@@ -1220,6 +1242,8 @@ const LAYOUTS = [
   { id: "stack",   name: "기본",       desc: "위 이미지 + 아래 제목줄", mini: `<div class="mini"><i class="im"></i><i class="bar"></i></div>` },
   { id: "overlay", name: "이미지 위", desc: "이미지 안에 제목·복사", mini: `<div class="mini ov"><i class="im"></i><i class="bar"></i></div>` },
   { id: "side",    name: "가로형",      desc: "왼쪽 작은 이미지",     mini: `<div class="mini sd"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "tall2",   name: "세로형 2열",  desc: "세로 이미지 두 개씩",   mini: `<div class="mini tl"><i class="im"></i><i class="im"></i></div>` },
+  { id: "tall3",   name: "세로형 3열",  desc: "세로 이미지 세 개씩",   mini: `<div class="mini tl t3"><i class="im"></i><i class="im"></i><i class="im"></i></div>` },
   { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
 ];
 const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><span class="d"><br>${l.desc}</span></span></button>`).join("");
