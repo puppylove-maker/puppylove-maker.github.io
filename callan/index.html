@@ -205,7 +205,12 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .edit-ic svg{width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .pbar .edit-ic{position:static;width:28px;height:28px}
 .pbar .edit-ic svg{filter:none}
-.copies{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:0 1 auto;min-width:0;max-width:62%}
+.copies{display:flex;flex-wrap:nowrap;gap:6px;flex:0 1 auto;min-width:0;max-width:62%;overflow-x:auto;scrollbar-width:none}
+.copies::-webkit-scrollbar{display:none}
+.sinfo{flex:1;min-width:0;display:grid;gap:8px}
+.sline{display:flex;align-items:center;gap:8px;min-width:0}
+.sline .ptitle{max-width:none;min-width:0!important;flex:0 1 auto}
+.pside .copies{max-width:100%}
 .copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle{min-width:3.5em!important}
 .texts{display:grid;gap:10px}
@@ -773,7 +778,7 @@ function promptHtml(p, admin){
   } else if (lo === "side") {
     inner = `<div class="box pside press" data-tog="${p.id}">
       <div class="sthumb">${mediaHtml(p)}</div>
-      ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
+      <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press" data-tog="${p.id}">
       ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
