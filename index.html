@@ -386,6 +386,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
     <label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 프롬프트 보기</label>
+    <label class="chk"><input type="checkbox" id="pHidden">비공개 (로그인했을 때만 보여요)</label>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -650,7 +651,7 @@ function render(){
   $("#pageTitle").textContent = folder.name;
   $("#view").classList.toggle("pc-col", folder.pcLayout === "col");
   if (folder.desc && !reorder) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
-  const items = isGroup(folder) ? [] : prompts(), subs = childFolders(fid);
+  const items = isGroup(folder) ? [] : prompts().filter(p => admin || !p.hidden), subs = childFolders(fid);
   if (reorder) return renderReorder();
   if (!promptsReady && !subs.length && !isGroup(folder)) { $("#view").innerHTML = `<div class="plist">${`<div class="item"><div class="box skel" style="aspect-ratio:2/1"></div><div class="box skel" style="height:48px;margin-top:4px"></div></div>`.repeat(2)}</div>`; return; }
   if (!items.length && !subs.length) {
@@ -883,7 +884,7 @@ document.addEventListener("click", e => {
 
 function promptHtml(p, admin){
   const lo = p.layout || "stack";
-  const title = `<span class="ptitle">${esc(p.title || "제목 없음")}</span>`;
+  const title = `<span class="ptitle">${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
   const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}">${esc(t.label || "복사")}</button>`).join("")}</span>`;
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
   let inner;
@@ -1286,6 +1287,7 @@ function openPrompt(id, preset){
   $("#pTitle").value = p.title || "";
   fillTexts("pTexts", textsOf(p));
   $("#pExpand").checked = !p.noExpand;
+  $("#pHidden").checked = !!p.hidden;
   setTheme(p.theme || "basic");
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
@@ -1350,7 +1352,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, theme: curTheme, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, theme: curTheme, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
