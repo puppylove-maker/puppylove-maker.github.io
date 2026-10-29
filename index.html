@@ -428,7 +428,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 <dialog id="viewDlg">
   <div class="dlg">
     <h2>폴더 화면 설정</h2>
-    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더 (4:1)</button><button type="button" data-vr="16/9">와이드 (16:9)</button><button type="button" data-vr="1/1">정사각 (1:1)</button></div></div>
+    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더</button><button type="button" data-vr="16/9">와이드</button><button type="button" data-vr="1/1">정사각</button><button type="button" data-vr="3/4">세로 (3:4)</button></div></div>
     <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-vc="1">1열</button><button type="button" data-vc="2">2열</button><button type="button" data-vc="3">3열</button></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">취소</button>
@@ -524,7 +524,7 @@ $("#status").textContent = "불러오는 중…";
 let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
-const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800] };
+const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800], "3/4": [750, 1000] };
 let viewCfg = { folderRatio: "4/1", folderCols: 0 };
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
