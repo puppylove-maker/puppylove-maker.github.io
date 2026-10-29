@@ -213,7 +213,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .pside .copies{max-width:100%;width:100%}
 .pside .copies>:first-child{margin-left:auto}
 .copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ptitle{min-width:3.5em!important}
+.ptitle{flex:0 0 auto!important}
 .texts{display:grid;gap:10px}
 .tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .thead{display:flex;align-items:center;gap:6px}
@@ -731,9 +731,9 @@ $("#groupDelBtn").onclick = async () => {
 };
 
 // ---------- 프롬프트 박스 (디자인별) ----------
-const DEFAULT_HINT = "눌러서 전체 프롬프트 보기";
-const hintHtml = p => (p.hint === undefined || p.hint === DEFAULT_HINT)
-  ? `<span class="phint"><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">눌러서 접기</span></span>`
+const DEFAULT_HINT = "전체 보기", OLD_HINT = "눌러서 전체 프롬프트 보기";
+const hintHtml = p => (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)
+  ? `<span class="phint"><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">접기</span></span>`
   : `<span class="phint">${esc(p.hint)}</span>`;
 // 한 프롬프트 안의 여러 텍스트 칸: [{label, content}]
 const textsOf = p => (p.texts && p.texts.length) ? p.texts : [{ label: p.copyLabel || "복사", content: p.content || "" }];
@@ -1179,7 +1179,7 @@ function openPrompt(id, preset){
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
   fillTexts("pTexts", textsOf(p));
-  $("#pHint").value = p.hint === undefined ? DEFAULT_HINT : p.hint;
+  $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
   $("#loAcc").classList.remove("open");
