@@ -218,6 +218,10 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle{flex:0 0 auto!important}
 .texts{display:grid;gap:10px}
+.lock-badge{position:absolute;top:8px;left:8px;z-index:2;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);padding:3px 7px 3px 6px;border-radius:999px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.lock-badge svg{width:11px;height:11px}
+.lock-ic{display:inline-flex;vertical-align:-1px;margin-right:3px;opacity:.7}
+.lock-ic svg{width:12px;height:12px}
 /* 버튼 테마: 유리 (아이폰 리퀴드 글래스 느낌) */
 .th-glass .copy-btn{position:relative;overflow:hidden;isolation:isolate;border:none;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 8px rgba(0,0,0,.25);font-weight:600;
   background:rgba(255,255,255,.06);
@@ -258,13 +262,15 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .copy-btn{flex:none;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#111;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
 
 /* 순서 바꾸기 */
-.olist{display:grid;gap:8px}
-.orow{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 8px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.olist{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.orow{display:flex;align-items:center;gap:6px;min-width:0;padding:8px 6px 8px 8px;border:1px solid var(--line);border-radius:12px;background:#fff}
 .othumb{width:52px;height:30px;border-radius:6px;background:var(--soft);object-fit:cover;flex:none}
 .oname{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.oarrow{width:34px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--sub);font-size:14px}
+.oarrow{width:28px;height:28px;flex:none;border:none;border-radius:8px;background:none;display:grid;place-items:center;cursor:pointer;color:var(--sub);font-size:12px;padding:0}
+.oarrow:hover{background:var(--soft)}
+.oarrow svg{width:15px;height:15px}
 .oarrow:disabled{opacity:.3}
-.oarrow.del{color:var(--danger);border-color:#f3dede}
+.oarrow.del{color:var(--danger)}
 .oarrow.del svg{width:15px;height:15px}
 .orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
 .obar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
@@ -358,6 +364,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">글씨 배경<div class="seg" id="fGrad"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
+    <label class="chk"><input type="checkbox" id="fHidden">비공개 (로그인했을 때만 보여요)</label>
     <label id="fParentWrap">위치<select id="fParent"></select></label>
     <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
 
@@ -411,6 +418,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <h2 id="groupDlgTitle">새 그룹</h2>
     <label>이름<input id="gName" required placeholder="그룹 이름"></label>
     <div class="field">넣을 폴더 (눌러서 선택)<div class="gpick" id="gPick"></div></div>
+    <label class="chk"><input type="checkbox" id="gHidden">비공개 (로그인했을 때만 보여요)</label>
     <div class="field" id="gOrderWrap">순서
       <div class="gorder">
         <button type="button" class="oarrow press" id="gLeft" aria-label="앞으로">‹</button>
@@ -545,18 +553,32 @@ onSnapshot(SETTINGS(), snap => {
   applyView();
 }, () => {});
 onSnapshot(query(col, where("type", "==", "folder")), snap => {
-  folderDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  rawFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  refilter();
   foldersReady = true; $("#status").textContent = "";
   render();
 }, () => { $("#status").textContent = "불러오기에 실패했어요"; });
 
+// 비공개: 로그인한 주인에게만 보이고, 방문자에게는 아예 안 보임
+let rawFolders = [], rawGroups = [];
+function hiddenChain(f, seen = 0){
+  if (!f || seen > 20) return false;
+  return !!f.hidden || hiddenChain(rawFolders.find(d => d.id === f.parentId), seen + 1);
+}
+function refilter(){
+  const all = isAdmin();
+  folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f));
+  groupDocs = all ? rawGroups : rawGroups.filter(g => !g.hidden);
+  if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
+}
+const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
 // 그룹 (이름 + 넣을 폴더 목록)
 let groupDocs = [], selGroup = null, gOpen = false;
 try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
 const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
 onSnapshot(query(col, where("type", "==", "group")), snap => {
-  groupDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
+  rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  refilter();
   render();
 }, () => {});
 
@@ -639,6 +661,7 @@ function folderListHtml(list){
   return `<div class="list">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       ${mediaHtml(f)}
+      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : ""}
       <span class="cap">${esc(f.name)}</span>
     </button>`).join("")}</div>`;
 }
@@ -654,7 +677,7 @@ function renderGroups(fid, admin){
   if (!show) return;
   $("#pills").innerHTML =
     `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
-    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${esc(g.name)}</button>`).join("") +
+    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
     "";
 }
 $("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem(LS("pv-gopen"), gOpen ? "1" : "0"); } catch(_) {} render(); };
@@ -687,7 +710,7 @@ function paintManager(){
   const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
   $("#gmList").innerHTML = gmIds.length ? gmIds.map((id, i) => `
     <div class="orow" data-oid="${esc(id)}">
-      <span class="oname">${esc(map[id]?.name || "")}</span>
+      <span class="oname">${map[id]?.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(map[id]?.name || "")}</span>
       <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
       <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
       <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
@@ -772,6 +795,7 @@ function openGroup(id, viaManager = false){
   gSel = new Set(g.folderIds || []);
   $("#groupDlgTitle").textContent = id ? "그룹 편집" : "새 그룹";
   $("#gName").value = g.name || "";
+  $("#gHidden").checked = !!g.hidden;
   $("#groupDelBtn").hidden = !id;
   gOrderIds = groups().map(x => x.id);
   $("#gOrderWrap").hidden = true;
@@ -787,7 +811,7 @@ $("#groupForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("groupSave", async () => {
     const name = $("#gName").value.trim(); if (!name) return;
-    const data = { name, folderIds: [...gSel], updated: serverTimestamp() };
+    const data = { name, folderIds: [...gSel], hidden: $("#gHidden").checked, updated: serverTimestamp() };
     try {
       if (editingGroup) await updateDoc(doc(db, SITE.col, editingGroup), data);
       else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
@@ -1246,6 +1270,7 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#folderDlgTitle").textContent = editingIsGroup ? (id ? "그룹 편집" : "새 그룹") : (id ? "폴더 편집" : "새 폴더");
   $("#fName").value = f.name || "";
   $("#fDesc").value = f.desc || "";
+  $("#fHidden").checked = !!f.hidden;
   setPc(f.pcLayout || "row");
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
@@ -1279,8 +1304,8 @@ $("#folderForm").addEventListener("submit", e => {
       const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
       const data = editingIsGroup
-        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, ...img, updated: serverTimestamp() }
-        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, ...img, updated: serverTimestamp() };
+        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, ...img, updated: serverTimestamp() }
+        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, ...img, updated: serverTimestamp() };
       if (editingFolder) await updateDoc(ref, data);
       else {
         const last = childFolders(currentFolderId()).at(-1);
@@ -1422,6 +1447,7 @@ onAuthStateChanged(auth, u => {
   $("#logoutBtn").hidden = !u;
   $("#who").hidden = !u || isAdmin();
   $("#who").textContent = u && !isAdmin() ? u.email + " · 보기 전용" : "";
+  refilter();
   render();
 });
 $("#loginBtn").onclick = async () => {
