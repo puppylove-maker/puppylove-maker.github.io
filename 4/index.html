@@ -98,7 +98,9 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .acc.open .acc-body{grid-template-rows:1fr}
 .acc .lo-grid{padding:0 10px 10px}
 /* 수정 창 안의 작은 디자인 선택 */
-.lo-grid.compact{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.lo-grid.compact{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.lo-grid.compact::-webkit-scrollbar{display:none}
+.lo-grid.compact .lo-card{flex:0 0 78px;scroll-snap-align:start}
 .lo-grid.compact .lo-card{padding:6px;gap:5px;border-radius:10px;font-size:11px;text-align:center}
 .lo-grid.compact .lo-card .d{display:none}
 .lo-grid.compact .mini{height:40px}
@@ -186,6 +188,13 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .lo-tall3 .tall-info .ptitle{font-size:12px}
 .plist .item .tall-info .copies{display:flex;flex-wrap:wrap;gap:4px;max-width:none;width:100%;margin:0;overflow:visible;justify-content:flex-start}
 .plist .item .tall-info .copy-btn{flex:1 1 40%;min-width:0;height:28px;padding:0 6px;font-size:11.5px}
+.tall-cap{display:grid!important;gap:6px;padding:28px 8px 8px!important}
+.tall-cap .ptitle{max-width:none;font-size:13px}
+.lo-tall3 .tall-cap{padding:22px 6px 6px!important}
+.lo-tall3 .tall-cap .ptitle{font-size:11.5px}
+.plist .item .tall-cap .copies{display:flex;flex-wrap:wrap;gap:4px;max-width:none;width:100%;margin:0;overflow:visible;justify-content:flex-start}
+.plist .item .tall-cap .copy-btn{flex:1 1 40%;min-width:0;height:28px;padding:0 6px;font-size:11.5px}
+.plist .item.lo-tall3 .tall-cap .copy-btn{height:24px;font-size:10.5px;padding:0 4px}
 .plist .item.lo-tall3 .tall-info .copy-btn{height:26px;font-size:11px;padding:0 4px}
 @media (min-width:720px){
   .wrap{max-width:820px}
@@ -408,7 +417,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div></div></div>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div></div></div></div>
     </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
@@ -915,7 +924,9 @@ function promptHtml(p, admin){
       <div class="sthumb">${mediaHtml(p)}</div>
       <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
   } else if (lo === "tall2" || lo === "tall3") {
-    inner = `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
+    inner = p.tallPos === "inside"
+      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap">${title}${copy}</div></div>`
+      : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
       <div class="tall-info">${title}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press" data-tog="${p.id}">
@@ -1217,6 +1228,9 @@ async function addBlankPrompt(lo, title, hint, texts = [{ label: "복사", conte
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
 }
+let curTallPos = "below";
+function setTallPos(v){ curTallPos = v; $("#pTallPos").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tp === v)); }
+$("#pTallPos").addEventListener("click", e => { const v = e.target.closest("[data-tp]")?.dataset.tp; if (v) setTallPos(v); });
 let curTheme = "basic";
 function setTheme(v){ curTheme = v; $("#pTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.th === v)); }
 $("#pTheme").addEventListener("click", e => { const v = e.target.closest("[data-th]")?.dataset.th; if (v) setTheme(v); });
@@ -1229,10 +1243,12 @@ $("#loAccBtn").onclick = () => $("#loAcc").classList.toggle("open");
 function setLayout(lo){
   curLayout = lo;
   $("#pLayout").innerHTML = loCards(lo);
+  requestAnimationFrame(() => { const on = $("#pLayout .lo-card.on"); if (on) $("#pLayout").scrollLeft = on.offsetLeft - 10; });
   $("#loCur").textContent = LAYOUTS.find(l => l.id === lo)?.name || "";
   const pk = $("#pPicker");
   const tall = lo === "tall2" || lo === "tall3";
   pk.classList.toggle("r21", lo !== "side" && !tall); pk.classList.toggle("r11", lo === "side"); pk.classList.toggle("r34", tall);
+  $("#pTallWrap").hidden = !tall;
   pk.hidden = $("#pTools").hidden = lo === "text";
 }
 
@@ -1313,6 +1329,7 @@ function openPrompt(id, preset){
   $("#pExpand").checked = !p.noExpand;
   $("#pHidden").checked = !!p.hidden;
   setTheme(p.theme || "basic");
+  setTallPos(p.tallPos || "below");
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
@@ -1376,7 +1393,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, theme: curTheme, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, theme: curTheme, tallPos: curTallPos, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
