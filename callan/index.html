@@ -739,7 +739,7 @@ const hintHtml = p => (p.hint === undefined || p.hint === DEFAULT_HINT)
 const textsOf = p => (p.texts && p.texts.length) ? p.texts : [{ label: p.copyLabel || "복사", content: p.content || "" }];
 const TRASH = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
 function textBlockHtml(t, scroll){
-  return `<div class="tblock"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
+  return `<div class="tblock"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow press" data-tmove="-1" aria-label="위로">▲</button><button type="button" class="oarrow press" data-tmove="1" aria-label="아래로">▼</button><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
     <textarea class="tbody ${scroll ? "scroll-box" : ""}" placeholder="복사될 프롬프트 내용">${esc(t.content || "")}</textarea></div>`;
 }
 function fillTexts(id, texts){
@@ -747,7 +747,13 @@ function fillTexts(id, texts){
   box.innerHTML = texts.map(t => textBlockHtml(t, id === "nTexts")).join("");
   syncTextBtns(box);
 }
-function syncTextBtns(box){ const bs = box.querySelectorAll("[data-rmtext]"); bs.forEach(b => b.hidden = bs.length < 2); }
+function syncTextBtns(box){
+  const rows = [...box.querySelectorAll(".tblock")];
+  rows.forEach((r, i) => {
+    r.querySelector("[data-rmtext]").hidden = rows.length < 2;
+    r.querySelectorAll("[data-tmove]").forEach(b => { b.hidden = rows.length < 2; b.disabled = b.dataset.tmove === "-1" ? i === 0 : i === rows.length - 1; });
+  });
+}
 function readTexts(id){
   const out = [...document.getElementById(id).querySelectorAll(".tblock")]
     .map(b => ({ label: b.querySelector(".tlabel").value.trim() || "복사", content: b.querySelector(".tbody").value }));
@@ -760,6 +766,15 @@ document.addEventListener("click", e => {
     const n = box.querySelectorAll(".tblock").length;
     box.insertAdjacentHTML("beforeend", textBlockHtml({ label: n ? "" : "복사", content: "" }, add.dataset.addtext === "nTexts"));
     syncTextBtns(box); box.lastElementChild.querySelector(".tlabel").focus();
+    return;
+  }
+  const mv = e.target.closest("[data-tmove]");
+  if (mv) {
+    const row = mv.closest(".tblock"), box = row.parentElement, top0 = row.getBoundingClientRect().top;
+    if (mv.dataset.tmove === "-1") row.previousElementSibling?.before(row); else row.nextElementSibling?.after(row);
+    syncTextBtns(box);
+    const dy = top0 - row.getBoundingClientRect().top;
+    row.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
     return;
   }
   const rm = e.target.closest("[data-rmtext]");
