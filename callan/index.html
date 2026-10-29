@@ -195,6 +195,8 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .plist .item .tall-cap .copies{display:flex;flex-wrap:wrap;gap:4px;max-width:none;width:100%;margin:0;overflow:visible;justify-content:flex-start}
 .plist .item .tall-cap .copy-btn{flex:1 1 40%;min-width:0;height:28px;padding:0 6px;font-size:11.5px}
 .plist .item.lo-tall3 .tall-cap .copy-btn{height:24px;font-size:10.5px;padding:0 4px}
+.plist .item.btn-short .tall-info .copy-btn,.plist .item.btn-short .tall-cap .copy-btn{flex:0 0 auto;padding:0 12px}
+.plist .item.lo-tall3.btn-short .tall-info .copy-btn,.plist .item.lo-tall3.btn-short .tall-cap .copy-btn{padding:0 9px}
 .plist .item.lo-tall3 .tall-info .copy-btn{height:26px;font-size:11px;padding:0 4px}
 @media (min-width:720px){
   .wrap{max-width:820px}
@@ -417,7 +419,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div></div></div></div>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
     </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
@@ -935,7 +937,7 @@ function promptHtml(p, admin){
     inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
       <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
   }
-  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
+  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
     <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
 }
 
@@ -1228,6 +1230,9 @@ async function addBlankPrompt(lo, title, hint, texts = [{ label: "복사", conte
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
 }
+let curTallBtn = "long";
+function setTallBtn(v){ curTallBtn = v; $("#pTallBtn").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tb === v)); }
+$("#pTallBtn").addEventListener("click", e => { const v = e.target.closest("[data-tb]")?.dataset.tb; if (v) setTallBtn(v); });
 let curTallPos = "below";
 function setTallPos(v){ curTallPos = v; $("#pTallPos").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tp === v)); }
 $("#pTallPos").addEventListener("click", e => { const v = e.target.closest("[data-tp]")?.dataset.tp; if (v) setTallPos(v); });
@@ -1330,6 +1335,7 @@ function openPrompt(id, preset){
   $("#pHidden").checked = !!p.hidden;
   setTheme(p.theme || "basic");
   setTallPos(p.tallPos || "below");
+  setTallBtn(p.tallBtn || "long");
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
@@ -1393,7 +1399,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, theme: curTheme, tallPos: curTallPos, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
