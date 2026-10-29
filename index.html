@@ -1119,12 +1119,7 @@ $("#menu").addEventListener("click", e => {
   if (k === "group") openGroupManager();
   if (k === "order") startReorder("prompts");
   if (k === "forder") startReorder("folders");
-  if (k === "tpl") {
-    newLo = "stack";
-    $("#tplList").innerHTML = loCards(newLo);
-    $("#nTitle").value = ""; $("#nHint").value = DEFAULT_HINT; fillTexts("nTexts", [{ label: "복사", content: "" }]);
-    $("#tplDlg").showModal();
-  }
+  if (k === "tpl") { openPrompt(null, { layout: "stack" }); $("#loAcc").classList.add("open"); }
 });
 let newLo = "stack";
 $("#tplList").addEventListener("click", e => {
