@@ -215,6 +215,9 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle{flex:0 0 auto!important}
 .texts{display:grid;gap:10px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer}
+.chk input{width:18px;height:18px;margin:0;accent-color:#111;flex:none}
+.item.noexp .press{cursor:default}
 .tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .thead{display:flex;align-items:center;gap:6px}
 .thead input{flex:1;min-width:0;padding:6px 9px;font-size:12px}
@@ -337,6 +340,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
+    <label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 프롬프트 보기</label>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -732,7 +736,7 @@ $("#groupDelBtn").onclick = async () => {
 
 // ---------- 프롬프트 박스 (디자인별) ----------
 const DEFAULT_HINT = "전체 보기", OLD_HINT = "눌러서 전체 프롬프트 보기";
-const hintHtml = p => (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)
+const hintHtml = p => (p.noExpand && (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)) ? "" : (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)
   ? `<span class="phint"><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">접기</span></span>`
   : `<span class="phint">${esc(p.hint)}</span>`;
 // 한 프롬프트 안의 여러 텍스트 칸: [{label, content}]
@@ -802,7 +806,7 @@ function promptHtml(p, admin){
     inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
       <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
   }
-  return `<div class="item lo-${lo} ${openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
+  return `<div class="item lo-${lo} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
     <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
 }
 
@@ -903,6 +907,7 @@ $("#view").addEventListener("click", e => {
   if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
   if (t.dataset.tog) {
     const id = t.dataset.tog;
+    if (promptDocs.find(x => x.id === id)?.noExpand) return;
     openItems.has(id) ? openItems.delete(id) : openItems.add(id);
     document.getElementById("it-" + id)?.classList.toggle("open", openItems.has(id));
   }
@@ -1179,6 +1184,7 @@ function openPrompt(id, preset){
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
   fillTexts("pTexts", textsOf(p));
+  $("#pExpand").checked = !p.noExpand;
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
@@ -1242,7 +1248,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
