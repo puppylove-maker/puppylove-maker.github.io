@@ -167,7 +167,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .g-none .cap{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.45)}
 .no-img .cap{top:0;bottom:0;display:flex;align-items:center;padding:0 16px;color:var(--text);background:none;text-shadow:none}
 
-.folder{position:relative;display:block;width:100%;aspect-ratio:4/1;padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.folder{position:relative;display:block;width:100%;aspect-ratio:var(--fr,4/1);padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer}
 /* 그룹: 카드가 겹쳐 쌓인 모양 */
 .folder.group{overflow:visible;box-shadow:0 5px 0 -2px #fff,0 5px 0 -1px var(--line),0 10px 0 -4px #fff,0 10px 0 -3px #ececec;margin-bottom:8px}
 .folder.group .media{border-radius:13px}
@@ -268,7 +268,17 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 
 .skel{background:linear-gradient(90deg,#f3f3f3 0%,#fafafa 50%,#f3f3f3 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-color:#f0f0f0}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
-#view>.list+.plist{margin-top:20px}
+#view>.list+.plist{margin-top:20px}#view>.list+.plist{margin-top:20px}
+/* 폴더 화면 설정: 몇 줄로 */
+body.fc-1 #view>.list,body.fc-2 #view>.list,body.fc-3 #view>.list{display:grid!important;gap:10px}
+body.fc-1 #view>.list{grid-template-columns:minmax(0,1fr)}
+body.fc-2 #view>.list{grid-template-columns:repeat(2,minmax(0,1fr))}
+body.fc-3 #view>.list{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+body.fc-1 #view>.list>.folder,body.fc-2 #view>.list>.folder,body.fc-3 #view>.list>.folder{width:auto!important}
+body.fc-3 .folder .cap{font-size:12px;padding:20px 8px 8px 9px}
+body.fc-2 .folder .cap{font-size:14px;padding:24px 10px 10px 11px}
+body.fc-3 .folder.no-img .cap,body.fc-2 .folder.no-img .cap{padding-top:0;padding-bottom:0}
+@media (min-width:720px){body.fc-1 #view>.list,body.fc-2 #view>.list{gap:14px}body.fc-3 #view>.list{gap:12px}}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted)}
 .who{font-size:11px;color:var(--muted);text-align:center}
@@ -415,6 +425,18 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   </form>
 </dialog>
 
+<dialog id="viewDlg">
+  <div class="dlg">
+    <h2>폴더 화면 설정</h2>
+    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더 (4:1)</button><button type="button" data-vr="16/9">와이드 (16:9)</button><button type="button" data-vr="1/1">정사각 (1:1)</button></div></div>
+    <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-vc="1">1열</button><button type="button" data-vc="2">2열</button><button type="button" data-vc="3">3열</button></div></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="viewDlg">취소</button>
+      <button type="button" class="btn primary press" id="vSave">저장</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="tplDlg">
   <div class="dlg">
     <h2>새 프롬프트</h2>
@@ -500,6 +522,25 @@ const pencil = light => `<svg viewBox="0 0 24 24" fill="none" stroke="${light ? 
 // ---------- 데이터: 첫 화면은 폴더만, 폴더 안에선 그 폴더 프롬프트만 받기 ----------
 $("#status").textContent = "불러오는 중…";
 let foldersReady = false;
+// 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
+const SETTINGS = () => doc(db, SITE.col, "_settings");
+const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800] };
+let viewCfg = { folderRatio: "4/1", folderCols: 0 };
+try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
+function applyView(){
+  const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
+  document.documentElement.style.setProperty("--fr", r);
+  document.body.classList.remove("fc-1", "fc-2", "fc-3");
+  if ([1, 2, 3].includes(+viewCfg.folderCols)) document.body.classList.add("fc-" + viewCfg.folderCols);
+  const pk = document.getElementById("fPicker"); if (pk) pk.style.aspectRatio = r;
+}
+applyView();
+onSnapshot(SETTINGS(), snap => {
+  const d = snap.exists() ? snap.data() : {};
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0 };
+  try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
+  applyView();
+}, () => {});
 onSnapshot(query(col, where("type", "==", "folder")), snap => {
   folderDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   foldersReady = true; $("#status").textContent = "";
@@ -1055,7 +1096,7 @@ const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
 const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
-const bakeSize = (kind, layout) => kind === "folder" ? [1400, 350] : layout === "side" ? [500, 500] : [1200, 600];
+const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : [1200, 600];
 async function bake(src, W, H, x = 50, y = 50, z = 1){
   const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
   const c = document.createElement("canvas"); c.width = W; c.height = H;
@@ -1155,7 +1196,7 @@ function openMenu(){
   const fid = currentFolderId();
   const cur = folderDocs.find(d => d.id === fid);
   const items = !fid
-    ? [["group", "그룹", "새 그룹 · 편집 · 순서"], ["new", "새 폴더", "프롬프트를 넣는 폴더"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    ? [["group", "그룹", "새 그룹 · 편집 · 순서"], ["new", "새 폴더", "프롬프트를 넣는 폴더"], ["view", "화면 설정", "카드 비율 · 몇 열로"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
     : isGroup(cur)
     ? [["new", "새 폴더", "이 그룹 안에 폴더 추가"], ...(childFolders(fid).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
     : [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
@@ -1171,6 +1212,7 @@ $("#menu").addEventListener("click", e => {
   const fid = currentFolderId();
   if (k === "new") openFolder(null, fid);
   if (k === "group") openGroupManager();
+  if (k === "view") openViewDlg();
   if (k === "order") startReorder("prompts");
   if (k === "forder") startReorder("folders");
   if (k === "tpl") { openPrompt(null, { layout: "stack" }); $("#loAcc").classList.add("open"); }
@@ -1293,6 +1335,45 @@ $("#promptDelBtn").onclick = async () => {
   try { await deleteDoc(doc(db, SITE.col, editingPrompt)); deleteDoc(ORIG(editingPrompt)).catch(() => {}); $("#promptDlg").close(); toast("삭제했어요"); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
+
+// ---------- 폴더 화면 설정 ----------
+let vr = "4/1", vc = 1;
+const paintView = () => {
+  $("#vRatio").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.vr === vr));
+  $("#vCols").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.vc === vc));
+};
+function openViewDlg(){
+  vr = viewCfg.folderRatio || "4/1";
+  vc = +viewCfg.folderCols || (matchMedia("(min-width:720px)").matches ? 2 : 1);
+  paintView(); $("#viewDlg").showModal();
+}
+$("#vRatio").addEventListener("click", e => { const v = e.target.closest("[data-vr]")?.dataset.vr; if (v) { vr = v; paintView(); } });
+$("#vCols").addEventListener("click", e => { const v = e.target.closest("[data-vc]")?.dataset.vc; if (v) { vc = +v; paintView(); } });
+$("#vSave").onclick = () => withBusy("vSave", async () => {
+  const ratioChanged = vr !== (viewCfg.folderRatio || "4/1");
+  try {
+    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc });
+    viewCfg = { folderRatio: vr, folderCols: vc }; applyView();
+    $("#viewDlg").close(); toast("저장됐어요");
+  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
+  if (ratioChanged) await rebakeFolders();
+});
+// 비율이 바뀌면 폴더 이미지를 원본에서 새 비율로 다시 잘라 저장
+async function rebakeFolders(){
+  const [W, H] = bakeSize("folder");
+  const list = folderDocs.filter(f => f.image && f.baked);
+  let n = 0;
+  for (const f of list) {
+    try {
+      const o = await getDoc(ORIG(f.id));
+      if (!o.exists()) continue;
+      const shown = await bake(o.data().image, W, H, num(f.imgX, 50), num(f.imgY, 50), num(f.zoom, 1));
+      await updateDoc(doc(db, SITE.col, f.id), { image: shown });
+      toast(`폴더 이미지 맞추는 중 ${++n}/${list.length}`);
+    } catch(_) {}
+  }
+  if (list.length) toast("폴더 이미지를 새 비율로 맞췄어요");
+}
 
 // ---------- 이미 올린 이미지 한 번에 변환 ----------
 $("#optBtn").onclick = async () => {
