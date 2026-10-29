@@ -215,6 +215,17 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle{flex:0 0 auto!important}
 .texts{display:grid;gap:10px}
+/* 박스 테마: 유리 */
+.th-glass .box{background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(238,240,246,.6));border-color:rgba(255,255,255,.95);box-shadow:0 6px 24px rgba(30,30,60,.07),inset 0 1px 0 #fff}
+.th-glass .copy-btn{background:rgba(255,255,255,.38);border:1px solid rgba(255,255,255,.75);color:#111;backdrop-filter:blur(12px) saturate(1.5);-webkit-backdrop-filter:blur(12px) saturate(1.5);box-shadow:0 2px 12px rgba(0,0,0,.08),inset 0 1px 0 rgba(255,255,255,.8)}
+.th-glass .ov-cap{left:8px;right:8px;bottom:8px;padding:8px 8px 8px 12px;border-radius:12px;background:rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.55);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.th-glass .ov-cap .copy-btn{background:rgba(255,255,255,.55)}
+.th-glass .ov-cap .phint{color:#444}
+/* 박스 테마: 텍스트만 */
+.th-text .copy-btn{background:none;border:none;box-shadow:none;height:28px;padding:0 6px;border-radius:6px;font-size:13px;color:var(--text)}
+.th-text .copy-btn:hover{background:rgba(0,0,0,.05)}
+.th-text .copies{gap:2px}
+.th-text .copy-btn+.copy-btn{border-left:1px solid rgba(0,0,0,.12);border-radius:0 6px 6px 0}
 .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer}
 .chk input{width:18px;height:18px;margin:0;accent-color:#111;flex:none}
 .item.noexp .press{cursor:default}
@@ -340,6 +351,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
+    <div class="field">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div>
     <label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 프롬프트 보기</label>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
@@ -806,7 +818,7 @@ function promptHtml(p, admin){
     inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
       <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
   }
-  return `<div class="item lo-${lo} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
+  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
     <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
 }
 
@@ -1099,6 +1111,9 @@ async function addBlankPrompt(lo, title, hint, texts = [{ label: "복사", conte
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
 }
+let curTheme = "basic";
+function setTheme(v){ curTheme = v; $("#pTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.th === v)); }
+$("#pTheme").addEventListener("click", e => { const v = e.target.closest("[data-th]")?.dataset.th; if (v) setTheme(v); });
 let curPc = "row";
 function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pc === v)); }
 $("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
@@ -1185,6 +1200,7 @@ function openPrompt(id, preset){
   $("#pTitle").value = p.title || "";
   fillTexts("pTexts", textsOf(p));
   $("#pExpand").checked = !p.noExpand;
+  setTheme(p.theme || "basic");
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   setLayout(p.layout || "stack");
@@ -1248,7 +1264,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, theme: curTheme, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
