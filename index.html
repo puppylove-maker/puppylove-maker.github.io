@@ -197,6 +197,12 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .plist .item.lo-tall3 .tall-cap .copy-btn{height:24px;font-size:10.5px;padding:0 4px}
 .plist .item.btn-short .tall-info .copy-btn,.plist .item.btn-short .tall-cap .copy-btn{flex:0 0 auto;padding:0 12px}
 .plist .item.lo-tall3.btn-short .tall-info .copy-btn,.plist .item.lo-tall3.btn-short .tall-cap .copy-btn{padding:0 9px}
+/* 세로형: 버튼 2개까지는 제목과 한 줄(버튼은 오른쪽부터), 3개부터 위아래 */
+.plist .item .tall-info.few,.plist .item .tall-cap.few{display:flex!important;align-items:center;gap:6px}
+.plist .item .few .ptitle{flex:1 1 auto!important;min-width:0!important;max-width:none}
+.plist .item .few .copies{flex:0 0 auto;width:auto;flex-wrap:nowrap;justify-content:flex-end;margin-left:auto}
+.plist .item .few .copy-btn{flex:0 0 auto!important;padding:0 10px}
+.plist .item.lo-tall3 .few .copy-btn{padding:0 7px}
 .plist .item.lo-tall3 .tall-info .copy-btn{height:26px;font-size:11px;padding:0 4px}
 @media (min-width:720px){
   .wrap{max-width:820px}
@@ -927,10 +933,11 @@ function promptHtml(p, admin){
       <div class="sthumb">${mediaHtml(p)}</div>
       <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
   } else if (lo === "tall2" || lo === "tall3") {
+    const few = textsOf(p).length <= 2 ? "few" : "";
     inner = p.tallPos === "inside"
-      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap">${title}${copy}</div></div>`
+      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
       : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
-      <div class="tall-info">${title}${copy}</div>`;
+      <div class="tall-info ${few}">${title}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press" data-tog="${p.id}">
       ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
