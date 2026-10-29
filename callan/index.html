@@ -205,7 +205,9 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .edit-ic svg{width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
 .pbar .edit-ic{position:static;width:28px;height:28px}
 .pbar .edit-ic svg{filter:none}
-.copies{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:none;max-width:70%}
+.copies{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;flex:0 1 auto;min-width:0;max-width:62%}
+.copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptitle{min-width:3.5em!important}
 .texts{display:grid;gap:10px}
 .tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .thead{display:flex;align-items:center;gap:6px}
