@@ -207,6 +207,9 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .pbar .edit-ic svg{filter:none}
 .copies{display:flex;flex-wrap:nowrap;gap:6px;margin-left:auto;flex:0 1 auto;min-width:0;max-width:62%;overflow-x:auto;scrollbar-width:none}
 .copies::-webkit-scrollbar{display:none}
+/* 버튼 4개까지는 스크롤 없이 한 줄에 다 (좁으면 버튼이 조금씩 줄어듦), 5개부터 옆으로 스크롤 */
+.copies:not(.many){overflow:visible;max-width:none;flex:1 1 auto;justify-content:flex-end}
+.copies:not(.many) .copy-btn{flex:0 1 auto;min-width:0;padding:0 clamp(8px,2.6vw,14px)}
 .sinfo{flex:1;min-width:0;display:grid;gap:8px}
 .sline{display:flex;align-items:center;gap:8px;min-width:0}
 .sline .ptitle{max-width:none;min-width:0!important;flex:0 1 auto}
@@ -854,7 +857,7 @@ document.addEventListener("click", e => {
 function promptHtml(p, admin){
   const lo = p.layout || "stack";
   const title = `<span class="ptitle">${esc(p.title || "제목 없음")}</span>`;
-  const copy = `<span class="copies">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}">${esc(t.label || "복사")}</button>`).join("")}</span>`;
+  const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}">${esc(t.label || "복사")}</button>`).join("")}</span>`;
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
   let inner;
   if (lo === "overlay") {
