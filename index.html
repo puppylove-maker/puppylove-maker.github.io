@@ -436,7 +436,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">제목 글씨 색<div class="cpick" id="pColor"></div></div><div class="field" style="padding:0 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">글씨 색 (제목·부제목·버튼)<div class="cpick" id="pColor"></div></div><div class="field" style="padding:0 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
     </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
@@ -487,7 +487,8 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   <div class="dlg">
     <h2>화면 설정</h2>
     <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
-    <div class="field">기본 글씨 색 (보관함 전체)<div class="cpick" id="vColor"></div></div>
+    <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
+    <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
     <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더</button><button type="button" data-vr="16/9">와이드</button><button type="button" data-vr="1/1">정사각</button><button type="button" data-vr="3/4">세로 (3:4)</button></div></div>
     <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-vc="1">1열</button><button type="button" data-vc="2">2열</button><button type="button" data-vc="3">3열</button></div></div>
     <div class="row" style="justify-content:flex-end">
@@ -585,13 +586,13 @@ let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
 const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800], "3/4": [750, 1000] };
-let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "" };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "", followAll: false };
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
   const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
   document.documentElement.style.setProperty("--fr", r);
-  if (viewCfg.textColor) document.documentElement.style.setProperty("--text", viewCfg.textColor); else document.documentElement.style.removeProperty("--text");
+  $("#pageTitle").style.color = viewCfg.textColor || "";
   document.body.classList.remove("fc-1", "fc-2", "fc-3");
   if ([1, 2, 3].includes(+viewCfg.folderCols)) document.body.classList.add("fc-" + viewCfg.folderCols);
   const pk = document.getElementById("fPicker"); if (pk) pk.style.aspectRatio = r;
@@ -600,7 +601,7 @@ function applyView(){
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "" };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
@@ -715,7 +716,7 @@ function folderListHtml(list){
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       ${mediaHtml(f)}
       ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : ""}
-      <span class="cap"${colorStyle(f.textColor)}>${esc(f.name)}</span>
+      <span class="cap"${colorStyle(effColor(f.textColor))}>${esc(f.name)}</span>
     </button>`).join("")}</div>`;
 }
 
@@ -883,8 +884,9 @@ $("#groupDelBtn").onclick = async () => {
 // ---------- 프롬프트 박스 (디자인별) ----------
 const DEFAULT_HINT = "전체 보기", OLD_HINT = "눌러서 전체 프롬프트 보기";
 const hintHtml = p => (p.noExpand && (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)) ? "" : (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)
-  ? `<span class="phint"><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">접기</span></span>`
-  : `<span class="phint">${esc(p.hint)}</span>`;
+  ? `<span class="phint"${hintStyle(p)}><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">접기</span></span>`
+  : `<span class="phint"${hintStyle(p)}>${esc(p.hint)}</span>`;
+function hintStyle(p){ const c = effColor(p.titleColor); return c ? ` style="color:${esc(c)};opacity:.7"` : ""; }
 // 한 프롬프트 안의 여러 텍스트 칸: [{label, content}]
 const textsOf = p => (p.texts && p.texts.length) ? p.texts : [{ label: p.copyLabel || "복사", content: p.content || "" }];
 const TRASH = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
@@ -933,8 +935,8 @@ document.addEventListener("click", e => {
 
 function promptHtml(p, admin){
   const lo = p.layout || "stack";
-  const title = `<span class="ptitle"${colorStyle(p.titleColor)}>${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
-  const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}">${esc(t.label || "복사")}</button>`).join("")}</span>`;
+  const title = `<span class="ptitle"${colorStyle(effColor(p.titleColor))}>${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
+  const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}"${colorStyle(effColor(p.titleColor))}>${esc(t.label || "복사")}</button>`).join("")}</span>`;
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
   let inner;
   if (lo === "overlay") {
@@ -1457,6 +1459,8 @@ function setColor(id, v){
   lab.style.background = !hit ? colorVal[id] : "";
 }
 ["fColor", "pColor", "vColor"].forEach(initColor);
+// 실제로 쓸 색: '전체 따라가기'면 테마 색, 아니면 박스 색 → 없으면 테마 색
+const effColor = own => (viewCfg.followAll && viewCfg.textColor) ? viewCfg.textColor : (own || viewCfg.textColor || "");
 const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
@@ -1470,6 +1474,7 @@ function openViewDlg(){
   vc = +viewCfg.folderCols || (matchMedia("(min-width:720px)").matches ? 2 : 1);
   $("#vTitle").value = viewCfg.siteTitle || "";
   setColor("vColor", viewCfg.textColor);
+  $("#vFollow").checked = !!viewCfg.followAll;
   paintView(); $("#viewDlg").showModal();
 }
 $("#vRatio").addEventListener("click", e => { const v = e.target.closest("[data-vr]")?.dataset.vr; if (v) { vr = v; paintView(); } });
@@ -1478,9 +1483,9 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
   const ratioChanged = vr !== (viewCfg.folderRatio || "4/1");
   try {
     const siteTitle = $("#vTitle").value.trim();
-    const textColor = colorVal.vColor || "";
-    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor });
-    viewCfg = { folderRatio: vr, folderCols: vc, siteTitle, textColor }; applyView(); render();
+    const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
+    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll });
+    viewCfg = { folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
   if (ratioChanged) await rebakeFolders();
