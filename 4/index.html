@@ -252,6 +252,12 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ptitle{flex:0 0 auto!important}
 .texts{display:grid;gap:10px}
+.cpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cpick button,.cpick label{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.12);padding:0;cursor:pointer;position:relative;flex:none}
+.cpick .on{box-shadow:0 0 0 2px #fff,0 0 0 3.5px #111}
+.cpick .c-def{background:#fff;font-size:9px;color:var(--sub);width:auto;padding:0 8px;border-radius:999px}
+.cpick label{background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);overflow:hidden}
+.cpick label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;padding:0;border:none}
 .lock-badge{position:absolute;top:8px;left:8px;z-index:2;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);padding:3px 7px 3px 6px;border-radius:999px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .lock-badge svg{width:11px;height:11px}
 .lock-ic{display:inline-flex;vertical-align:-1px;margin-right:3px;opacity:.7}
@@ -402,6 +408,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="picker r41" id="fPicker"></div>
     <div class="tools" id="fTools"></div>
     <div class="field">글씨 배경<div class="seg" id="fGrad"></div></div>
+    <div class="field">글씨 색<div class="cpick" id="fColor"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
@@ -429,7 +436,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">제목 글씨 색<div class="cpick" id="pColor"></div></div><div class="field" style="padding:0 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
     </div>
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
@@ -480,6 +487,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   <div class="dlg">
     <h2>화면 설정</h2>
     <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
+    <div class="field">기본 글씨 색 (보관함 전체)<div class="cpick" id="vColor"></div></div>
     <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더</button><button type="button" data-vr="16/9">와이드</button><button type="button" data-vr="1/1">정사각</button><button type="button" data-vr="3/4">세로 (3:4)</button></div></div>
     <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-vc="1">1열</button><button type="button" data-vc="2">2열</button><button type="button" data-vc="3">3열</button></div></div>
     <div class="row" style="justify-content:flex-end">
@@ -577,12 +585,13 @@ let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
 const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800], "3/4": [750, 1000] };
-let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "" };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "" };
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
   const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
   document.documentElement.style.setProperty("--fr", r);
+  if (viewCfg.textColor) document.documentElement.style.setProperty("--text", viewCfg.textColor); else document.documentElement.style.removeProperty("--text");
   document.body.classList.remove("fc-1", "fc-2", "fc-3");
   if ([1, 2, 3].includes(+viewCfg.folderCols)) document.body.classList.add("fc-" + viewCfg.folderCols);
   const pk = document.getElementById("fPicker"); if (pk) pk.style.aspectRatio = r;
@@ -591,7 +600,7 @@ function applyView(){
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "" };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "" };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
@@ -706,7 +715,7 @@ function folderListHtml(list){
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       ${mediaHtml(f)}
       ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : ""}
-      <span class="cap">${esc(f.name)}</span>
+      <span class="cap"${colorStyle(f.textColor)}>${esc(f.name)}</span>
     </button>`).join("")}</div>`;
 }
 
@@ -924,7 +933,7 @@ document.addEventListener("click", e => {
 
 function promptHtml(p, admin){
   const lo = p.layout || "stack";
-  const title = `<span class="ptitle">${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
+  const title = `<span class="ptitle"${colorStyle(p.titleColor)}>${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
   const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}">${esc(t.label || "복사")}</button>`).join("")}</span>`;
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
   let inner;
@@ -1332,6 +1341,7 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#fName").value = f.name || "";
   $("#fDesc").value = f.desc || "";
   $("#fHidden").checked = !!f.hidden;
+  setColor("fColor", f.textColor);
   setPc(f.pcLayout || "row");
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
@@ -1345,6 +1355,7 @@ function openPrompt(id, preset){
   fillTexts("pTexts", textsOf(p));
   $("#pExpand").checked = !p.noExpand;
   $("#pHidden").checked = !!p.hidden;
+  setColor("pColor", p.titleColor);
   setTheme(p.theme || "basic");
   setTallPos(p.tallPos || "below");
   setTallBtn(p.tallBtn || "long");
@@ -1368,8 +1379,8 @@ $("#folderForm").addEventListener("submit", e => {
       const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
       const data = editingIsGroup
-        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, ...img, updated: serverTimestamp() }
-        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, ...img, updated: serverTimestamp() };
+        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
+        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
       if (editingFolder) await updateDoc(ref, data);
       else {
         const last = childFolders(currentFolderId()).at(-1);
@@ -1411,7 +1422,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
       if (editingPrompt) await updateDoc(ref, data);
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
@@ -1428,6 +1439,26 @@ $("#promptDelBtn").onclick = async () => {
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
+// ---------- 글씨 색 고르기 ----------
+const SWATCH = ["#111111", "#ffffff", "#6b6b6b", "#e5484d", "#f76b15", "#e2b600", "#30a46c", "#0090ff", "#3e63dd", "#8e4ec6", "#e93d82", "#a1785c"];
+const colorVal = {};
+function initColor(id){
+  const el = document.getElementById(id);
+  el.innerHTML = `<button type="button" class="c-def" data-c="">기본</button>` + SWATCH.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("") + `<label title="직접 고르기"><input type="color"></label>`;
+  el.addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) setColor(id, b.dataset.c); });
+  el.querySelector("input").addEventListener("input", e => setColor(id, e.target.value));
+}
+function setColor(id, v){
+  colorVal[id] = v || "";
+  const el = document.getElementById(id);
+  let hit = false;
+  el.querySelectorAll("[data-c]").forEach(b => { const on = b.dataset.c.toLowerCase() === colorVal[id].toLowerCase(); b.classList.toggle("on", on); hit ||= on; });
+  const lab = el.querySelector("label"); lab.classList.toggle("on", !hit);
+  lab.style.background = !hit ? colorVal[id] : "";
+}
+["fColor", "pColor", "vColor"].forEach(initColor);
+const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
+
 // ---------- 폴더 화면 설정 ----------
 let vr = "4/1", vc = 1;
 const paintView = () => {
@@ -1438,6 +1469,7 @@ function openViewDlg(){
   vr = viewCfg.folderRatio || "4/1";
   vc = +viewCfg.folderCols || (matchMedia("(min-width:720px)").matches ? 2 : 1);
   $("#vTitle").value = viewCfg.siteTitle || "";
+  setColor("vColor", viewCfg.textColor);
   paintView(); $("#viewDlg").showModal();
 }
 $("#vRatio").addEventListener("click", e => { const v = e.target.closest("[data-vr]")?.dataset.vr; if (v) { vr = v; paintView(); } });
@@ -1446,8 +1478,9 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
   const ratioChanged = vr !== (viewCfg.folderRatio || "4/1");
   try {
     const siteTitle = $("#vTitle").value.trim();
-    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle });
-    viewCfg = { folderRatio: vr, folderCols: vc, siteTitle }; applyView(); render();
+    const textColor = colorVal.vColor || "";
+    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor });
+    viewCfg = { folderRatio: vr, folderCols: vc, siteTitle, textColor }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
   if (ratioChanged) await rebakeFolders();
