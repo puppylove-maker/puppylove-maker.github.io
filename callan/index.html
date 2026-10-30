@@ -313,7 +313,10 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 
 .skel{background:linear-gradient(90deg,#f3f3f3 0%,#fafafa 50%,#f3f3f3 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-color:#f0f0f0}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
-#view>.list+.plist{margin-top:20px}#view>.list+.plist{margin-top:20px}
+#view>.list+.plist{margin-top:20px}
+/* 첫 화면은 좌우 여백 넓게 */
+body.home .wrap{padding-left:28px;padding-right:28px}
+@media (min-width:720px){body.home .wrap{padding-left:64px;padding-right:64px}}
 /* 폴더 화면 설정: 몇 줄로 */
 body.fc-1 #view>.list,body.fc-2 #view>.list,body.fc-3 #view>.list{display:grid!important;gap:10px}
 body.fc-1 #view>.list{grid-template-columns:minmax(0,1fr)}
@@ -664,6 +667,7 @@ function render(){
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
 
   renderGroups(fid, admin);
+  document.body.classList.toggle("home", !fid);
   if (!fid) {
     $("#view").classList.remove("pc-col");
     $("#pageTitle").textContent = siteName(); document.title = siteName();
