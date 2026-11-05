@@ -543,7 +543,8 @@ const SITES = {
   "4":       { col: "prompts_4",       admins: ["lilywi3h@gmail.com"] },
   "dubu":    { col: "prompts_dubu",    admins: ["zoozitwater@gmail.com"] },
 };
-const SITE = SITES[location.pathname.split("/").filter(Boolean)[0]] || SITES[""];
+// 주소 중 SITES에 있는 이름을 찾아서 고름 (저장소 주소가 바뀌어도 동작)
+const SITE = SITES[location.pathname.split("/").filter(Boolean).find(k => k in SITES && k)] || SITES[""];
 const ADMINS = SITE.admins;
 const LS = k => SITE.col + ":" + k; // 기기 저장 키도 보관함별로
 // ==========================================
