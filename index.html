@@ -411,6 +411,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">글씨 색<div class="cpick" id="fColor"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
+    <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="fPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <label id="fParentWrap">위치<select id="fParent"></select></label>
     <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
@@ -477,7 +478,6 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <h2 id="groupDlgTitle">새 그룹</h2>
     <label>이름<input id="gName" required placeholder="그룹 이름"></label>
     <div class="field">넣을 폴더 (눌러서 선택)<div class="gpick" id="gPick"></div></div>
-    <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="gPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="gHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <div class="field" id="gOrderWrap">순서
       <div class="gorder">
@@ -636,14 +636,17 @@ function hiddenChain(f, seen = 0){
 // 그룹 비밀번호: 맞게 입력한 그룹은 이 브라우저에서 계속 열려 있음
 let unlocked = {};
 try { unlocked = JSON.parse(localStorage.getItem(LS("pv-unlock")) || "{}"); } catch(_) {}
-const groupOpen = g => !g.pw || isAdmin() || unlocked[g.id] === g.pw;
-function lockGroupOf(f, seen = 0){
-  if (!f || seen > 20) return null;
-  return rawGroups.find(g => !groupOpen(g) && (g.folderIds || []).includes(f.id)) || lockGroupOf(rawFolders.find(d => d.id === f.parentId), seen + 1);
+// 폴더 비밀번호: 맞게 입력한 폴더는 이 브라우저에서 계속 열려 있음
+const folderOpen = f => !f.pw || isAdmin() || unlocked[f.id] === f.pw;
+function lockedAncestor(f, seen = 0){
+  const par = f && rawFolders.find(d => d.id === f.parentId);
+  if (!par || seen > 20) return null;
+  return !folderOpen(par) ? par : lockedAncestor(par, seen + 1);
 }
+const lockOf = f => f ? (!folderOpen(f) ? f : lockedAncestor(f)) : null;
 function refilter(){
   const all = isAdmin();
-  folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f) && !lockGroupOf(f));
+  folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f) && !lockedAncestor(f));
   groupDocs = all ? rawGroups : rawGroups.filter(g => !g.hidden);
   if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
 }
@@ -717,14 +720,16 @@ function render(){
   }
 
   const folder = folderDocs.find(d => d.id === fid);
+  const lockG = foldersReady && !admin && lockOf(folder || rawFolders.find(d => d.id === fid));
+  if (lockG && !hiddenChain(lockG)) {
+    $("#pageTitle").textContent = folder ? folder.name : "비밀번호가 필요해요";
+    $("#view").innerHTML = `<div class="empty">🔒 비밀번호가 걸린 폴더예요<br><br><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
+    $("#lockOpen").onclick = () => askPw(lockG, render);
+    $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true;
+    if (lastAsked !== lockG.id) { lastAsked = lockG.id; askPw(lockG, render); }
+    return;
+  }
   if (!folder) {
-    const lockG = foldersReady && lockGroupOf(rawFolders.find(d => d.id === fid));
-    if (lockG) {
-      $("#pageTitle").textContent = "비밀번호가 필요해요";
-      $("#view").innerHTML = `<div class="empty"><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
-      $("#lockOpen").onclick = () => askPw(lockG, render);
-      $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
-    }
     $("#pageTitle").textContent = foldersReady ? "폴더를 찾을 수 없어요" : "";
     $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
@@ -745,7 +750,7 @@ function folderListHtml(list){
   return `<div class="list">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       ${mediaHtml(f)}
-      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : ""}
+      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : f.pw ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}
       <span class="cap"${colorStyle(effColor(f.textColor))}>${esc(f.name)}</span>
     </button>`).join("")}</div>`;
 }
@@ -761,10 +766,10 @@ function renderGroups(fid, admin){
   if (!show) return;
   $("#pills").innerHTML =
     `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
-    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden || (g.pw && !groupOpen(g)) ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
+    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
     "";
 }
-let pwFor = null, pwThen = null;
+let pwFor = null, pwThen = null, lastAsked = null;
 function askPw(g, then){
   pwFor = g; pwThen = then;
   $("#pwTitle").textContent = `‘${g.name}’ 비밀번호`;
@@ -784,8 +789,6 @@ $("#pills").addEventListener("click", e => {
   const t = e.target.closest("[data-g],[data-gadd],[data-gedit]"); if (!t) return;
   if (t.dataset.gadd) return openGroup(null);
   if (t.dataset.gedit) return openGroup(t.dataset.gedit);
-  const tg = groupDocs.find(x => x.id === t.dataset.g);
-  if (tg && !groupOpen(tg)) return askPw(tg, () => { selGroup = tg.id; render(); });
   selGroup = t.dataset.g || null; render();
   const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
 });
@@ -897,7 +900,7 @@ function openGroup(id, viaManager = false){
   $("#groupDlgTitle").textContent = id ? "그룹 편집" : "새 그룹";
   $("#gName").value = g.name || "";
   $("#gHidden").checked = !!g.hidden;
-  $("#gPw").value = g.pw || "";
+
   $("#groupDelBtn").hidden = !id;
   gOrderIds = groups().map(x => x.id);
   $("#gOrderWrap").hidden = true;
@@ -913,7 +916,7 @@ $("#groupForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("groupSave", async () => {
     const name = $("#gName").value.trim(); if (!name) return;
-    const data = { name, folderIds: [...gSel], hidden: $("#gHidden").checked, pw: $("#gPw").value.trim(), updated: serverTimestamp() };
+    const data = { name, folderIds: [...gSel], hidden: $("#gHidden").checked, updated: serverTimestamp() };
     try {
       if (editingGroup) await updateDoc(doc(db, SITE.col, editingGroup), data);
       else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
@@ -1391,6 +1394,7 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#fName").value = f.name || "";
   $("#fDesc").value = f.desc || "";
   $("#fHidden").checked = !!f.hidden;
+  $("#fPw").value = f.pw || "";
   setColor("fColor", f.textColor);
   setPc(f.pcLayout || "row");
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
@@ -1429,8 +1433,8 @@ $("#folderForm").addEventListener("submit", e => {
       const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
       const data = editingIsGroup
-        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
-        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
+        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
+        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
       if (editingFolder) await updateDoc(ref, data);
       else {
         const last = childFolders(currentFolderId()).at(-1);
