@@ -1,0 +1,1617 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프롬프트 보관함</title>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#ffffff;--text:#111111;--sub:#555555;--muted:#9a9a9a;--line:#ececec;--soft:#f5f5f5;--danger:#c0392b;
+  --ease:cubic-bezier(.2,.8,.2,1);
+  color-scheme:light;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button,input,textarea,select{outline:none}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;min-height:calc(100vh / var(--z,1));display:flex;flex-direction:column}
+main{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:6vh}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
+.title{display:flex;align-items:center;gap:2px;min-width:0}
+h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
+.row{display:flex;gap:6px;align-items:center}
+.desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
+.hbtns{display:flex;gap:6px;position:relative;flex:none}
+.icon-btn{width:30px;height:30px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
+.icon-btn svg{width:16px;height:16px}
+.icon-btn.plus{color:#555}
+.icon-btn.plus svg{transition:transform .3s var(--ease)}
+.icon-btn.plus.on svg{transform:rotate(45deg)}
+/* 그룹: 제목 옆 화살표 + 알약 */
+.title-chev{border:none;background:none;padding:4px;margin-left:2px;color:#999;cursor:pointer;display:grid;place-items:center;flex:none}
+.title-chev svg{width:18px;height:18px;transition:transform .3s var(--ease)}
+.title-chev.on svg{transform:rotate(180deg)}
+.gacc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease),margin .32s var(--ease)}
+.gacc>div{overflow:hidden}
+.gacc.open{grid-template-rows:1fr;margin-top:-10px;margin-bottom:14px}
+.pills{display:flex;flex-wrap:nowrap;gap:6px;padding:2px 16px 2px 0;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.pills::-webkit-scrollbar{display:none}
+.pills .pill{flex:none;scroll-snap-align:start}
+.pill{height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--sub);font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.pill.on{background:#f1f1f1;border-color:#f1f1f1;color:var(--text);font-weight:600}
+.pill.add{border-style:dashed;color:var(--muted)}
+.pill.edit{border:none;background:none;color:var(--muted);padding:0 8px;font-size:12px}
+.gpick{display:flex;flex-wrap:wrap;gap:6px}
+#gmList .oarrow svg{width:15px;height:15px}
+#gmList .orow{gap:6px;padding-left:14px}
+#gmList .oarrow{width:32px;height:32px}
+.gorder{display:flex;align-items:center;gap:6px}
+.gorder .oarrow{flex:none;font-size:18px;line-height:1}
+.gorder-list{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:2px 0}
+.gorder-list::-webkit-scrollbar{display:none}
+.gorder-list .pill{flex:none;height:28px;font-size:12px;cursor:default;display:inline-flex;align-items:center;transition:transform .25s var(--ease)}
+/* + 메뉴 */
+.menu{position:absolute;top:42px;right:0;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:6px;z-index:20;opacity:0;transform:translateY(-6px) scale(.97);transform-origin:top right;pointer-events:none;transition:opacity .18s var(--ease),transform .22s var(--ease)}
+.menu.show{opacity:1;transform:none;pointer-events:auto}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:none;background:none;padding:10px 12px;border-radius:10px;font:inherit;font-size:14px;color:var(--text);cursor:pointer;text-align:left}
+.menu button:hover{background:var(--soft)}
+.menu small{font-size:11px;color:var(--muted);margin-top:1px}
+/* 박스 디자인: 오버레이 */
+.lo-overlay .pimg{margin-bottom:0}
+.ov-cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:30px 10px 10px 14px;background:linear-gradient(to top,rgba(255,255,255,.92),rgba(255,255,255,0))}
+.ov-cap .phint{color:#777}
+.lo-overlay .pimg.no-pic{aspect-ratio:auto;min-height:110px;background:var(--soft)}
+/* 박스 디자인: 가로형 */
+.pside{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 8px;border-radius:14px;cursor:pointer}
+.sthumb{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;background:#e9e9e9;flex:none}
+.sbody{flex:1;min-width:0;display:grid;gap:2px}
+.sbody .ptitle{max-width:none}
+.pside .edit-ic{position:static;width:28px;height:28px}
+.pside .edit-ic svg{filter:none}
+/* 박스 디자인: 텍스트 카드 */
+.ptext{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;min-height:48px;border-radius:14px;cursor:pointer;position:relative}
+.ptext .ptitle{max-width:60%}
+.tsnip{font-size:12px;color:var(--sub);white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
+.ptext .tfoot{display:flex;justify-content:space-between;align-items:center}
+.ptext .edit-ic{position:static;width:28px;height:28px}
+.ptext .edit-ic svg{filter:none}
+/* 디자인 미리보기 (템플릿 고르기) */
+.lo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.lo-card{display:grid;gap:8px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px;font:inherit;font-size:12px;color:var(--sub);cursor:pointer;text-align:left}
+.lo-card.on{border-color:#bdbdbd;background:var(--soft)}
+/* 박스 디자인 변경 (아코디언) */
+.acc{border:1px solid var(--line);border-radius:10px;background:#fff}
+.acc-head{width:100%;display:flex;align-items:center;gap:8px;border:none;background:none;padding:10px 12px;font:inherit;font-size:13px;color:var(--text);cursor:pointer;text-align:left}
+.acc-head span:first-child{flex:1}
+.acc-cur{font-size:12px;color:var(--muted)}
+.acc-head svg{width:16px;height:16px;color:#999;transition:transform .3s var(--ease)}
+.acc.open .acc-head svg{transform:rotate(180deg)}
+.acc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease)}
+.acc-body>div{overflow:hidden}
+.acc.open .acc-body{grid-template-rows:1fr}
+.acc .lo-grid{padding:0 10px 10px}
+/* 수정 창 안의 작은 디자인 선택 */
+.lo-grid.compact{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
+.lo-grid.compact::-webkit-scrollbar{display:none}
+.lo-grid.compact .lo-card{flex:0 0 78px;scroll-snap-align:start}
+.lo-grid.compact .lo-card{padding:6px;gap:5px;border-radius:10px;font-size:11px;text-align:center}
+.lo-grid.compact .lo-card .d{display:none}
+.lo-grid.compact .mini{height:40px}
+.lo-grid.compact .mini .im{height:22px}.lo-grid.compact .mini .bar{height:9px}
+.lo-grid.compact .mini.ov .im{height:38px}.lo-grid.compact .mini.ov .bar{bottom:6px;height:7px}
+.lo-grid.compact .mini.sd{grid-template-columns:16px 1fr;height:40px}.lo-grid.compact .mini.sd .im{height:16px}.lo-grid.compact .mini.sd .bar{height:7px}
+.lo-grid.compact .mini.tx .bar{height:7px}.lo-grid.compact .mini.tx .ln{height:4px}
+.mini{display:grid;gap:3px;height:62px;align-content:start}
+.mini i{display:block;background:#e4e4e4;border-radius:5px}
+.mini .im{height:36px}.mini .bar{height:14px;background:#efefef}
+.mini.ov{position:relative}.mini.ov .im{height:56px}.mini.ov .bar{position:absolute;left:4px;right:4px;bottom:9px;height:10px;background:#fafafa}
+.mini.sd{grid-template-columns:28px 1fr;align-items:center;height:62px;align-content:center}.mini.sd .im{height:28px}.mini.sd .bar{height:10px}
+.mini.tx .bar{height:10px}.mini.tx .ln{height:6px;background:#efefef}
+.mini.tl{grid-template-columns:repeat(2,1fr);gap:4px}.mini.tl.t3{grid-template-columns:repeat(3,1fr)}.mini.tl .im{height:46px}
+.lo-grid.compact .mini.tl .im{height:36px}
+/* 템플릿 */
+.tpl-list{display:grid;gap:8px;max-height:60vh;overflow:auto}
+.tpl{display:grid;gap:3px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
+.tpl b{font-size:14px}
+.tpl span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 관리 줄 (폴더 편집 / 순서 바꾸기) */
+.admin-bar{display:flex;gap:4px;margin:-6px 0 12px}
+.link{border:none;background:none;font:inherit;font-size:12px;color:var(--muted);padding:4px 8px;border-radius:6px;cursor:pointer}
+.link:hover{background:var(--soft);color:var(--sub)}
+.link:first-child{margin-left:-8px}
+footer{display:flex;justify-content:center;gap:4px;padding-top:40px}
+
+.press{transition:transform .38s cubic-bezier(.34,1.56,.64,1),background-color .18s var(--ease),border-color .18s var(--ease),opacity .18s;touch-action:manipulation}
+.press.is-pressed{transform:scale(.95);transition:transform .12s var(--ease),background-color .12s,opacity .12s}
+.pimg.press.is-pressed,.pbar.press.is-pressed,.folder.press.is-pressed{transform:scale(.98)}
+#view.enter{animation:enter .32s var(--ease)}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+dialog.closing{animation:pop-out .16s var(--ease) forwards}
+dialog.closing::backdrop{opacity:0;transition:opacity .16s}
+@keyframes pop-out{to{opacity:0;transform:translateY(6px) scale(.98)}}
+
+.item{display:grid;grid-template-columns:minmax(0,1fr);min-width:0}
+.expand{display:grid;grid-template-rows:0fr;transition:grid-template-rows .36s var(--ease),opacity .3s var(--ease),margin .36s var(--ease);opacity:0}
+.expand>div{overflow:hidden}
+.item.open .expand{grid-template-rows:1fr;opacity:1;margin-top:4px}
+.expand-inner{white-space:pre-wrap;word-break:break-word;font-size:12.5px;line-height:1.45;color:var(--sub);background:var(--soft);border-radius:12px;padding:12px 14px}
+
+.btn{border:1px solid var(--line);background:var(--bg);color:var(--text);height:30px;padding:0 10px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:#f1f1f1;border-color:#f1f1f1;color:var(--text);font-weight:600}
+.btn.primary:hover{background:#e8e8e8}
+.btn.ghost{border-color:transparent;color:var(--sub);background:transparent}
+.btn.danger{color:var(--danger)}
+.btn.sm{height:28px;padding:0 9px;font-size:12px}
+.btn:disabled{opacity:.5}
+
+select{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 10px center;background-size:16px}
+input,textarea{width:100%;font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 11px;transition:border-color .15s}
+input:focus,textarea:focus{border-color:#cfcfcf}
+textarea{min-height:140px;resize:vertical;line-height:1.55}
+textarea.short{min-height:70px}
+textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
+
+.box{border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+.list{display:grid;gap:10px}
+.media{position:absolute;inset:0;overflow:hidden}
+.media img{width:100%;height:100%;object-fit:cover;display:block}
+
+.cap{position:absolute;left:0;right:0;bottom:0;padding:28px 16px 12px 14px;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-white .cap{color:var(--text);background:linear-gradient(to top,rgba(255,255,255,.85),rgba(255,255,255,0))}
+.g-black .cap{color:#fff;background:linear-gradient(to top,rgba(0,0,0,.45),rgba(0,0,0,0))}
+.g-none .cap{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.45)}
+.no-img .cap{top:0;bottom:0;display:flex;align-items:center;padding:0 16px;color:var(--text);background:none;text-shadow:none}
+
+.folder{position:relative;display:block;width:100%;aspect-ratio:var(--fr,4/1);padding:0;overflow:hidden;text-align:left;font:inherit;color:inherit;cursor:pointer}
+/* 그룹: 카드가 겹쳐 쌓인 모양 */
+.folder.group{overflow:visible;box-shadow:0 5px 0 -2px #fff,0 5px 0 -1px var(--line),0 10px 0 -4px #fff,0 10px 0 -3px #ececec;margin-bottom:8px}
+.folder.group .media{border-radius:13px}
+
+.plist{display:flex;flex-wrap:wrap;align-items:flex-start;row-gap:16px;column-gap:12px}
+.plist>.item{width:100%}
+.plist>.item.lo-tall2{width:calc((100% - 12px) / 2)}
+.plist>.item.lo-tall3{width:calc((100% - 24px) / 3)}
+/* 세로형 카드 */
+.ptall{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;cursor:pointer}
+.ptall.no-pic{display:grid;place-items:center}
+.tall-info{display:grid;gap:6px;padding:8px 2px 0;min-width:0}
+.tall-info .ptitle{max-width:none;font-size:13px}
+.lo-tall3 .tall-info .ptitle{font-size:12px}
+.plist .item .tall-info .copies{display:flex;flex-wrap:wrap;gap:4px;max-width:none;width:100%;margin:0;overflow:visible;justify-content:flex-start}
+.plist .item .tall-info .copy-btn{flex:1 1 40%;min-width:0;height:28px;padding:0 6px;font-size:11.5px}
+.tall-cap{display:grid!important;gap:6px;padding:28px 8px 8px!important}
+.tall-cap .ptitle{max-width:none;font-size:13px}
+.lo-tall3 .tall-cap{padding:22px 6px 6px!important}
+.lo-tall3 .tall-cap .ptitle{font-size:11.5px}
+.plist .item .tall-cap .copies{display:flex;flex-wrap:wrap;gap:4px;max-width:none;width:100%;margin:0;overflow:visible;justify-content:flex-start}
+.plist .item .tall-cap .copy-btn{flex:1 1 40%;min-width:0;height:28px;padding:0 6px;font-size:11.5px}
+.plist .item.lo-tall3 .tall-cap .copy-btn{height:24px;font-size:10.5px;padding:0 4px}
+.plist .item.btn-short .tall-info .copy-btn,.plist .item.btn-short .tall-cap .copy-btn{flex:0 0 auto;padding:0 12px}
+.plist .item.lo-tall3.btn-short .tall-info .copy-btn,.plist .item.lo-tall3.btn-short .tall-cap .copy-btn{padding:0 9px}
+/* 세로형: 버튼 2개까지는 제목과 한 줄(버튼은 오른쪽부터), 3개부터 위아래 */
+.plist .item .tall-info.few,.plist .item .tall-cap.few{display:flex!important;align-items:center;gap:6px}
+.plist .item .few .ptitle{flex:1 1 auto!important;min-width:0!important;max-width:none}
+.plist .item .few .copies{flex:0 0 auto;width:auto;flex-wrap:nowrap;justify-content:flex-end;margin-left:auto}
+.plist .item .few .copy-btn{flex:0 0 auto!important;padding:0 10px}
+.plist .item.lo-tall3 .few .copy-btn{padding:0 7px}
+.plist .item.lo-tall3 .tall-info .copy-btn{height:26px;font-size:11px;padding:0 4px}
+@media (min-width:720px){
+  .wrap{max-width:820px}
+  /* 2칸씩, 마지막이 홀수면 가운데 */
+  .plist{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px}
+  .plist>.item{width:calc(50% - 10px)}
+  .plist{column-gap:20px;row-gap:20px}
+  .plist>.item.lo-tall2{width:calc((100% - 40px) / 3)}
+  .plist>.item.lo-tall3{width:calc((100% - 60px) / 4)}
+  #view.pc-col .plist{flex-direction:column;align-items:center}
+  #view.pc-col .plist>.item{width:min(100%,560px)}
+  #view>.list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+  #view>.list>.folder{width:calc(50% - 7px)}
+  .wrap{padding:36px 28px 48px}
+  h1{font-size:20px}
+}
+/* PC: 크게, 화면 가운데에 */
+@media (min-width:900px){
+  .wrap{justify-content:center;padding-top:48px;padding-bottom:48px}
+  main{flex:0 0 auto;padding-bottom:0}
+  footer{padding-top:48px}
+}
+@media (min-width:1400px){html{zoom:1.2;--z:1.2}}
+@media (min-width:1700px){html{zoom:1.4;--z:1.4}}
+@media (min-width:2100px){html{zoom:1.65;--z:1.65}}
+.pimg{position:relative;aspect-ratio:2/1;border-radius:14px;overflow:hidden;cursor:pointer;margin-bottom:4px}
+.pbar{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:14px;cursor:pointer;min-height:48px}
+.ptitle{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;min-width:0;flex:0 1 auto}
+.phint{flex:1;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phint .h-close{display:none}
+.item.open .phint .h-open{display:none}
+.item.open .phint .h-close{display:inline}
+.edit-ic{position:absolute;top:8px;right:8px;width:32px;height:32px;border:none;background:none;padding:0;display:grid;place-items:center;cursor:pointer;z-index:2}
+.edit-ic svg{width:18px;height:18px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.pbar .edit-ic{position:static;width:28px;height:28px}
+.pbar .edit-ic svg{filter:none}
+.copies{display:flex;flex-wrap:nowrap;gap:6px;margin-left:auto;flex:0 1 auto;min-width:0;max-width:62%;overflow-x:auto;scrollbar-width:none}
+.copies::-webkit-scrollbar{display:none}
+/* 버튼 4개까지는 스크롤 없이 한 줄에 다 (좁으면 버튼이 조금씩 줄어듦), 5개부터 옆으로 스크롤 */
+.copies:not(.many){overflow:visible;max-width:none;flex:1 1 auto;justify-content:flex-end}
+.copies:not(.many) .copy-btn{flex:0 1 auto;min-width:0;padding:0 clamp(8px,2.6vw,14px)}
+.sinfo{flex:1;min-width:0;display:grid;gap:8px}
+.sline{display:flex;align-items:center;gap:8px;min-width:0}
+.sline .ptitle{max-width:none;min-width:0!important;flex:0 1 auto}
+.pside .copies{max-width:100%;width:100%}
+.pside .copies>:first-child{margin-left:auto}
+.copies .copy-btn{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptitle{flex:0 0 auto!important}
+.texts{display:grid;gap:10px}
+.cpick{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cpick button,.cpick label{width:24px;height:24px;border-radius:50%;border:1px solid rgba(0,0,0,.12);padding:0;cursor:pointer;position:relative;flex:none}
+.cpick .on{box-shadow:0 0 0 2px #fff,0 0 0 3.5px #111}
+.cpick .c-def{background:#fff;font-size:9px;color:var(--sub);width:auto;padding:0 8px;border-radius:999px}
+.cpick label{background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);overflow:hidden}
+.cpick label input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;padding:0;border:none}
+.lock-badge{position:absolute;top:8px;left:8px;z-index:2;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;color:#fff;background:rgba(0,0,0,.45);padding:3px 7px 3px 6px;border-radius:999px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.lock-badge svg{width:11px;height:11px}
+.lock-ic{display:inline-flex;vertical-align:-1px;margin-right:3px;opacity:.7}
+.lock-ic svg{width:12px;height:12px}
+/* 버튼 테마: 유리 (아이폰 리퀴드 글래스 느낌) */
+.th-glass .copy-btn{position:relative;overflow:hidden;isolation:isolate;border:none;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 8px rgba(0,0,0,.25);font-weight:600;
+  background:rgba(255,255,255,.06);
+  backdrop-filter:blur(1.5px) saturate(1.3);-webkit-backdrop-filter:blur(1.5px) saturate(1.3);
+  box-shadow:inset .5px .5px 0 rgba(255,255,255,.55),inset -.5px -.5px 0 rgba(255,255,255,.2),0 4px 14px -4px rgba(0,0,0,.2)}
+/* 유리 테마: 카드 전체도 리퀴드 글래스 */
+.th-glass .box{border-color:transparent;box-shadow:0 10px 30px -10px rgba(20,20,40,.25),0 2px 6px rgba(0,0,0,.05)}
+.th-glass .pimg::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:1;
+  box-shadow:inset .5px .5px 0 rgba(255,255,255,.6),inset -.5px -.5px 0 rgba(255,255,255,.25),inset 0 0 24px rgba(255,255,255,.12);
+  background:linear-gradient(150deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,0) 30%,rgba(255,255,255,0) 80%,rgba(255,255,255,.08) 100%)}
+.th-glass .pbar,.th-glass .ptext,.th-glass .pside{background:linear-gradient(150deg,rgba(255,255,255,.95),rgba(242,244,250,.75));
+  backdrop-filter:blur(16px) saturate(1.6);-webkit-backdrop-filter:blur(16px) saturate(1.6);
+  box-shadow:inset .5px .5px 0 #fff,inset -.5px -.5px 0 rgba(0,0,0,.04),inset 0 0 0 .5px rgba(0,0,0,.05),0 10px 30px -12px rgba(20,20,40,.22),0 2px 6px rgba(0,0,0,.04)}
+.th-glass .ov-cap,.th-glass .edit-ic{z-index:2}
+.th-glass .copies{padding:6px 6px 12px;margin:-6px -6px -12px auto}
+.th-glass.lo-side .copies{margin:-6px -6px -12px 0}
+.th-glass:not(.lo-overlay) .copy-btn{color:#111;text-shadow:none;background:rgba(255,255,255,.35)}
+.th-glass .ov-cap{background:none}
+.th-glass .ov-cap .ptitle,.th-glass .ov-cap .phint{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.45)}
+.th-glass .copy-btn::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;background:linear-gradient(160deg,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 35%,rgba(255,255,255,0) 75%,rgba(255,255,255,.1) 100%)}
+/* 박스 테마: 텍스트만 */
+.th-text .copy-btn{background:none;border:none;box-shadow:none;height:28px;padding:0 6px;border-radius:6px;font-size:13px;color:var(--text)}
+.th-text .copy-btn:hover{background:rgba(0,0,0,.05)}
+.th-text .copies{gap:2px}
+.th-text .copy-btn+.copy-btn{border-left:1px solid rgba(0,0,0,.12);border-radius:0 6px 6px 0}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;white-space:nowrap}
+.chk input{width:15px;height:15px;margin:0;padding:0;accent-color:#111;flex:none}
+.chk small{font-size:11px;color:var(--muted)}
+.chk-row{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.item.noexp .press{cursor:default}
+.tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.thead{display:flex;align-items:center;gap:6px}
+.thead input{flex:1;min-width:0;padding:6px 9px;font-size:12px}
+.thead .oarrow{width:30px;height:30px;flex:none}
+.tblock textarea{min-height:110px}
+.tblock textarea.scroll-box{min-height:0;height:96px}
+.add-text{justify-self:start}
+.ex-label{font-size:11px;font-weight:700;color:var(--text);margin:8px 0 2px}
+.ex-label:first-child{margin-top:0}
+.copy-btn{flex:none;height:30px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#111;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+
+/* 순서 바꾸기 */
+.olist{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.orow{display:flex;align-items:center;gap:6px;min-width:0;padding:8px 6px 8px 8px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.othumb{width:52px;height:30px;border-radius:6px;background:var(--soft);object-fit:cover;flex:none}
+.oname{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.oarrow{width:28px;height:28px;flex:none;border:none;border-radius:8px;background:none;display:grid;place-items:center;cursor:pointer;color:var(--sub);font-size:12px;padding:0}
+.oarrow:hover{background:var(--soft)}
+.oarrow svg{width:15px;height:15px}
+.oarrow:disabled{opacity:.3}
+.oarrow.del{color:var(--danger)}
+.oarrow.del svg{width:15px;height:15px}
+.orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
+.obar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
+
+.skel{background:linear-gradient(90deg,#f3f3f3 0%,#fafafa 50%,#f3f3f3 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-color:#f0f0f0}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+#view>.list+.plist{margin-top:20px}
+/* 첫 화면은 좌우 여백 넓게 */
+body.home .wrap{padding-left:22px;padding-right:22px}
+@media (min-width:720px){body.home .wrap{padding-left:44px;padding-right:44px}}
+/* 폴더 화면 설정: 몇 줄로 */
+body.fc-1 #view>.list,body.fc-2 #view>.list,body.fc-3 #view>.list{display:grid!important;gap:10px}
+body.fc-1 #view>.list{grid-template-columns:minmax(0,1fr)}
+body.fc-2 #view>.list{grid-template-columns:repeat(2,minmax(0,1fr))}
+body.fc-3 #view>.list{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+body.fc-1 #view>.list>.folder,body.fc-2 #view>.list>.folder,body.fc-3 #view>.list>.folder{width:auto!important}
+body.fc-3 .folder .cap{font-size:12px;padding:20px 8px 8px 9px}
+body.fc-2 .folder .cap{font-size:14px;padding:24px 10px 10px 11px}
+body.fc-3 .folder.no-img .cap,body.fc-2 .folder.no-img .cap{padding-top:0;padding-bottom:0}
+@media (min-width:720px){body.fc-1 #view>.list,body.fc-2 #view>.list{gap:14px}body.fc-3 #view>.list{gap:12px}}
+.empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
+.status{font-size:12px;color:var(--muted)}
+.who{font-size:11px;color:var(--muted);text-align:center}
+
+dialog{border:none;border-radius:16px;padding:0;overflow-x:hidden;width:min(480px,calc(100% - 24px));max-height:calc(100% - 24px);background:var(--bg);color:var(--text);box-shadow:0 10px 40px rgba(0,0,0,.14)}
+dialog[open]{animation:pop .22s var(--ease)}
+dialog::backdrop{background:rgba(0,0,0,.25)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+.dlg{padding:16px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.dlg h2{margin:0;font-size:15px;font-weight:700}
+label,.field{font-size:12px;color:var(--sub);display:grid;gap:5px}
+.picker{position:relative;border:1px dashed #d4d4d4;border-radius:12px;background:var(--soft);overflow:hidden;color:var(--muted);font-size:13px;touch-action:none;user-select:none;-webkit-user-select:none}
+.picker.r21{aspect-ratio:2/1}
+.picker.r41{aspect-ratio:4/1}
+.picker.r11{aspect-ratio:1/1;width:50%}
+.picker.r34{aspect-ratio:3/4;width:50%}
+.picker .empty-hint{position:absolute;inset:0;display:grid;place-items:center;cursor:pointer}
+.picker.has{cursor:grab;border-style:solid}
+.nudge{position:absolute;width:30px;height:30px;border:none;background:none;color:#fff;display:grid;place-items:center;cursor:pointer;padding:0;z-index:2;transition:transform .15s var(--ease)}
+.nudge:active{transform:scale(.85)}
+.nudge svg{width:22px;height:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+.nudge{width:28px;height:22px}
+.n-up{top:0;left:50%;margin-left:-14px}
+.n-down{bottom:0;left:50%;margin-left:-14px}.n-down svg{transform:rotate(180deg)}
+.n-left{left:0;top:50%;margin-top:-14px;width:22px;height:28px}.n-left svg{transform:rotate(-90deg)}
+.n-right{right:0;top:50%;margin-top:-14px;width:22px;height:28px}.n-right svg{transform:rotate(90deg)}
+.picker .drag-hint{position:absolute;left:8px;top:8px;font-size:11px;background:rgba(255,255,255,.9);color:var(--sub);padding:2px 8px;border-radius:999px;pointer-events:none}
+.tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tools .zoom-row{display:flex;align-items:center;gap:8px;flex:1 1 100%;font-size:12px;color:var(--muted)}
+img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-user-select:none}
+.tools input[type=range]{flex:1;padding:0;border:none;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:#e6e6e6}
+.tools input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.tools input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff;border:1px solid #d0d0d0}
+.seg{display:flex;background:var(--soft);border-radius:8px;padding:3px;gap:3px}
+.seg button{flex:1;height:28px;border:none;border-radius:6px;background:transparent;font:inherit;font-size:12px;color:var(--sub);cursor:pointer}
+.seg button.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.toast{white-space:nowrap;position:fixed;left:50%;bottom:24px;transform:translate(-50%,8px);background:#fff;color:var(--text);border:1px solid var(--line);box-shadow:0 4px 16px rgba(0,0,0,.08);padding:9px 14px;border-radius:10px;font-size:13px;opacity:0;transition:.22s var(--ease);pointer-events:none;z-index:10}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title">
+      <button class="back press" id="backBtn" hidden aria-label="뒤로">‹</button>
+      <h1 id="pageTitle">프롬프트 보관함</h1>
+      <button class="title-chev press" id="grpToggle" hidden aria-label="그룹 보기"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+    </div>
+    <div class="hbtns">
+      <button class="icon-btn press" id="folderEditBtn" hidden aria-label="폴더 편집"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="icon-btn plus press" id="plusBtn" hidden aria-label="추가"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <div class="menu" id="menu"></div>
+    </div>
+  </header>
+  <div class="gacc" id="gAcc" hidden><div><div class="pills" id="pills"></div></div></div>
+  <main>
+    <div class="desc" id="desc" hidden></div>
+    <div class="status" id="status"></div>
+    <div id="view"></div>
+  </main>
+  <footer>
+    <span class="who" id="who" hidden></span>
+    <button class="link press" id="optBtn" hidden>이미지 가볍게 변환</button>
+    <button class="link press" id="backupBtn" hidden>백업</button>
+    <button class="link press" id="loginBtn" hidden>관리자 로그인</button>
+    <button class="link press" id="logoutBtn" hidden>로그아웃</button>
+  </footer>
+</div>
+
+<dialog id="folderDlg">
+  <form class="dlg" id="folderForm">
+    <h2 id="folderDlgTitle">새 폴더</h2>
+    <div class="picker r41" id="fPicker"></div>
+    <div class="tools" id="fTools"></div>
+    <div class="field">글씨 배경<div class="seg" id="fGrad"></div></div>
+    <div class="field">글씨 색<div class="cpick" id="fColor"></div></div>
+    <label>제목<input id="fName" required placeholder="폴더 이름"></label>
+    <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
+    <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
+    <label id="fParentWrap">위치<select id="fParent"></select></label>
+    <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
+
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
+      <div class="row" style="margin-left:auto">
+        <button type="button" class="btn press" data-close="folderDlg">취소</button>
+        <button type="submit" class="btn primary press" id="folderSave">저장</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="promptDlg">
+  <form class="dlg" id="promptForm">
+    <h2 id="promptDlgTitle">새 프롬프트</h2>
+    <div class="picker r21" id="pPicker"></div>
+    <div class="tools" id="pTools"></div>
+    <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
+    <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
+    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
+    <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
+    <div class="acc" id="loAcc">
+      <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">글씨 색 (제목·부제목·버튼)<div class="cpick" id="pColor"></div></div><div class="field" style="padding:0 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">세로형 제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger press" id="promptDelBtn" hidden>삭제</button>
+      <div class="row" style="margin-left:auto">
+        <button type="button" class="btn press" data-close="promptDlg">취소</button>
+        <button type="submit" class="btn primary press" id="promptSave">저장</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="groupsDlg">
+  <div class="dlg">
+    <h2>그룹</h2>
+    <div class="olist" id="gmList"></div>
+    <button type="button" class="btn press" id="gmNew">+ 새 그룹 만들기</button>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="groupsDlg">닫기</button>
+      <button type="button" class="btn primary press" id="gmSave">순서 저장</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="pwDlg">
+  <form class="dlg" id="pwForm">
+    <h2 id="pwTitle">비밀번호</h2>
+    <input id="pwIn" type="password" autocomplete="off" placeholder="비밀번호 입력">
+    <div id="pwErr" style="color:var(--danger);font-size:12px;min-height:16px"></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="pwDlg">취소</button>
+      <button type="submit" class="btn primary press">열기</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="groupDlg">
+  <form class="dlg" id="groupForm">
+    <h2 id="groupDlgTitle">새 그룹</h2>
+    <label>이름<input id="gName" required placeholder="그룹 이름"></label>
+    <div class="field">넣을 폴더 (눌러서 선택)<div class="gpick" id="gPick"></div></div>
+    <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="gPw" autocomplete="off" placeholder="없음"></label>
+    <label class="chk"><input type="checkbox" id="gHidden">비공개 <small>(로그인 시에만 보임)</small></label>
+    <div class="field" id="gOrderWrap">순서
+      <div class="gorder">
+        <button type="button" class="oarrow press" id="gLeft" aria-label="앞으로">‹</button>
+        <div class="gorder-list" id="gOrder"></div>
+        <button type="button" class="oarrow press" id="gRight" aria-label="뒤로">›</button>
+      </div>
+    </div>
+    <div class="row" style="justify-content:space-between">
+      <button type="button" class="btn danger press" id="groupDelBtn" hidden>삭제</button>
+      <div class="row" style="margin-left:auto">
+        <button type="button" class="btn press" data-close="groupDlg">취소</button>
+        <button type="submit" class="btn primary press" id="groupSave">저장</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="viewDlg">
+  <div class="dlg">
+    <h2>화면 설정</h2>
+    <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
+    <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
+    <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
+    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더</button><button type="button" data-vr="16/9">와이드</button><button type="button" data-vr="1/1">정사각</button><button type="button" data-vr="3/4">세로 (3:4)</button></div></div>
+    <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-vc="1">1열</button><button type="button" data-vc="2">2열</button><button type="button" data-vc="3">3열</button></div></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="viewDlg">취소</button>
+      <button type="button" class="btn primary press" id="vSave">저장</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="tplDlg">
+  <div class="dlg">
+    <h2>새 프롬프트</h2>
+    <div class="field">박스 디자인<div class="lo-grid" id="tplList"></div></div>
+    <label>제목<input id="nTitle" placeholder="새 프롬프트"></label>
+    <label>부제목 (비우면 안 보여요)<input id="nHint"></label>
+    <div class="field">프롬프트 텍스트<div class="texts" id="nTexts"></div><button type="button" class="btn sm press add-text" data-addtext="nTexts">+ 텍스트 칸 추가</button></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="tplDlg">취소</button>
+      <button type="button" class="btn primary press" id="nAdd">추가</button>
+    </div>
+  </div>
+</dialog>
+
+<input type="file" id="fileIn" accept="image/*" hidden>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+// ================== 설정 ==================
+const firebaseConfig = {
+  apiKey: "AIzaSyAyOmjnKoXiyKXyUCnvqRkADH25ZgnWgwY",
+  authDomain: "puppylove-b7026.firebaseapp.com",
+  projectId: "puppylove-b7026",
+  appId: "1:1025480055512:web:28c07922509a8b922255ad"
+};
+// 주소별 보관함: 같은 코드로 여러 사람이 각자 보관함을 따로 씀 (데이터·관리자 완전히 분리)
+const SITES = {
+  "":        { col: "prompts",         admins: ["j03243619@gmail.com"] },
+  "callan":  { col: "prompts_jaeseok", admins: ["jaeseokbabo@gmail.com"] },
+  "4":       { col: "prompts_4",       admins: ["lilywi3h@gmail.com"] },
+  "dubu":    { col: "prompts_dubu",    admins: ["zoozitwater@gmail.com"] },
+};
+const SITE = SITES[location.pathname.split("/").filter(Boolean)[0]] || SITES[""];
+const ADMINS = SITE.admins;
+const LS = k => SITE.col + ":" + k; // 기기 저장 키도 보관함별로
+// ==========================================
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+// 한 번 본 내용은 기기에 저장해두고, 다음에 열 때 바로 보여준 뒤 바뀐 것만 받아오기
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch(_) { db = getFirestore(app); }
+const col = collection(db, SITE.col); // 폴더와 프롬프트를 한 곳에 저장 (type으로 구분)
+
+const $ = s => document.querySelector(s);
+let folderDocs = [], promptDocs = [], promptsFor = null, promptsReady = false;
+let user = null, editingFolder = null, editingPrompt = null, reorder = null;
+const openItems = new Set();
+const isAdmin = () => !!user && ADMINS.includes(user.email);
+
+function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+const ts = v => v?.toMillis ? v.toMillis() : (typeof v === "number" ? v : 0);
+const num = (v, d) => (typeof v === "number" && isFinite(v)) ? v : d;
+const currentFolderId = () => { const m = location.hash.match(/^#\/f\/(.+)$/); return m ? decodeURIComponent(m[1]) : null; };
+
+// 정렬: 순서(order)가 있으면 그 순서, 없으면 폴더는 만든 순 / 프롬프트는 최신이 위
+const folderKey = f => num(f.order, ts(f.created) / 1e3);
+const promptKey = p => num(p.order, ts(p.created || p.updated) / 1e3);
+const folders = () => [...folderDocs].sort((a,b) => folderKey(a) - folderKey(b));
+const prompts = () => [...promptDocs].sort((a,b) => promptKey(a) - promptKey(b));
+// 폴더 안의 폴더
+const parentOf = f => f?.parentId || null;
+const isGroup = f => !!f?.isGroup;
+const homeFolders = () => folders().filter(f => { if (isGroup(f)) return false; const p = folderDocs.find(d => d.id === parentOf(f)); return !p || isGroup(p); });
+const childFolders = pid => pid ? folders().filter(f => parentOf(f) === pid) : homeFolders();
+const descendants = id => childFolders(id).flatMap(c => [c.id, ...descendants(c.id)]);
+const folderPath = f => { const names = []; let cur = f; while (cur) { names.unshift(cur.name); cur = folderDocs.find(d => d.id === parentOf(cur)); } return names.join(" › "); };
+
+function imgStyle(o){
+  const x = num(o.imgX, 50), y = num(o.imgY, 50), z = num(o.zoom, 1);
+  return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
+}
+const viewStyle = o => o.baked ? "" : imgStyle(o);
+const mediaHtml = o => o.image ? `<div class="media"><img src="${o.image}" alt="" loading="lazy" style="${viewStyle(o)}"></div>` : "";
+const gradClass = o => o.image ? "g-" + (o.grad || "white") : "no-img";
+const pencil = light => `<svg viewBox="0 0 24 24" fill="none" stroke="${light ? "#fff" : "#8a8a8a"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+
+// ---------- 데이터: 첫 화면은 폴더만, 폴더 안에선 그 폴더 프롬프트만 받기 ----------
+$("#status").textContent = "불러오는 중…";
+let foldersReady = false;
+// 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
+const SETTINGS = () => doc(db, SITE.col, "_settings");
+const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800], "3/4": [750, 1000] };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "", followAll: false };
+const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
+try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
+function applyView(){
+  const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
+  document.documentElement.style.setProperty("--fr", r);
+  $("#pageTitle").style.color = viewCfg.textColor || "";
+  document.body.classList.remove("fc-1", "fc-2", "fc-3");
+  if ([1, 2, 3].includes(+viewCfg.folderCols)) document.body.classList.add("fc-" + viewCfg.folderCols);
+  const pk = document.getElementById("fPicker"); if (pk) pk.style.aspectRatio = r;
+  if (!currentFolderId()) { $("#pageTitle").textContent = siteName(); document.title = siteName(); }
+}
+applyView();
+onSnapshot(SETTINGS(), snap => {
+  const d = snap.exists() ? snap.data() : {};
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll };
+  try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
+  applyView(); if (typeof render === "function" && foldersReady) render();
+}, () => {});
+onSnapshot(query(col, where("type", "==", "folder")), snap => {
+  rawFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  refilter();
+  foldersReady = true; $("#status").textContent = "";
+  render();
+}, () => { $("#status").textContent = "불러오기에 실패했어요"; });
+
+// 비공개: 로그인한 주인에게만 보이고, 방문자에게는 아예 안 보임
+let rawFolders = [], rawGroups = [];
+function hiddenChain(f, seen = 0){
+  if (!f || seen > 20) return false;
+  return !!f.hidden || hiddenChain(rawFolders.find(d => d.id === f.parentId), seen + 1);
+}
+// 그룹 비밀번호: 맞게 입력한 그룹은 이 브라우저에서 계속 열려 있음
+let unlocked = {};
+try { unlocked = JSON.parse(localStorage.getItem(LS("pv-unlock")) || "{}"); } catch(_) {}
+const groupOpen = g => !g.pw || isAdmin() || unlocked[g.id] === g.pw;
+function lockGroupOf(f, seen = 0){
+  if (!f || seen > 20) return null;
+  return rawGroups.find(g => !groupOpen(g) && (g.folderIds || []).includes(f.id)) || lockGroupOf(rawFolders.find(d => d.id === f.parentId), seen + 1);
+}
+function refilter(){
+  const all = isAdmin();
+  folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f) && !lockGroupOf(f));
+  groupDocs = all ? rawGroups : rawGroups.filter(g => !g.hidden);
+  if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
+}
+const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
+// 그룹 (이름 + 넣을 폴더 목록)
+let groupDocs = [], selGroup = null, gOpen = false;
+try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
+const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
+onSnapshot(query(col, where("type", "==", "group")), snap => {
+  rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  refilter();
+  render();
+}, () => {});
+
+// 폴더별로 한 번 연결해두고 계속 기억 (다시 들어가면 바로 보임)
+const promptCache = new Map(); // fid -> { docs, ready, unsub }
+function ensurePrompts(fid){
+  if (!fid || promptCache.has(fid)) return promptCache.get(fid);
+  if (isGroup(folderDocs.find(d => d.id === fid))) return { docs: [], ready: true };
+  const entry = { docs: [], ready: false, unsub: null };
+  promptCache.set(fid, entry);
+  entry.unsub = onSnapshot(query(col, where("folderId", "==", fid)), snap => {
+    entry.docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.type !== "folder");
+    entry.ready = true;
+    if (currentFolderId() === fid) { promptDocs = entry.docs; promptsReady = true; render(); }
+  }, () => { promptCache.delete(fid); if (currentFolderId() === fid) $("#status").textContent = "불러오기에 실패했어요"; });
+  return entry;
+}
+function watchPrompts(){
+  const fid = currentFolderId();
+  promptsFor = fid;
+  if (!fid) { promptDocs = []; promptsReady = false; return; }
+  const e = ensurePrompts(fid);
+  promptDocs = e.docs; promptsReady = e.ready;
+}
+// 폴더에 손가락이 닿는 순간 미리 받기 시작
+document.addEventListener("pointerdown", e => {
+  const f = e.target.closest("[data-open]"); if (f) ensurePrompts(f.dataset.open);
+}, { passive: true });
+document.addEventListener("pointerover", e => {
+  const f = e.target.closest("[data-open]"); if (f) ensurePrompts(f.dataset.open);
+}, { passive: true });
+
+// ---------- 화면 ----------
+function render(){
+  const fid = currentFolderId();
+  const admin = isAdmin();
+  $("#backBtn").hidden = !fid;
+  $("#plusBtn").hidden = !admin || !!reorder;
+  $("#backupBtn").hidden = !admin;
+  let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v1")) === "1"; } catch(_) {}
+  $("#optBtn").hidden = !admin || optDone;
+  $("#desc").hidden = true;
+  $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
+
+  renderGroups(fid, admin);
+  document.body.classList.toggle("home", !fid);
+  if (!fid) {
+    $("#view").classList.remove("pc-col");
+    $("#pageTitle").textContent = siteName(); document.title = siteName();
+    const g = groupDocs.find(x => x.id === selGroup);
+    const list = g ? homeFolders().filter(f => (g.folderIds || []).includes(f.id)) : homeFolders();
+    if (reorder) return renderReorder();
+    if (!foldersReady) { $("#view").innerHTML = ""; return; }
+    if (!list.length) {
+      $("#view").innerHTML = `<div class="empty">${g ? "이 그룹에 넣은 폴더가 없어요." : admin ? "‘새 폴더’를 눌러 첫 폴더를 만들어보세요." : "아직 폴더가 없어요."}</div>`;
+      return;
+    }
+    $("#view").innerHTML = folderListHtml(list);
+    return;
+  }
+
+  const folder = folderDocs.find(d => d.id === fid);
+  if (!folder) {
+    const lockG = foldersReady && lockGroupOf(rawFolders.find(d => d.id === fid));
+    if (lockG) {
+      $("#pageTitle").textContent = "비밀번호가 필요해요";
+      $("#view").innerHTML = `<div class="empty"><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
+      $("#lockOpen").onclick = () => askPw(lockG, render);
+      $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
+    }
+    $("#pageTitle").textContent = foldersReady ? "폴더를 찾을 수 없어요" : "";
+    $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
+  }
+  $("#pageTitle").textContent = folder.name;
+  $("#view").classList.toggle("pc-col", folder.pcLayout === "col");
+  if (folder.desc && !reorder) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
+  const items = isGroup(folder) ? [] : prompts().filter(p => admin || !p.hidden), subs = childFolders(fid);
+  if (reorder) return renderReorder();
+  if (!promptsReady && !subs.length && !isGroup(folder)) { $("#view").innerHTML = `<div class="plist">${`<div class="item"><div class="box skel" style="aspect-ratio:2/1"></div><div class="box skel" style="height:48px;margin-top:4px"></div></div>`.repeat(2)}</div>`; return; }
+  if (!items.length && !subs.length) {
+    $("#view").innerHTML = `<div class="empty">${isGroup(folder) ? (admin ? "‘+’를 눌러 이 그룹에 폴더를 만들거나, 폴더 편집에서 ‘위치’로 옮겨오세요." : "아직 폴더가 없어요.") : (admin ? "‘+’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요.")}</div>`;
+    return;
+  }
+  $("#view").innerHTML = (subs.length ? folderListHtml(subs) : "") +
+    (items.length ? `<div class="plist">${items.map(p => promptHtml(p, admin)).join("")}</div>` : "");
+}
+function folderListHtml(list){
+  return `<div class="list">${list.map(f => `
+    <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
+      ${mediaHtml(f)}
+      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : ""}
+      <span class="cap"${colorStyle(effColor(f.textColor))}>${esc(f.name)}</span>
+    </button>`).join("")}</div>`;
+}
+
+function renderGroups(fid, admin){
+  if (admin) migrateOldGroups();
+  const home = !fid && !reorder;
+  const show = home && (groupDocs.length > 0 || admin);
+  $("#grpToggle").hidden = !show;
+  $("#gAcc").hidden = !show;
+  $("#grpToggle").classList.toggle("on", gOpen);
+  $("#gAcc").classList.toggle("open", gOpen);
+  if (!show) return;
+  $("#pills").innerHTML =
+    `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
+    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden || (g.pw && !groupOpen(g)) ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
+    "";
+}
+let pwFor = null, pwThen = null;
+function askPw(g, then){
+  pwFor = g; pwThen = then;
+  $("#pwTitle").textContent = `‘${g.name}’ 비밀번호`;
+  $("#pwIn").value = ""; $("#pwErr").textContent = "";
+  $("#pwDlg").showModal(); setTimeout(() => $("#pwIn").focus(), 50);
+}
+$("#pwForm").addEventListener("submit", e => {
+  e.preventDefault();
+  if (!pwFor) return;
+  if ($("#pwIn").value.trim() !== pwFor.pw) { $("#pwErr").textContent = "비밀번호가 달라요"; $("#pwIn").select(); return; }
+  unlocked[pwFor.id] = pwFor.pw;
+  try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
+  $("#pwDlg").close(); refilter(); pwThen && pwThen();
+});
+$("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem(LS("pv-gopen"), gOpen ? "1" : "0"); } catch(_) {} render(); };
+$("#pills").addEventListener("click", e => {
+  const t = e.target.closest("[data-g],[data-gadd],[data-gedit]"); if (!t) return;
+  if (t.dataset.gadd) return openGroup(null);
+  if (t.dataset.gedit) return openGroup(t.dataset.gedit);
+  const tg = groupDocs.find(x => x.id === t.dataset.g);
+  if (tg && !groupOpen(tg)) return askPw(tg, () => { selGroup = tg.id; render(); });
+  selGroup = t.dataset.g || null; render();
+  const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
+});
+// 이전 방식(큰 폴더) 그룹이 있으면 알약 그룹으로 자동 변환 (한 번만)
+let migrating = false;
+async function migrateOldGroups(){
+  if (migrating || !isAdmin() || !foldersReady) return;
+  const old = folderDocs.filter(isGroup); if (!old.length) return;
+  migrating = true;
+  try {
+    for (const g of old) {
+      const kids = folderDocs.filter(f => parentOf(f) === g.id).map(f => f.id);
+      await setDoc(doc(col), { type: "group", name: g.name, folderIds: kids, created: serverTimestamp(), order: num(g.order, 0), updated: serverTimestamp() });
+      await deleteDoc(doc(db, SITE.col, g.id)); deleteDoc(ORIG(g.id)).catch(() => {});
+    }
+  } catch(_) {}
+  migrating = false;
+}
+let editingGroup = null, gSel = new Set(), gOrderIds = [];
+// ---------- 그룹 관리 창: 새 그룹 · 편집 · 순서 ----------
+let gmIds = [];
+function paintManager(){
+  const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
+  $("#gmList").innerHTML = gmIds.length ? gmIds.map((id, i) => `
+    <div class="orow" data-oid="${esc(id)}">
+      <span class="oname">${map[id]?.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(map[id]?.name || "")}</span>
+      <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
+      <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
+      <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
+      <button type="button" class="oarrow del press" data-gdel="${esc(id)}" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+    </div>`).join("") : `<div class="empty" style="padding:16px 0">아직 그룹이 없어요</div>`;
+  $("#gmSave").hidden = gmIds.length < 2;
+}
+function openGroupManager(){
+  gmIds = groups().map(g => g.id);
+  paintManager();
+  $("#groupsDlg").showModal();
+}
+$("#gmList").addEventListener("click", e => {
+  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel]"); if (!t) return;
+  if (t.dataset.gdel) {
+    const id = t.dataset.gdel, g = groupDocs.find(x => x.id === id);
+    if (!confirm(`"${g?.name || ""}" 그룹을 지울까요? 폴더는 그대로 남아요.`)) return;
+    const row = t.closest(".orow"); row?.classList.add("leaving");
+    deleteDoc(doc(db, SITE.col, id)).then(() => {
+      if (selGroup === id) selGroup = null;
+      setTimeout(() => {
+        const before = new Map([...$("#gmList").children].map(el => [el.dataset.oid, el.getBoundingClientRect().top]));
+        gmIds = gmIds.filter(x => x !== id); paintManager();
+        [...$("#gmList").children].forEach(el => {
+          const dy = before.get(el.dataset.oid) - el.getBoundingClientRect().top; if (!dy) return;
+          el.style.transition = "none"; el.style.transform = `translateY(${dy}px)`;
+          requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
+        });
+        toast("삭제했어요");
+      }, 200);
+    }).catch(() => { row?.classList.remove("leaving"); toast("삭제 실패: 권한을 확인해주세요"); });
+    return;
+  }
+  if (t.dataset.gedit) { $("#groupsDlg").close(); return setTimeout(() => openGroup(t.dataset.gedit, true), 160); }
+  const from = +(t.dataset.gup ?? t.dataset.gdown), to = t.dataset.gup !== undefined ? from - 1 : from + 1;
+  const before = new Map([...$("#gmList").children].map(el => [el.dataset.oid, el.getBoundingClientRect().top]));
+  const [x] = gmIds.splice(from, 1); gmIds.splice(to, 0, x);
+  paintManager();
+  [...$("#gmList").children].forEach(el => {
+    const dy = before.get(el.dataset.oid) - el.getBoundingClientRect().top; if (!dy) return;
+    el.style.transition = "none"; el.style.transform = `translateY(${dy}px)`;
+    requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
+  });
+});
+$("#gmNew").onclick = () => { $("#groupsDlg").close(); setTimeout(() => openGroup(null, true), 160); };
+$("#gmSave").onclick = async () => {
+  try {
+    const batch = writeBatch(db);
+    gmIds.forEach((id, i) => batch.update(doc(db, SITE.col, id), { order: i }));
+    await batch.commit(); $("#groupsDlg").close(); toast("순서를 저장했어요");
+  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+};
+function paintOrder(){
+  const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
+  $("#gOrder").innerHTML = gOrderIds.map(id => `<span class="pill ${id === editingGroup ? "on" : ""}" data-oid="${esc(id)}">${esc(id === editingGroup ? ($("#gName").value.trim() || map[id]?.name) : map[id]?.name)}</span>`).join("");
+  const i = gOrderIds.indexOf(editingGroup);
+  $("#gLeft").disabled = i <= 0; $("#gRight").disabled = i === gOrderIds.length - 1;
+  $("#gOrder").querySelector(".on")?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+}
+function moveGroup(d){
+  const i = gOrderIds.indexOf(editingGroup), j = i + d;
+  if (i < 0 || j < 0 || j >= gOrderIds.length) return;
+  const before = new Map([...$("#gOrder").children].map(el => [el.dataset.oid, el.getBoundingClientRect().left]));
+  [gOrderIds[i], gOrderIds[j]] = [gOrderIds[j], gOrderIds[i]];
+  paintOrder();
+  [...$("#gOrder").children].forEach(el => {
+    const dx = before.get(el.dataset.oid) - el.getBoundingClientRect().left; if (!dx) return;
+    el.style.transition = "none"; el.style.transform = `translateX(${dx}px)`;
+    requestAnimationFrame(() => { el.style.transition = ""; el.style.transform = ""; });
+  });
+}
+$("#gLeft").onclick = () => moveGroup(-1);
+$("#gRight").onclick = () => moveGroup(1);
+function paintPick(){
+  $("#gPick").innerHTML = homeFolders().map(f => `<button type="button" class="pill press ${gSel.has(f.id) ? "on" : ""}" data-pick="${esc(f.id)}">${esc(f.name)}</button>`).join("") || `<span class="hint">아직 폴더가 없어요</span>`;
+}
+let fromManager = false;
+function openGroup(id, viaManager = false){
+  fromManager = viaManager;
+  editingGroup = id;
+  const g = groupDocs.find(x => x.id === id) || {};
+  gSel = new Set(g.folderIds || []);
+  $("#groupDlgTitle").textContent = id ? "그룹 편집" : "새 그룹";
+  $("#gName").value = g.name || "";
+  $("#gHidden").checked = !!g.hidden;
+  $("#gPw").value = g.pw || "";
+  $("#groupDelBtn").hidden = !id;
+  gOrderIds = groups().map(x => x.id);
+  $("#gOrderWrap").hidden = true;
+  paintPick();
+  $("#groupDlg").showModal();
+}
+$("#gPick").addEventListener("click", e => {
+  const b = e.target.closest("[data-pick]"); if (!b) return;
+  const id = b.dataset.pick; gSel.has(id) ? gSel.delete(id) : gSel.add(id);
+  b.classList.toggle("on", gSel.has(id));
+});
+$("#groupForm").addEventListener("submit", e => {
+  e.preventDefault();
+  withBusy("groupSave", async () => {
+    const name = $("#gName").value.trim(); if (!name) return;
+    const data = { name, folderIds: [...gSel], hidden: $("#gHidden").checked, pw: $("#gPw").value.trim(), updated: serverTimestamp() };
+    try {
+      if (editingGroup) await updateDoc(doc(db, SITE.col, editingGroup), data);
+      else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
+      if (!gOpen) { gOpen = true; try { localStorage.setItem(LS("pv-gopen"), "1"); } catch(_) {} }
+      $("#groupDlg").close(); toast("저장됐어요"); render();
+      if (fromManager) setTimeout(openGroupManager, 200);
+    } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  });
+});
+$("#groupDelBtn").onclick = async () => {
+  if (!confirm("이 그룹을 지울까요? 폴더는 그대로 남아요.")) return;
+  try { await deleteDoc(doc(db, SITE.col, editingGroup)); selGroup = null; $("#groupDlg").close(); toast("삭제했어요"); if (fromManager) setTimeout(openGroupManager, 200); }
+  catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+};
+
+// ---------- 프롬프트 박스 (디자인별) ----------
+const DEFAULT_HINT = "전체 보기", OLD_HINT = "눌러서 전체 프롬프트 보기";
+const hintHtml = p => (p.noExpand && (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)) ? "" : (p.hint === undefined || p.hint === DEFAULT_HINT || p.hint === OLD_HINT)
+  ? `<span class="phint"${hintStyle(p)}><span class="h-open">${DEFAULT_HINT}</span><span class="h-close">접기</span></span>`
+  : `<span class="phint"${hintStyle(p)}>${esc(p.hint)}</span>`;
+function hintStyle(p){ const c = effColor(p.titleColor); return c ? ` style="color:${esc(c)};opacity:.7"` : ""; }
+// 한 프롬프트 안의 여러 텍스트 칸: [{label, content}]
+const textsOf = p => (p.texts && p.texts.length) ? p.texts : [{ label: p.copyLabel || "복사", content: p.content || "" }];
+const TRASH = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
+function textBlockHtml(t, scroll){
+  return `<div class="tblock"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow press" data-tmove="-1" aria-label="위로">▲</button><button type="button" class="oarrow press" data-tmove="1" aria-label="아래로">▼</button><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
+    <textarea class="tbody ${scroll ? "scroll-box" : ""}" placeholder="복사될 프롬프트 내용">${esc(t.content || "")}</textarea></div>`;
+}
+function fillTexts(id, texts){
+  const box = document.getElementById(id);
+  box.innerHTML = texts.map(t => textBlockHtml(t, id === "nTexts")).join("");
+  syncTextBtns(box);
+}
+function syncTextBtns(box){
+  const rows = [...box.querySelectorAll(".tblock")];
+  rows.forEach((r, i) => {
+    r.querySelector("[data-rmtext]").hidden = rows.length < 2;
+    r.querySelectorAll("[data-tmove]").forEach(b => { b.hidden = rows.length < 2; b.disabled = b.dataset.tmove === "-1" ? i === 0 : i === rows.length - 1; });
+  });
+}
+function readTexts(id){
+  const out = [...document.getElementById(id).querySelectorAll(".tblock")]
+    .map(b => ({ label: b.querySelector(".tlabel").value.trim() || "복사", content: b.querySelector(".tbody").value }));
+  return out.length ? out : [{ label: "복사", content: "" }];
+}
+document.addEventListener("click", e => {
+  const add = e.target.closest("[data-addtext]");
+  if (add) {
+    const box = document.getElementById(add.dataset.addtext);
+    const n = box.querySelectorAll(".tblock").length;
+    box.insertAdjacentHTML("beforeend", textBlockHtml({ label: n ? "" : "복사", content: "" }, add.dataset.addtext === "nTexts"));
+    syncTextBtns(box); box.lastElementChild.querySelector(".tlabel").focus();
+    return;
+  }
+  const mv = e.target.closest("[data-tmove]");
+  if (mv) {
+    const row = mv.closest(".tblock"), box = row.parentElement, top0 = row.getBoundingClientRect().top;
+    if (mv.dataset.tmove === "-1") row.previousElementSibling?.before(row); else row.nextElementSibling?.after(row);
+    syncTextBtns(box);
+    const dy = top0 - row.getBoundingClientRect().top;
+    row.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
+    return;
+  }
+  const rm = e.target.closest("[data-rmtext]");
+  if (rm) { const box = rm.closest(".texts"); rm.closest(".tblock").remove(); syncTextBtns(box); }
+});
+
+function promptHtml(p, admin){
+  const lo = p.layout || "stack";
+  const title = `<span class="ptitle"${colorStyle(effColor(p.titleColor))}>${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
+  const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}"${colorStyle(effColor(p.titleColor))}>${esc(t.label || "복사")}</button>`).join("")}</span>`;
+  const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
+  let inner;
+  if (lo === "overlay") {
+    inner = `<div class="box pimg press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">
+      ${mediaHtml(p)}${edit(!!p.image)}
+      <div class="ov-cap">${title}${hintHtml(p)}${copy}</div></div>`;
+  } else if (lo === "side") {
+    inner = `<div class="box pside press" data-tog="${p.id}">
+      <div class="sthumb">${mediaHtml(p)}</div>
+      <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
+  } else if (lo === "tall2" || lo === "tall3") {
+    const few = textsOf(p).length <= 2 ? "few" : "";
+    inner = p.tallPos === "inside"
+      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
+      : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
+      <div class="tall-info ${few}">${title}${copy}</div>`;
+  } else if (lo === "text") {
+    inner = `<div class="box ptext press" data-tog="${p.id}">
+      ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
+  } else {
+    inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
+      <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
+  }
+  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
+    <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
+}
+
+// ---------- 순서 바꾸기 ----------
+function renderReorder(){
+  const rows = reorder.ids.map(id => reorder.map[id]);
+  $("#view").innerHTML = `
+    <div class="obar"><span>${reorder.removed.size ? `${reorder.removed.size}개 삭제 예정` : "순서 바꾸기·삭제"}</span>
+      <span class="row"><button class="btn sm press" id="oCancel">취소</button><button class="btn sm primary press" id="oDone">완료</button></span></div>
+    <div class="olist">${rows.map((o, i) => `
+      <div class="orow" data-oid="${o.id}">
+        ${o.image ? `<img class="othumb" src="${o.image}" alt="" style="${viewStyle(o)}">` : `<span class="othumb"></span>`}
+        <span class="oname">${esc(o.name || o.title || "제목 없음")}</span>
+        <button class="oarrow press" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
+        <button class="oarrow press" data-down="${i}" ${i === rows.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
+        <button class="oarrow del press" data-del="${o.id}" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
+      </div>`).join("")}</div>`;
+}
+function moveRow(from, to){
+  // 부드럽게 자리 바꾸기 (FLIP)
+  const before = new Map([...document.querySelectorAll(".orow")].map(el => [el.dataset.oid, el.getBoundingClientRect().top]));
+  const ids = reorder.ids; const [x] = ids.splice(from, 1); ids.splice(to, 0, x);
+  renderReorder();
+  document.querySelectorAll(".orow").forEach(el => {
+    const dy = before.get(el.dataset.oid) - el.getBoundingClientRect().top;
+    if (!dy) return;
+    el.style.transform = `translateY(${dy}px)`; el.style.transition = "none";
+    requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
+  });
+}
+function removeRow(id){
+  const el = document.querySelector(`.orow[data-oid="${id}"]`);
+  const go = () => {
+    const before = new Map([...document.querySelectorAll(".orow")].map(r => [r.dataset.oid, r.getBoundingClientRect().top]));
+    reorder.ids = reorder.ids.filter(x => x !== id); reorder.removed.add(id);
+    renderReorder();
+    document.querySelectorAll(".orow").forEach(r => {
+      const dy = before.get(r.dataset.oid) - r.getBoundingClientRect().top; if (!dy) return;
+      r.style.transform = `translateY(${dy}px)`; r.style.transition = "none";
+      requestAnimationFrame(() => { r.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; r.style.transform = ""; });
+    });
+  };
+  if (el) { el.classList.add("leaving"); setTimeout(go, 200); } else go();
+}
+function startReorder(kind){
+  const fid = currentFolderId();
+  const list = kind === "folders" ? childFolders(fid) : prompts();
+  reorder = { kind, ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
+  history.pushState({ reorder: 1 }, ""); // 뒤로가기 누르면 정리하기만 닫히게
+  render(); window.scrollTo({ top: 0, behavior: "smooth" });
+}
+window.addEventListener("popstate", () => { if (reorder) { reorder = null; render(); } });
+
+async function finishReorder(save){
+  if (save) {
+    const n = reorder.removed.size, isFolders = reorder.kind === "folders";
+    if (n && !confirm(isFolders ? `${n}개를 삭제할까요? 폴더는 안의 프롬프트도 같이 지워지고, 그룹은 안의 폴더가 첫 화면으로 나와요.` : `프롬프트 ${n}개를 삭제할까요?`)) return;
+    try {
+      const batch = writeBatch(db);
+      reorder.ids.forEach((id, i) => batch.update(doc(db, SITE.col, id), { order: i }));
+      for (const id of reorder.removed) {
+        batch.delete(doc(db, SITE.col, id)); batch.delete(ORIG(id));
+        if (isFolders && isGroup(reorder.map[id])) { childFolders(id).forEach(k => batch.update(doc(db, SITE.col, k.id), { parentId: null })); continue; }
+        if (isFolders) for (const fid of [id, ...descendants(id)]) {
+          if (fid !== id) { batch.delete(doc(db, SITE.col, fid)); batch.delete(ORIG(fid)); }
+          (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); });
+        }
+      }
+      await batch.commit(); toast(n ? "저장하고 삭제했어요" : "순서를 저장했어요");
+    } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
+  }
+  reorder = null; render();
+  if (history.state?.reorder) history.back();
+}
+
+// ---------- 이동 / 클릭 ----------
+function onRoute(){
+  reorder = null; watchPrompts(); render(); window.scrollTo(0,0);
+  const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
+}
+window.addEventListener("hashchange", onRoute);
+$("#backBtn").onclick = () => {
+  if (reorder) return history.back();
+  const f = folderDocs.find(d => d.id === currentFolderId());
+  location.hash = parentOf(f) ? "#/f/" + encodeURIComponent(parentOf(f)) : "";
+};
+
+$("#view").addEventListener("click", e => {
+  const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-tog],[data-up],[data-down],[data-del],#oDone,#oCancel");
+  if (!t) return;
+  if (t.id === "oDone") return finishReorder(true);
+  if (t.id === "oCancel") return finishReorder(false);
+  if (t.dataset.del) return removeRow(t.dataset.del);
+  if (t.dataset.up) return moveRow(+t.dataset.up, +t.dataset.up - 1);
+  if (t.dataset.down) return moveRow(+t.dataset.down, +t.dataset.down + 1);
+  if (t.dataset.edit) return openPrompt(t.dataset.edit);
+  if (t.dataset.copy) { const pd = promptDocs.find(x => x.id === t.dataset.copy); return copyText(pd ? (textsOf(pd)[+t.dataset.i || 0]?.content || "") : ""); }
+  if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
+  if (t.dataset.tog) {
+    const id = t.dataset.tog;
+    if (promptDocs.find(x => x.id === id)?.noExpand) return;
+    openItems.has(id) ? openItems.delete(id) : openItems.add(id);
+    document.getElementById("it-" + id)?.classList.toggle("open", openItems.has(id));
+  }
+});
+document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
+
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); }
+  catch(_) { const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
+  toast("복사됐어요");
+}
+
+// 이미지 우클릭·길게 눌러 저장 막기
+document.addEventListener("contextmenu", e => { if (e.target.closest("img, .media, .picker")) e.preventDefault(); });
+document.addEventListener("dragstart", e => { if (e.target.tagName === "IMG") e.preventDefault(); });
+
+// 누를 때 들어갔다 튕기듯 돌아오는 효과
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".press"); if (!el || el.disabled) return;
+  el.classList.add("is-pressed");
+  const up = () => { el.classList.remove("is-pressed"); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up); };
+  window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+});
+// 창 닫힐 때도 부드럽게
+const _close = HTMLDialogElement.prototype.close;
+HTMLDialogElement.prototype.close = function(...a){
+  if (!this.open || this.classList.contains("closing")) return _close.apply(this, a);
+  this.classList.add("closing");
+  setTimeout(() => { this.classList.remove("closing"); _close.apply(this, a); }, 150);
+};
+
+// ---------- 이미지 편집기: 드래그로 위치, 슬라이더로 확대 ----------
+let fileTarget = null;
+const ARW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>`;
+function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
+  const st = { image:"", imgX:50, imgY:50, zoom:1, grad:"white" };
+  const picker = $("#" + pickerId), tools = $("#" + toolsId), gradEl = gradId ? $("#" + gradId) : document.createElement("div");
+  tools.innerHTML = `
+    <button type="button" class="btn sm press" data-act="pick">이미지 선택</button>
+    <button type="button" class="btn sm ghost press" data-act="remove">제거</button>
+    <span class="zoom-row" data-el="zoomRow"><span>확대</span><input type="range" min="1" max="3" step="0.01" aria-label="확대"></span>`;
+  gradEl.innerHTML = `<button type="button" data-g="white">흰색</button><button type="button" data-g="black">검은색</button><button type="button" data-g="none">없음</button>`;
+  const range = tools.querySelector("input");
+  const applyImg = () => { const im = picker.querySelector("img"); if (im) im.style.cssText = imgStyle(st); };
+
+  function paint(){
+    if (st.image) {
+      picker.classList.add("has");
+      picker.innerHTML = `<div class="media"><img src="${st.image}" alt="" draggable="false" style="${imgStyle(st)}"></div>
+        <button type="button" class="nudge n-up" data-nx="0" data-ny="1" aria-label="위로">${ARW}</button>
+        <button type="button" class="nudge n-down" data-nx="0" data-ny="-1" aria-label="아래로">${ARW}</button>
+        <button type="button" class="nudge n-left" data-nx="1" data-ny="0" aria-label="왼쪽으로">${ARW}</button>
+        <button type="button" class="nudge n-right" data-nx="-1" data-ny="0" aria-label="오른쪽으로">${ARW}</button>`;
+    } else {
+      picker.classList.remove("has");
+      picker.innerHTML = `<div class="empty-hint">이미지 추가 (선택)</div>`;
+    }
+    tools.querySelector('[data-act="remove"]').hidden = !st.image;
+    tools.querySelector('[data-act="pick"]').textContent = st.image ? "이미지 변경" : "이미지 선택";
+    tools.querySelector('[data-el="zoomRow"]').hidden = !st.image; range.value = st.zoom;
+
+    gradEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.g === st.grad));
+  }
+  const pick = () => { fileTarget = api; $("#fileIn").click(); };
+  tools.addEventListener("click", e => {
+    const a = e.target.closest("[data-act]")?.dataset.act;
+    if (a === "pick") pick();
+    if (a === "remove") { st.image = ""; paint(); }
+  });
+  gradEl.addEventListener("click", e => { const g = e.target.closest("[data-g]")?.dataset.g; if (g) { st.grad = g; paint(); } });
+  range.addEventListener("input", () => { st.zoom = +range.value; applyImg(); });
+  picker.addEventListener("click", () => { if (!st.image) pick(); });
+
+  // 화살표: 누르면 한 칸, 꾹 누르면 계속 이동
+  let hold = null;
+  const nudge = (nx, ny) => {
+    const step = 4 / st.zoom;
+    st.imgX = Math.max(0, Math.min(100, st.imgX + nx * step));
+    st.imgY = Math.max(0, Math.min(100, st.imgY + ny * step));
+    applyImg();
+  };
+  picker.addEventListener("pointerdown", e => {
+    const b = e.target.closest(".nudge"); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const nx = +b.dataset.nx, ny = +b.dataset.ny;
+    nudge(nx, ny);
+    clearInterval(hold); clearTimeout(hold);
+    hold = setTimeout(() => { hold = setInterval(() => nudge(nx, ny), 60); }, 350);
+    const stop = () => { clearTimeout(hold); clearInterval(hold); window.removeEventListener("pointerup", stop); window.removeEventListener("pointercancel", stop); };
+    window.addEventListener("pointerup", stop); window.addEventListener("pointercancel", stop);
+  }, true);
+
+  let drag = null;
+  picker.addEventListener("pointerdown", e => {
+    if (!st.image || e.target.closest(".nudge")) return;
+    drag = { x: e.clientX, y: e.clientY, ox: st.imgX, oy: st.imgY, w: picker.clientWidth, h: picker.clientHeight };
+    picker.setPointerCapture(e.pointerId);
+  });
+  picker.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const k = 1.6 / st.zoom;
+    st.imgX = Math.max(0, Math.min(100, drag.ox - (e.clientX - drag.x) / drag.w * 100 * k));
+    st.imgY = Math.max(0, Math.min(100, drag.oy - (e.clientY - drag.y) / drag.h * 100 * k));
+    applyImg();
+  });
+  const end = () => { drag = null; };
+  picker.addEventListener("pointerup", end); picker.addEventListener("pointercancel", end);
+
+  const api = {
+    maxW, maxH,
+    load(o){ Object.assign(st, { image: o.image || "", imgX: num(o.imgX,50), imgY: num(o.imgY,50), zoom: num(o.zoom,1), grad: o.grad || "white" }); paint(); },
+    setImage(src){ Object.assign(st, { image: src, imgX:50, imgY:50, zoom:1 }); paint(); },
+    data(){ return { image: st.image, imgX: Math.round(st.imgX*10)/10, imgY: Math.round(st.imgY*10)/10, zoom: Math.round(st.zoom*100)/100, grad: st.grad }; }
+  };
+  return api;
+}
+// 화면에 보이는 크기에 맞춰 작게 저장 (폴더 4:1, 프롬프트 2:1)
+const fEditor = makeEditor("fPicker", "fTools", "fGrad", 1600, 1600);
+const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
+
+// ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
+const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
+const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : (layout === "tall2" || layout === "tall3") ? [600, 800] : [1200, 600];
+async function bake(src, W, H, x = 50, y = 50, z = 1){
+  const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+  ctx.imageSmoothingQuality = "high";
+  // 화면의 object-fit:cover + object-position + 확대와 똑같이 계산
+  const s = Math.max(W / im.width, H / im.height), dw = im.width * s, dh = im.height * s;
+  const ox = (W - dw) * x / 100, oy = (H - dh) * y / 100, Ox = W * x / 100, Oy = H * y / 100;
+  ctx.drawImage(im, Ox + (ox - Ox) * z, Oy + (oy - Oy) * z, dw * z, dh * z);
+  let q = .88, out = c.toDataURL("image/jpeg", q);
+  while (out.length > 200000 && q > .6) { q -= .05; out = c.toDataURL("image/jpeg", q); }
+  return out;
+}
+// 저장 데이터 만들기: 화면용(잘린 것) + 원본 따로
+async function withBaked(id, kind, layout, ed){
+  const d = ed.data();
+  if (!d.image) return { data: { ...d, image: "", baked: false }, orig: null };
+  const [W, H] = bakeSize(kind, layout);
+  const shown = await bake(d.image, W, H, d.imgX, d.imgY, d.zoom);
+  return { data: { ...d, image: shown, baked: true }, orig: d.image };
+}
+async function saveOrig(id, orig){
+  if (orig) await setDoc(ORIG(id), { type: "orig", image: orig });
+  else await deleteDoc(ORIG(id)).catch(() => {});
+}
+// 수정 창 열 때 원본 불러오기
+async function loadOriginal(id, o, ed){
+  if (!o.image || !o.baked) { ed.load(o); return; }
+  ed.load({ ...o, imgX: 50, imgY: 50, zoom: 1 }); // 원본 오기 전 잠깐
+  try {
+    const snap = await getDoc(ORIG(id));
+    if (snap.exists()) ed.load({ ...o, image: snap.data().image });
+  } catch(_) {}
+}
+
+async function resizeImage(file, maxW, maxH){
+  const url = URL.createObjectURL(file);
+  try {
+    const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const scale = Math.min(1, maxW / im.width, maxH / im.height);
+    const c = document.createElement("canvas");
+    c.width = Math.round(im.width * scale); c.height = Math.round(im.height * scale);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height); // 투명 배경(PNG)은 흰색으로
+    ctx.drawImage(im, 0, 0, c.width, c.height);
+    // 화질 우선: 0.9에서 시작해 너무 클 때만 조금씩 낮춤 (최대 약 0.3MB)
+    let q = .9, out = c.toDataURL("image/jpeg", q);
+    while (out.length > 420000 && q > .6) { q -= .05; out = c.toDataURL("image/jpeg", q); }
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+$("#fileIn").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = "";
+  if (!f || !fileTarget) return;
+  try { fileTarget.setImage(await resizeImage(f, fileTarget.maxW, fileTarget.maxH)); } catch(_) { toast("이미지를 불러오지 못했어요"); }
+});
+
+// ---------- 추가 / 편집 ----------
+async function addBlankPrompt(lo, title, hint, texts = [{ label: "복사", content: "" }]){
+  try {
+    const last = prompts().at(-1);
+    const ref = await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), updated: serverTimestamp(),
+      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: texts[0].content, texts, image: "", imgX: 50, imgY: 50, zoom: 1 });
+    toast("추가됐어요");
+    setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+  } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
+}
+let curTallBtn = "long";
+function setTallBtn(v){ curTallBtn = v; $("#pTallBtn").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tb === v)); }
+$("#pTallBtn").addEventListener("click", e => { const v = e.target.closest("[data-tb]")?.dataset.tb; if (v) setTallBtn(v); });
+let curTallPos = "below";
+function setTallPos(v){ curTallPos = v; $("#pTallPos").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tp === v)); }
+$("#pTallPos").addEventListener("click", e => { const v = e.target.closest("[data-tp]")?.dataset.tp; if (v) setTallPos(v); });
+let curTheme = "basic";
+function setTheme(v){ curTheme = v; $("#pTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.th === v)); }
+$("#pTheme").addEventListener("click", e => { const v = e.target.closest("[data-th]")?.dataset.th; if (v) setTheme(v); });
+let curPc = "row";
+function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pc === v)); }
+$("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
+let curLayout = "stack";
+document.addEventListener("click", e => { const b = e.target.closest("#pLayout [data-lo]"); if (b) setLayout(b.dataset.lo); });
+$("#loAccBtn").onclick = () => $("#loAcc").classList.toggle("open");
+function setLayout(lo){
+  curLayout = lo;
+  $("#pLayout").innerHTML = loCards(lo);
+  requestAnimationFrame(() => { const on = $("#pLayout .lo-card.on"); if (on) $("#pLayout").scrollLeft = on.offsetLeft - 10; });
+  $("#loCur").textContent = LAYOUTS.find(l => l.id === lo)?.name || "";
+  const pk = $("#pPicker");
+  const tall = lo === "tall2" || lo === "tall3";
+  pk.classList.toggle("r21", lo !== "side" && !tall); pk.classList.toggle("r11", lo === "side"); pk.classList.toggle("r34", tall);
+  $("#pTallWrap").hidden = !tall;
+  pk.hidden = $("#pTools").hidden = lo === "text";
+}
+
+
+// ---------- + 메뉴 ----------
+const LAYOUTS = [
+  { id: "stack",   name: "기본",       desc: "위 이미지 + 아래 제목줄", mini: `<div class="mini"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "overlay", name: "이미지 위", desc: "이미지 안에 제목·복사", mini: `<div class="mini ov"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "side",    name: "가로형",      desc: "왼쪽 작은 이미지",     mini: `<div class="mini sd"><i class="im"></i><i class="bar"></i></div>` },
+  { id: "tall2",   name: "세로형 2열",  desc: "세로 이미지 두 개씩",   mini: `<div class="mini tl"><i class="im"></i><i class="im"></i></div>` },
+  { id: "tall3",   name: "세로형 3열",  desc: "세로 이미지 세 개씩",   mini: `<div class="mini tl t3"><i class="im"></i><i class="im"></i><i class="im"></i></div>` },
+  { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
+];
+const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><span class="d"><br>${l.desc}</span></span></button>`).join("");
+function openMenu(){
+  const fid = currentFolderId();
+  const cur = folderDocs.find(d => d.id === fid);
+  const items = !fid
+    ? [["group", "그룹", "새 그룹 · 편집 · 순서"], ["new", "새 폴더", "프롬프트를 넣는 폴더"], ["view", "화면 설정", "보관함 이름 · 카드 비율 · 몇 열"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    : isGroup(cur)
+    ? [["new", "새 폴더", "이 그룹 안에 폴더 추가"], ...(childFolders(fid).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+    : [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "정리하기", "순서 바꾸기 · 삭제"]] : [])];
+  $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
+  $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
+}
+function closeMenu(){ $("#menu").classList.remove("show"); $("#plusBtn").classList.remove("on"); }
+$("#plusBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.contains("show") ? closeMenu() : openMenu(); };
+document.addEventListener("click", e => { if (!e.target.closest("#menu,#plusBtn")) closeMenu(); });
+$("#menu").addEventListener("click", e => {
+  const k = e.target.closest("[data-m]")?.dataset.m; if (!k) return;
+  closeMenu();
+  const fid = currentFolderId();
+  if (k === "new") openFolder(null, fid);
+  if (k === "group") openGroupManager();
+  if (k === "view") openViewDlg();
+  if (k === "order") startReorder("prompts");
+  if (k === "forder") startReorder("folders");
+  if (k === "tpl") { openPrompt(null, { layout: "stack" }); $("#loAcc").classList.add("open"); }
+});
+let newLo = "stack";
+$("#tplList").addEventListener("click", e => {
+  const lo = e.target.closest("[data-lo]")?.dataset.lo; if (!lo) return;
+  newLo = lo; $("#tplList").innerHTML = loCards(lo);
+});
+$("#nAdd").onclick = () => {
+  const title = $("#nTitle").value.trim(), hint = $("#nHint").value.trim(), texts = readTexts("nTexts");
+  $("#tplDlg").close();
+  addBlankPrompt(newLo, title, hint, texts);
+};
+$("#folderEditBtn").onclick = () => openFolder(currentFolderId());
+
+let editingIsGroup = false;
+function openFolder(id, newParent = null, asGroup = false){
+  editingFolder = id;
+  const f = folderDocs.find(d => d.id === id) || {};
+  editingIsGroup = id ? isGroup(f) : asGroup;
+  // 위치: 첫 화면 또는 그룹 안 (폴더만)
+  const cur = id ? parentOf(f) : newParent;
+  $("#fParent").innerHTML = `<option value="">첫 화면</option>` + folders().filter(o => isGroup(o) && o.id !== id)
+    .map(o => `<option value="${esc(o.id)}" ${o.id === cur ? "selected" : ""}>${esc(o.name)}</option>`).join("");
+  $("#fParentWrap").hidden = true;
+  $("#fPcWrap").hidden = editingIsGroup;
+  $("#folderDlgTitle").textContent = editingIsGroup ? (id ? "그룹 편집" : "새 그룹") : (id ? "폴더 편집" : "새 폴더");
+  $("#fName").value = f.name || "";
+  $("#fDesc").value = f.desc || "";
+  $("#fHidden").checked = !!f.hidden;
+  setColor("fColor", f.textColor);
+  setPc(f.pcLayout || "row");
+  id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
+  $("#folderDelBtn").hidden = !id;
+  $("#folderDlg").showModal();
+}
+function openPrompt(id, preset){
+  editingPrompt = id;
+  const p = promptDocs.find(d => d.id === id) || preset || {};
+  $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
+  $("#pTitle").value = p.title || "";
+  fillTexts("pTexts", textsOf(p));
+  $("#pExpand").checked = !p.noExpand;
+  $("#pHidden").checked = !!p.hidden;
+  setColor("pColor", p.titleColor);
+  setTheme(p.theme || "basic");
+  setTallPos(p.tallPos || "below");
+  setTallBtn(p.tallBtn || "long");
+  $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
+  id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
+  setLayout(p.layout || "stack");
+  $("#loAcc").classList.remove("open");
+  $("#promptDelBtn").hidden = !id;
+  $("#promptDlg").showModal();
+}
+
+async function withBusy(btnId, fn){
+  const b = $("#" + btnId); b.disabled = true;
+  try { await fn(); } finally { b.disabled = false; }
+}
+$("#folderForm").addEventListener("submit", e => {
+  e.preventDefault();
+  withBusy("folderSave", async () => {
+    const name = $("#fName").value.trim(); if (!name) return;
+    try {
+      const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
+      const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
+      const data = editingIsGroup
+        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
+        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
+      if (editingFolder) await updateDoc(ref, data);
+      else {
+        const last = childFolders(currentFolderId()).at(-1);
+        if (currentFolderId() && !editingIsGroup) data.parentId = currentFolderId();
+        await setDoc(ref, { type: "folder", created: serverTimestamp(), order: last ? folderKey(last) + 1 : 0, ...data });
+      }
+      await saveOrig(ref.id, orig);
+      $("#folderDlg").close(); toast("저장됐어요");
+    } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  });
+});
+$("#folderDelBtn").onclick = async () => {
+  if (editingIsGroup) {
+    const kids = childFolders(editingFolder);
+    if (!confirm(kids.length ? `그룹만 지우고, 안의 폴더 ${kids.length}개는 첫 화면으로 꺼낼까요?` : "이 그룹을 삭제할까요?")) return;
+    try {
+      await Promise.all(kids.map(k => updateDoc(doc(db, SITE.col, k.id), { parentId: null })));
+      await deleteDoc(doc(db, SITE.col, editingFolder)); deleteDoc(ORIG(editingFolder)).catch(() => {});
+      $("#folderDlg").close(); location.hash = ""; toast("삭제했어요");
+    } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+    return;
+  }
+  try {
+    const ids = [editingFolder, ...descendants(editingFolder)];
+    const inside = (await Promise.all(ids.map(fid => getDocs(query(col, where("folderId", "==", fid)))))).flatMap(s => s.docs);
+    const subN = ids.length - 1;
+    if (!confirm(subN || inside.length ? `이 폴더와 안의 ${subN ? `폴더 ${subN}개, ` : ""}프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
+    const parent = parentOf(folderDocs.find(d => d.id === editingFolder));
+    await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), deleteDoc(ORIG(d.id)).catch(() => {})]));
+    await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, SITE.col, fid)), deleteDoc(ORIG(fid)).catch(() => {})]));
+    $("#folderDlg").close(); location.hash = parent ? "#/f/" + encodeURIComponent(parent) : ""; toast("삭제했어요");
+  } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+};
+
+$("#promptForm").addEventListener("submit", e => {
+  e.preventDefault();
+  withBusy("promptSave", async () => {
+    try {
+      const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
+      const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
+      const texts = readTexts("pTexts");
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      if (editingPrompt) await updateDoc(ref, data);
+      else {
+        const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
+        await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: last ? promptKey(last) + 1 : 0, ...data });
+      }
+      await saveOrig(ref.id, orig);
+      $("#promptDlg").close(); toast("저장됐어요");
+    } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
+  });
+});
+$("#promptDelBtn").onclick = async () => {
+  if (!confirm("이 프롬프트를 삭제할까요?")) return;
+  try { await deleteDoc(doc(db, SITE.col, editingPrompt)); deleteDoc(ORIG(editingPrompt)).catch(() => {}); $("#promptDlg").close(); toast("삭제했어요"); }
+  catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
+};
+
+// ---------- 글씨 색 고르기 ----------
+const SWATCH = ["#111111", "#ffffff", "#8a8a8a"];
+const colorVal = {};
+function initColor(id){
+  const el = document.getElementById(id);
+  el.innerHTML = `<button type="button" class="c-def" data-c="">기본</button>` + SWATCH.map(c => `<button type="button" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("") + `<label title="직접 고르기"><input type="color"></label>`;
+  el.addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) setColor(id, b.dataset.c); });
+  el.querySelector("input").addEventListener("input", e => setColor(id, e.target.value));
+}
+function setColor(id, v){
+  colorVal[id] = v || "";
+  const el = document.getElementById(id);
+  let hit = false;
+  el.querySelectorAll("[data-c]").forEach(b => { const on = b.dataset.c.toLowerCase() === colorVal[id].toLowerCase(); b.classList.toggle("on", on); hit ||= on; });
+  const lab = el.querySelector("label"); lab.classList.toggle("on", !hit);
+  lab.style.background = !hit ? colorVal[id] : "";
+}
+["fColor", "pColor", "vColor"].forEach(initColor);
+// 실제로 쓸 색: '전체 따라가기'면 테마 색, 아니면 박스 색 → 없으면 테마 색
+const effColor = own => (viewCfg.followAll && viewCfg.textColor) ? viewCfg.textColor : (own || viewCfg.textColor || "");
+const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
+
+// ---------- 폴더 화면 설정 ----------
+let vr = "4/1", vc = 1;
+const paintView = () => {
+  $("#vRatio").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.vr === vr));
+  $("#vCols").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.vc === vc));
+};
+function openViewDlg(){
+  vr = viewCfg.folderRatio || "4/1";
+  vc = +viewCfg.folderCols || (matchMedia("(min-width:720px)").matches ? 2 : 1);
+  $("#vTitle").value = viewCfg.siteTitle || "";
+  setColor("vColor", viewCfg.textColor);
+  $("#vFollow").checked = !!viewCfg.followAll;
+  paintView(); $("#viewDlg").showModal();
+}
+$("#vRatio").addEventListener("click", e => { const v = e.target.closest("[data-vr]")?.dataset.vr; if (v) { vr = v; paintView(); } });
+$("#vCols").addEventListener("click", e => { const v = e.target.closest("[data-vc]")?.dataset.vc; if (v) { vc = +v; paintView(); } });
+$("#vSave").onclick = () => withBusy("vSave", async () => {
+  const ratioChanged = vr !== (viewCfg.folderRatio || "4/1");
+  try {
+    const siteTitle = $("#vTitle").value.trim();
+    const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
+    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll });
+    viewCfg = { folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }; applyView(); render();
+    $("#viewDlg").close(); toast("저장됐어요");
+  } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
+  if (ratioChanged) await rebakeFolders();
+});
+// 비율이 바뀌면 폴더 이미지를 원본에서 새 비율로 다시 잘라 저장
+async function rebakeFolders(){
+  const [W, H] = bakeSize("folder");
+  const list = folderDocs.filter(f => f.image && f.baked);
+  let n = 0;
+  for (const f of list) {
+    try {
+      const o = await getDoc(ORIG(f.id));
+      if (!o.exists()) continue;
+      const shown = await bake(o.data().image, W, H, num(f.imgX, 50), num(f.imgY, 50), num(f.zoom, 1));
+      await updateDoc(doc(db, SITE.col, f.id), { image: shown });
+      toast(`폴더 이미지 맞추는 중 ${++n}/${list.length}`);
+    } catch(_) {}
+  }
+  if (list.length) toast("폴더 이미지를 새 비율로 맞췄어요");
+}
+
+// ---------- 이미 올린 이미지 한 번에 변환 ----------
+$("#optBtn").onclick = async () => {
+  if (!confirm("이미 올린 이미지를 박스 모양대로 잘라 가볍게 바꿀까요? 원본은 따로 보관돼요.")) return;
+  const btn = $("#optBtn"); btn.disabled = true;
+  try {
+    const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(d => d.image && !d.baked && d.type !== "orig");
+    let n = 0;
+    for (const o of all) {
+      const [W, H] = bakeSize(o.type === "folder" ? "folder" : "prompt", o.layout);
+      const shown = await bake(o.image, W, H, num(o.imgX, 50), num(o.imgY, 50), num(o.zoom, 1));
+      await setDoc(ORIG(o.id), { type: "orig", image: o.image });
+      await updateDoc(doc(db, SITE.col, o.id), { image: shown, baked: true });
+      toast(`변환 중 ${++n}/${all.length}`);
+    }
+    try { localStorage.setItem(LS("pv-opt-v1"), "1"); } catch(_) {}
+    btn.hidden = true;
+    toast(all.length ? `이미지 ${all.length}개를 가볍게 바꿨어요` : "바꿀 이미지가 없어요");
+  } catch(_) { toast("변환 중 문제가 생겼어요. 다시 눌러주세요"); }
+  btn.disabled = false;
+};
+
+// ---------- 백업 (이때만 전체를 받아요) ----------
+$("#backupBtn").onclick = async () => {
+  try {
+    const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }));
+    const origOf = id => all.find(d => d.id === id + "_orig")?.image;
+    const strip = o => { const { id, created, updated, type, folderId, ...rest } = o; const original = origOf(id); return original ? { ...rest, original } : rest; };
+    const data = all.filter(d => d.type === "folder").sort((a,b) => folderKey(a) - folderKey(b))
+      .map(f => ({ ...strip(f), prompts: all.filter(p => p.folderId === f.id && p.type !== "folder").sort((a,b) => promptKey(a) - promptKey(b)).map(strip) }));
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+    a.download = `프롬프트_백업_${new Date().toISOString().slice(0,10)}.json`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  } catch(_) { toast("백업 실패"); }
+};
+
+// ---------- 로그인 ----------
+onAuthStateChanged(auth, u => {
+  user = u;
+  $("#loginBtn").hidden = !!u;
+  $("#logoutBtn").hidden = !u;
+  $("#who").hidden = !u || isAdmin();
+  $("#who").textContent = u && !isAdmin() ? u.email + " · 보기 전용" : "";
+  refilter();
+  render();
+});
+$("#loginBtn").onclick = async () => {
+  const provider = new GoogleAuthProvider();
+  try { await signInWithPopup(auth, provider); }
+  catch (e) {
+    if (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") signInWithRedirect(auth, provider);
+    else if (e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("로그인 실패: " + e.code);
+  }
+};
+$("#logoutBtn").onclick = () => signOut(auth);
+
+watchPrompts();
+</script>
+</body>
+</html>
