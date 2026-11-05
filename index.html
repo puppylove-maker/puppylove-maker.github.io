@@ -460,11 +460,24 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   </div>
 </dialog>
 
+<dialog id="pwDlg">
+  <form class="dlg" id="pwForm">
+    <h2 id="pwTitle">비밀번호</h2>
+    <input id="pwIn" type="password" autocomplete="off" placeholder="비밀번호 입력">
+    <div id="pwErr" style="color:var(--danger);font-size:12px;min-height:16px"></div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" class="btn press" data-close="pwDlg">취소</button>
+      <button type="submit" class="btn primary press">열기</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="groupDlg">
   <form class="dlg" id="groupForm">
     <h2 id="groupDlgTitle">새 그룹</h2>
     <label>이름<input id="gName" required placeholder="그룹 이름"></label>
     <div class="field">넣을 폴더 (눌러서 선택)<div class="gpick" id="gPick"></div></div>
+    <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="gPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="gHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <div class="field" id="gOrderWrap">순서
       <div class="gorder">
@@ -618,9 +631,17 @@ function hiddenChain(f, seen = 0){
   if (!f || seen > 20) return false;
   return !!f.hidden || hiddenChain(rawFolders.find(d => d.id === f.parentId), seen + 1);
 }
+// 그룹 비밀번호: 맞게 입력한 그룹은 이 브라우저에서 계속 열려 있음
+let unlocked = {};
+try { unlocked = JSON.parse(localStorage.getItem(LS("pv-unlock")) || "{}"); } catch(_) {}
+const groupOpen = g => !g.pw || isAdmin() || unlocked[g.id] === g.pw;
+function lockGroupOf(f, seen = 0){
+  if (!f || seen > 20) return null;
+  return rawGroups.find(g => !groupOpen(g) && (g.folderIds || []).includes(f.id)) || lockGroupOf(rawFolders.find(d => d.id === f.parentId), seen + 1);
+}
 function refilter(){
   const all = isAdmin();
-  folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f));
+  folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f) && !lockGroupOf(f));
   groupDocs = all ? rawGroups : rawGroups.filter(g => !g.hidden);
   if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
 }
@@ -695,6 +716,13 @@ function render(){
 
   const folder = folderDocs.find(d => d.id === fid);
   if (!folder) {
+    const lockG = foldersReady && lockGroupOf(rawFolders.find(d => d.id === fid));
+    if (lockG) {
+      $("#pageTitle").textContent = "비밀번호가 필요해요";
+      $("#view").innerHTML = `<div class="empty"><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
+      $("#lockOpen").onclick = () => askPw(lockG, render);
+      $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
+    }
     $("#pageTitle").textContent = foldersReady ? "폴더를 찾을 수 없어요" : "";
     $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
@@ -731,14 +759,31 @@ function renderGroups(fid, admin){
   if (!show) return;
   $("#pills").innerHTML =
     `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
-    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
+    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden || (g.pw && !groupOpen(g)) ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
     "";
 }
+let pwFor = null, pwThen = null;
+function askPw(g, then){
+  pwFor = g; pwThen = then;
+  $("#pwTitle").textContent = `‘${g.name}’ 비밀번호`;
+  $("#pwIn").value = ""; $("#pwErr").textContent = "";
+  $("#pwDlg").showModal(); setTimeout(() => $("#pwIn").focus(), 50);
+}
+$("#pwForm").addEventListener("submit", e => {
+  e.preventDefault();
+  if (!pwFor) return;
+  if ($("#pwIn").value.trim() !== pwFor.pw) { $("#pwErr").textContent = "비밀번호가 달라요"; $("#pwIn").select(); return; }
+  unlocked[pwFor.id] = pwFor.pw;
+  try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
+  $("#pwDlg").close(); refilter(); pwThen && pwThen();
+});
 $("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem(LS("pv-gopen"), gOpen ? "1" : "0"); } catch(_) {} render(); };
 $("#pills").addEventListener("click", e => {
   const t = e.target.closest("[data-g],[data-gadd],[data-gedit]"); if (!t) return;
   if (t.dataset.gadd) return openGroup(null);
   if (t.dataset.gedit) return openGroup(t.dataset.gedit);
+  const tg = groupDocs.find(x => x.id === t.dataset.g);
+  if (tg && !groupOpen(tg)) return askPw(tg, () => { selGroup = tg.id; render(); });
   selGroup = t.dataset.g || null; render();
   const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
 });
@@ -850,6 +895,7 @@ function openGroup(id, viaManager = false){
   $("#groupDlgTitle").textContent = id ? "그룹 편집" : "새 그룹";
   $("#gName").value = g.name || "";
   $("#gHidden").checked = !!g.hidden;
+  $("#gPw").value = g.pw || "";
   $("#groupDelBtn").hidden = !id;
   gOrderIds = groups().map(x => x.id);
   $("#gOrderWrap").hidden = true;
@@ -865,7 +911,7 @@ $("#groupForm").addEventListener("submit", e => {
   e.preventDefault();
   withBusy("groupSave", async () => {
     const name = $("#gName").value.trim(); if (!name) return;
-    const data = { name, folderIds: [...gSel], hidden: $("#gHidden").checked, updated: serverTimestamp() };
+    const data = { name, folderIds: [...gSel], hidden: $("#gHidden").checked, pw: $("#gPw").value.trim(), updated: serverTimestamp() };
     try {
       if (editingGroup) await updateDoc(doc(db, SITE.col, editingGroup), data);
       else { const last = groups().at(-1); const ref = doc(col); await setDoc(ref, { type: "group", created: serverTimestamp(), order: last ? num(last.order, 0) + 1 : 0, ...data }); selGroup = ref.id; }
