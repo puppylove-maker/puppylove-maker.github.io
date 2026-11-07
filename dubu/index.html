@@ -437,6 +437,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
+    <label id="pFolderWrap">위치 (이 프롬프트를 넣을 폴더)<select id="pFolder"></select></label>
     <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
@@ -1393,13 +1394,7 @@ function openFolder(id, newParent = null, asGroup = false){
   // 자기 자신과 자기 안에 든 폴더로는 못 옮김
   const banned = new Set();
   if (id) { const walk = pid => { banned.add(pid); folderDocs.filter(d => parentOf(d) === pid).forEach(d => walk(d.id)); }; walk(id); }
-  const opts = [];
-  const tree = (pid, depth) => childFolders(pid).filter(o => !isGroup(o) && !banned.has(o.id)).forEach(o => {
-    opts.push(`<option value="${esc(o.id)}" ${o.id === cur ? "selected" : ""}>${"　".repeat(depth)}${depth ? "└ " : ""}${esc(o.name)}</option>`);
-    tree(o.id, depth + 1);
-  });
-  tree(null, 0);
-  $("#fParent").innerHTML = `<option value="" ${!cur ? "selected" : ""}>첫 화면</option>` + opts.join("");
+  $("#fParent").innerHTML = `<option value="" ${!cur ? "selected" : ""}>첫 화면</option>` + folderOptions(cur, banned);
   $("#fParentWrap").hidden = !id || editingIsGroup;
   $("#fPcWrap").hidden = editingIsGroup;
   $("#folderDlgTitle").textContent = editingIsGroup ? (id ? "그룹 편집" : "새 그룹") : (id ? "폴더 편집" : "새 폴더");
@@ -1413,8 +1408,20 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
 }
+// 폴더 고르기 목록 (안쪽 폴더는 들여쓰기)
+function folderOptions(cur, banned = new Set()){
+  const opts = [];
+  const tree = (pid, depth) => childFolders(pid).filter(o => !isGroup(o) && !banned.has(o.id)).forEach(o => {
+    opts.push(`<option value="${esc(o.id)}" ${o.id === cur ? "selected" : ""}>${"　".repeat(depth)}${depth ? "└ " : ""}${esc(o.name)}</option>`);
+    tree(o.id, depth + 1);
+  });
+  tree(null, 0);
+  return opts.join("");
+}
 function openPrompt(id, preset){
   editingPrompt = id;
+  $("#pFolder").innerHTML = folderOptions(currentFolderId());
+  $("#pFolderWrap").hidden = !id;
   const p = promptDocs.find(d => d.id === id) || preset || {};
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
@@ -1495,7 +1502,12 @@ $("#promptForm").addEventListener("submit", e => {
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
       const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
-      if (editingPrompt) await updateDoc(ref, data);
+      if (editingPrompt) {
+        const nf = $("#pFolder").value;
+        if (nf && nf !== currentFolderId()) { data.folderId = nf; data.order = Date.now() / 1e3; }
+        await updateDoc(ref, data);
+        if (data.folderId) toast("옮겼어요");
+      }
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
         await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: last ? promptKey(last) + 1 : 0, ...data });
