@@ -622,6 +622,28 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 <div class="toast" id="toast"></div>
 
 <script type="module">
+// ---- 로딩 시간 재기: 주소 끝에 ?debug 붙이면 화면 아래에 표시 ----
+const DBG = /[?&]debug/.test(location.search), T = { sdk: performance.now() };
+function dbgShow(){
+  if (!DBG) return;
+  let el = document.getElementById("dbgBox");
+  if (!el) { el = document.createElement("pre"); el.id = "dbgBox"; el.style.cssText = "position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;background:rgba(0,0,0,.82);color:#fff;font:11px/1.5 monospace;padding:8px 10px;border-radius:8px;white-space:pre-wrap;margin:0"; document.body.appendChild(el); }
+  const f = v => v == null ? "…" : (v / 1000).toFixed(2) + "초";
+  el.textContent = [
+    `코드(SDK) 받기 끝: ${f(T.sdk)}`,
+    `첫 폴더 데이터: ${f(T.first)} ${T.firstCache ? "(저장된 것)" : "(서버)"} · ${T.n ?? "…"}개 · ${T.kb ?? "…"}KB`,
+    `서버 최신 데이터: ${f(T.server)} · ${T.skb ?? "…"}KB`,
+    `로그인 확인: ${f(T.auth)}`,
+    `화면 그림 다 뜸: ${f(T.imgs)} (${T.imgN ?? "…"}장)`,
+  ].join("\n");
+}
+function dbgImgs(){
+  if (!DBG || T.imgs) return;
+  const ims = [...document.querySelectorAll("#view img")];
+  if (!ims.length) return;
+  T.imgN = ims.length;
+  Promise.all(ims.map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; }))).then(() => { if (!T.imgs) { T.imgs = performance.now(); dbgShow(); } });
+}
 // ================== 설정 ==================
 const firebaseConfig = {
   apiKey: "AIzaSyAyOmjnKoXiyKXyUCnvqRkADH25ZgnWgwY",
@@ -713,7 +735,13 @@ onSnapshot(SETTINGS(), snap => {
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
-onSnapshot(query(col, where("type", "==", "folder")), snap => {
+onSnapshot(query(col, where("type", "==", "folder")), DBG ? { includeMetadataChanges: true } : {}, snap => {
+  if (DBG) {
+    const kb = Math.round(snap.docs.reduce((a, d) => a + JSON.stringify(d.data()).length, 0) / 1024);
+    if (!T.first) { T.first = performance.now(); T.firstCache = snap.metadata.fromCache; T.n = snap.size; T.kb = kb; }
+    if (!snap.metadata.fromCache && !T.server) { T.server = performance.now(); T.skb = kb; }
+    setTimeout(() => { dbgImgs(); dbgShow(); }, 0);
+  }
   rawFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   refilter();
   foldersReady = true; $("#status").textContent = "";
@@ -1801,6 +1829,7 @@ $("#backupBtn").onclick = async () => {
 
 // ---------- 로그인 ----------
 onAuthStateChanged(auth, u => {
+  if (DBG && !T.auth) { T.auth = performance.now(); dbgShow(); }
   user = u;
   $("#loginBtn").hidden = !!u;
   $("#logoutBtn").hidden = !u;
