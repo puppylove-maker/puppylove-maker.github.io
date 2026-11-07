@@ -28,7 +28,10 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;align-items:center}
 .pnote{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:11.5px;line-height:1.5;margin:0 2px 5px}
-.desc.line{padding-bottom:16px;border-bottom:1px solid var(--line)}
+.desc.line{padding-bottom:8px;border-bottom:1px solid var(--line)}
+.lab-row{display:flex;align-items:center;gap:10px}
+.chk.mini{font-size:11px;gap:4px;color:var(--sub)}
+.chk.mini input{width:12px;height:12px}
 .desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
 .hbtns{display:flex;gap:6px;position:relative;flex:none}
 .icon-btn{width:30px;height:30px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
@@ -423,8 +426,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">글씨 색<div class="cpick" id="fColor"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label id="fParentWrap">위치 (이 폴더를 어디에 넣을지)<select id="fParent"></select></label>
-    <label>안내글 (폴더 맨 위에 보여요)<textarea class="short" id="fDesc" placeholder="선택"></textarea></label>
-    <label class="chk"><input type="checkbox" id="fDescLine">안내글 아래 구분선 <small>(회색 줄)</small></label>
+    <div class="field"><div class="lab-row">안내글 (폴더 맨 위에 보여요)<label class="chk mini"><input type="checkbox" id="fDescLine">구분선</label></div><textarea class="short" id="fDesc" placeholder="선택"></textarea></div>
     <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="fPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
