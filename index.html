@@ -81,6 +81,10 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .tsnip{font-size:12px;color:var(--sub);white-space:pre-wrap;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.45}
 .ptext .tfoot{display:flex;justify-content:space-between;align-items:center}
 .ptext .edit-ic{position:static;width:28px;height:28px}
+/* 글 카드: 버튼 3개부터는 아래로 2열씩 쌓임 */
+.ptext.grid2{flex-wrap:wrap;row-gap:10px;padding-bottom:12px}
+.ptext.grid2 .copies.copies{flex:1 1 100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-width:none;width:100%;margin:0;padding:0;overflow:visible}
+.ptext.grid2 .copies .copy-btn{width:100%;flex:none;padding:0 10px}
 .ptext .edit-ic svg{filter:none}
 /* 디자인 미리보기 (템플릿 고르기) */
 .lo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
@@ -1005,7 +1009,7 @@ function promptHtml(p, admin){
       : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
       <div class="tall-info ${few}">${title}${copy}</div>`;
   } else if (lo === "text") {
-    inner = `<div class="box ptext press" data-tog="${p.id}">
+    inner = `<div class="box ptext press ${textsOf(p).length >= 3 ? "grid2" : ""}" data-tog="${p.id}">
       ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
   } else {
     inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
