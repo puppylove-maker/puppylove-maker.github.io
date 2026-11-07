@@ -27,6 +27,7 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;mar
 h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;align-items:center}
+.pnote{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:11.5px;line-height:1.5;margin:0 2px 5px}
 .desc{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:13px;line-height:1.6;margin:4px 0 20px}
 .hbtns{display:flex;gap:6px;position:relative;flex:none}
 .icon-btn{width:30px;height:30px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
@@ -443,6 +444,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="tools" id="pTools"></div>
     <label>제목<input id="pTitle" placeholder="카드에 보이는 제목"></label>
     <label>부제목 (비우면 안 보여요)<input id="pHint"></label>
+    <label>박스 위 글 <small style="color:var(--muted)">(박스 바로 위에 작게 · 비우면 없음)</small><textarea class="short" id="pNote" placeholder="선택"></textarea></label>
     <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
@@ -1038,7 +1040,7 @@ function promptHtml(p, admin){
     inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
       <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
   }
-  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${inner}
+  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${p.note ? `<div class="pnote">${esc(p.note)}</div>` : ""}${inner}
     <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
 }
 
@@ -1471,6 +1473,7 @@ function openPrompt(id, preset){
   fillTexts("pTexts", textsOf(p));
   $("#pExpand").checked = !p.noExpand;
   $("#pHidden").checked = !!p.hidden;
+  $("#pNote").value = p.note || "";
   setColor("pColor", p.titleColor);
   setTheme(p.theme || "basic");
   setTallPos(p.tallPos || "below");
@@ -1544,7 +1547,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, gridRatio: curGridRatio, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), note: $("#pNote").value.trim(), layout: curLayout, gridRatio: curGridRatio, ...img, updated: serverTimestamp() };
       if (editingPrompt) {
         const nf = $("#pFolder").value;
         if (nf && nf !== currentFolderId()) { data.folderId = nf; data.order = Date.now() / 1e3; }
