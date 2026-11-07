@@ -635,6 +635,7 @@ function dbgShow(){
     `서버 최신 데이터: ${f(T.server)} · ${T.skb ?? "…"}KB`,
     `로그인 확인: ${f(T.auth)}`,
     `화면 그림 다 뜸: ${f(T.imgs)} (${T.imgN ?? "…"}장)`,
+    `폴더 열 때 프롬프트: ${T.fold ?? "폴더를 열면 표시"}`,
   ].join("\n");
 }
 function dbgImgs(){
@@ -789,8 +790,15 @@ function ensurePrompts(fid){
   if (isGroup(folderDocs.find(d => d.id === fid))) return { docs: [], ready: true };
   const entry = { docs: [], ready: false, unsub: null };
   promptCache.set(fid, entry);
+  const t0 = performance.now();
   entry.unsub = onSnapshot(query(col, where("folderId", "==", fid)), snap => {
     entry.docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.type !== "folder");
+    if (DBG && !entry.dbg) {
+      entry.dbg = 1;
+      const kb = Math.round(snap.docs.reduce((a, d) => a + JSON.stringify(d.data()).length, 0) / 1024);
+      T.fold = `${((performance.now() - t0) / 1000).toFixed(2)}초 ${snap.metadata.fromCache ? "(저장된 것)" : "(서버)"} · ${snap.size}개 · ${kb}KB`;
+      setTimeout(dbgShow, 0);
+    }
     entry.ready = true;
     if (currentFolderId() === fid) { promptDocs = entry.docs; promptsReady = true; render(); }
   }, () => { promptCache.delete(fid); if (currentFolderId() === fid) $("#status").textContent = "불러오기에 실패했어요"; });
