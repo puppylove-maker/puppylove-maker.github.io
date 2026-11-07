@@ -1390,9 +1390,17 @@ function openFolder(id, newParent = null, asGroup = false){
   editingIsGroup = id ? isGroup(f) : asGroup;
   // 위치: 첫 화면 또는 그룹 안 (폴더만)
   const cur = id ? parentOf(f) : newParent;
-  $("#fParent").innerHTML = `<option value="">첫 화면</option>` + folders().filter(o => isGroup(o) && o.id !== id)
-    .map(o => `<option value="${esc(o.id)}" ${o.id === cur ? "selected" : ""}>${esc(o.name)}</option>`).join("");
-  $("#fParentWrap").hidden = true;
+  // 자기 자신과 자기 안에 든 폴더로는 못 옮김
+  const banned = new Set();
+  if (id) { const walk = pid => { banned.add(pid); folderDocs.filter(d => parentOf(d) === pid).forEach(d => walk(d.id)); }; walk(id); }
+  const opts = [];
+  const tree = (pid, depth) => childFolders(pid).filter(o => !isGroup(o) && !banned.has(o.id)).forEach(o => {
+    opts.push(`<option value="${esc(o.id)}" ${o.id === cur ? "selected" : ""}>${"　".repeat(depth)}${depth ? "└ " : ""}${esc(o.name)}</option>`);
+    tree(o.id, depth + 1);
+  });
+  tree(null, 0);
+  $("#fParent").innerHTML = `<option value="" ${!cur ? "selected" : ""}>첫 화면</option>` + opts.join("");
+  $("#fParentWrap").hidden = !id || editingIsGroup;
   $("#fPcWrap").hidden = editingIsGroup;
   $("#folderDlgTitle").textContent = editingIsGroup ? (id ? "그룹 편집" : "새 그룹") : (id ? "폴더 편집" : "새 폴더");
   $("#fName").value = f.name || "";
@@ -1439,8 +1447,14 @@ $("#folderForm").addEventListener("submit", e => {
       const data = editingIsGroup
         ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
         : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
-      if (editingFolder) await updateDoc(ref, data);
-      else {
+      if (editingFolder) {
+        const np = $("#fParent").value || null;
+        if (!editingIsGroup && np !== (parentOf(folderDocs.find(d => d.id === editingFolder)) || null)) {
+          const last = childFolders(np).at(-1);
+          data.parentId = np; data.order = last ? folderKey(last) + 1 : 0;
+        }
+        await updateDoc(ref, data);
+      } else {
         const last = childFolders(currentFolderId()).at(-1);
         if (currentFolderId() && !editingIsGroup) data.parentId = currentFolderId();
         await setDoc(ref, { type: "folder", created: serverTimestamp(), order: last ? folderKey(last) + 1 : 0, ...data });
