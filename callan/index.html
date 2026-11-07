@@ -471,7 +471,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
   </main>
   <footer>
     <span class="who" id="who" hidden></span>
-    <button class="link press" id="optBtn" hidden>이미지 가볍게 변환</button>
+    <button class="link press" id="optBtn" hidden>이미지 가볍게 (로딩 빠르게)</button>
     <button class="link press" id="backupBtn" hidden>백업</button>
     <button class="link press" id="loginBtn" hidden>관리자 로그인</button>
     <button class="link press" id="logoutBtn" hidden>로그아웃</button>
@@ -693,7 +693,7 @@ $("#status").textContent = "불러오는 중…";
 let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
-const RATIO_PX = { "4/1": [1400, 350], "16/9": [1280, 720], "1/1": [800, 800], "3/4": [750, 1000] };
+const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800] };
 let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "", followAll: false };
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
@@ -790,7 +790,7 @@ function render(){
   $("#backBtn").hidden = !fid;
   $("#plusBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
-  let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v1")) === "1"; } catch(_) {}
+  let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v2")) === "1"; } catch(_) {}
   $("#optBtn").hidden = !admin || optDone;
   $("#desc").hidden = true;
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
@@ -1353,7 +1353,18 @@ const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
 const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
-const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : layout === "col1" ? (curColRatio === "auto" ? [600, 800] : (([w, h]) => [600, Math.round(600 * h / w)])(curColRatio.split("/").map(Number))) : layout === "grid2" ? ({ "1/1": [700, 700], "4/3": [800, 600], "3/4": [600, 800] }[curGridRatio] || [700, 700]) : layout === "sq2" ? [700, 700] : (layout === "tall2" || layout === "tall3") ? [600, 800] : [1200, 600];
+// 화면에 실제로 보이는 크기(폰 2배 화질)에 맞춰 자름 — 너무 크면 로딩이 느려짐
+const ratioWH = (r, w) => { const [a, b] = String(r).split("/").map(Number); return [w, Math.round(w * b / a)]; };
+const bakeSize = (kind, layout, o = null) => {
+  if (kind === "folder") return RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"];
+  const gr = o ? (layout === "sq2" ? "1/1" : layout === "tall2" ? "3/4" : o.gridRatio || "1/1") : curGridRatio;
+  const cr = o ? (o.colRatio || "3/4") : curColRatio;
+  if (layout === "side") return [320, 320];
+  if (layout === "grid2" || layout === "sq2" || layout === "tall2") return ratioWH(gr, 520);
+  if (layout === "tall3") return [420, 560];
+  if (layout === "col1") return cr === "auto" ? ratioWH((o && o.imgRatio) || "3/4", 560) : ratioWH(cr, 560);
+  return [900, 450];
+};
 async function bake(src, W, H, x = 50, y = 50, z = 1){
   const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
   const c = document.createElement("canvas"); c.width = W; c.height = H;
@@ -1364,8 +1375,8 @@ async function bake(src, W, H, x = 50, y = 50, z = 1){
   const s = Math.max(W / im.width, H / im.height), dw = im.width * s, dh = im.height * s;
   const ox = (W - dw) * x / 100, oy = (H - dh) * y / 100, Ox = W * x / 100, Oy = H * y / 100;
   ctx.drawImage(im, Ox + (ox - Ox) * z, Oy + (oy - Oy) * z, dw * z, dh * z);
-  let q = .88, out = c.toDataURL("image/jpeg", q);
-  while (out.length > 200000 && q > .6) { q -= .05; out = c.toDataURL("image/jpeg", q); }
+  let q = .82, out = c.toDataURL("image/jpeg", q);
+  while (out.length > 110000 && q > .5) { q -= .06; out = c.toDataURL("image/jpeg", q); }
   return out;
 }
 // 저장 데이터 만들기: 화면용(잘린 것) + 원본 따로
@@ -1376,7 +1387,7 @@ async function withBaked(id, kind, layout, ed){
   if (kind === "prompt" && layout === "col1" && curColRatio === "auto") {
     // 맞춤: 원본 이미지 비율 그대로
     const dm = await imgDims(d.image);
-    if (dm) { W = Math.min(700, dm[0]); H = Math.round(W * dm[1] / dm[0]); extra.imgRatio = `${dm[0]}/${dm[1]}`; }
+    if (dm) { W = Math.min(560, dm[0]); H = Math.round(W * dm[1] / dm[0]); extra.imgRatio = `${dm[0]}/${dm[1]}`; }
   }
   const shown = await bake(d.image, W, H, d.imgX, d.imgY, d.zoom);
   return { data: { ...d, ...extra, image: shown, baked: true }, orig: d.image };
@@ -1750,22 +1761,25 @@ async function rebakeFolders(){
 
 // ---------- 이미 올린 이미지 한 번에 변환 ----------
 $("#optBtn").onclick = async () => {
-  if (!confirm("이미 올린 이미지를 박스 모양대로 잘라 가볍게 바꿀까요? 원본은 따로 보관돼요.")) return;
+  if (!confirm("올린 이미지를 화면 크기에 맞게 다시 줄여서 로딩을 빠르게 할까요? 원본은 따로 보관돼요.")) return;
   const btn = $("#optBtn"); btn.disabled = true;
   try {
-    const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }))
-      .filter(d => d.image && !d.baked && d.type !== "orig");
-    let n = 0;
+    const docs = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }));
+    const all = docs.filter(d => d.image && (d.type === "folder" || d.type === "prompt"));
+    let n = 0, done = 0;
     for (const o of all) {
-      const [W, H] = bakeSize(o.type === "folder" ? "folder" : "prompt", o.layout);
-      const shown = await bake(o.image, W, H, num(o.imgX, 50), num(o.imgY, 50), num(o.zoom, 1));
-      await setDoc(ORIG(o.id), { type: "orig", image: o.image });
-      await updateDoc(doc(db, SITE.col, o.id), { image: shown, baked: true });
-      toast(`변환 중 ${++n}/${all.length}`);
+      toast(`가볍게 바꾸는 중 ${++n}/${all.length}`);
+      let src = o.image;
+      if (o.baked) { const g = await getDoc(ORIG(o.id)); if (!g.exists()) continue; src = g.data().image; }
+      const [nl] = o.type === "prompt" ? normLayout(o) : [null];
+      const [W, H] = bakeSize(o.type === "folder" ? "folder" : "prompt", nl, o);
+      const shown = await bake(src, W, H, num(o.imgX, 50), num(o.imgY, 50), num(o.zoom, 1));
+      if (!o.baked) await setDoc(ORIG(o.id), { type: "orig", image: src });
+      if (shown.length < o.image.length || !o.baked) { await updateDoc(doc(db, SITE.col, o.id), { image: shown, baked: true }); done++; }
     }
-    try { localStorage.setItem(LS("pv-opt-v1"), "1"); } catch(_) {}
+    try { localStorage.setItem(LS("pv-opt-v2"), "1"); } catch(_) {}
     btn.hidden = true;
-    toast(all.length ? `이미지 ${all.length}개를 가볍게 바꿨어요` : "바꿀 이미지가 없어요");
+    toast(done ? `이미지 ${done}개를 가볍게 바꿨어요` : "이미 가벼워요");
   } catch(_) { toast("변환 중 문제가 생겼어요. 다시 눌러주세요"); }
   btn.disabled = false;
 };
