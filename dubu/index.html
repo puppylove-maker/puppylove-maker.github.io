@@ -27,6 +27,8 @@ header{display:flex;align-items:center;justify-content:space-between;gap:8px;mar
 h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .back{border:none;background:none;font:inherit;font-size:24px;line-height:1;padding:0 8px 4px 0;cursor:pointer;color:var(--text)}
 .row{display:flex;gap:6px;align-items:center}
+img.lazy-img{opacity:0;transition:opacity .25s}
+img.lazy-img.ready{opacity:1}
 .pnote{white-space:pre-wrap;word-break:break-word;color:var(--sub);font-size:11.5px;line-height:1.5;margin:0 2px 5px}
 .desc.line{padding-bottom:8px;border-bottom:1px solid var(--line)}
 .lab-row{display:flex;align-items:center;gap:10px}
@@ -172,7 +174,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 
 .box{border:1px solid var(--line);border-radius:14px;background:var(--soft)}
 .list{display:grid;gap:10px}
-.media{position:absolute;inset:0;overflow:hidden}
+.media{position:absolute;inset:0;overflow:hidden;background:var(--soft)}
 .media img{width:100%;height:100%;object-fit:cover;display:block}
 
 .cap{position:absolute;left:0;right:0;bottom:0;padding:28px 16px 12px 14px;font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -667,7 +669,7 @@ const LS = k => SITE.col + ":" + k; // 기기 저장 키도 보관함별로
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, getDoc, setDoc, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, getDoc, getDocFromCache, setDoc, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -707,8 +709,33 @@ function imgStyle(o){
   return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
 }
 const viewStyle = o => o.baked ? "" : imgStyle(o);
-const mediaHtml = o => o.image ? `<div class="media"><img src="${o.image}" alt="" loading="lazy" style="${viewStyle(o)}"></div>` : "";
-const gradClass = o => o.image ? "g-" + (o.grad || "white") : "no-img";
+// 그림은 따로 저장(<id>_img): 목록에는 흐린 미리보기만 오고, 화면에 보일 때 진짜 그림을 받아옴 → 첫 화면이 빨라짐
+const hasImg = o => !!(o && (o.image || o.imgSplit));
+const imgTag = (o, cls = "", style = "") => o.imgSplit
+  ? `<img class="${cls} lazy-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="${o.id}" data-v="${o.imgV || 0}" alt="" style="${style}">`
+  : `<img class="${cls}" src="${o.image}" alt="" loading="lazy" style="${style || viewStyle(o)}">`;
+const mediaHtml = o => hasImg(o) ? `<div class="media">${imgTag(o)}</div>` : "";
+const imgMem = new Map();
+async function fetchImg(id, v){
+  const key = id + ":" + v;
+  if (imgMem.has(key)) return imgMem.get(key);
+  const p = (async () => {
+    try { const c = await getDocFromCache(IMGD(id)); if (c.exists() && String(c.data().v || 0) === String(v)) return c.data().image; } catch(_) {}
+    const sn = await getDoc(IMGD(id)); return sn.exists() ? sn.data().image : "";
+  })();
+  imgMem.set(key, p); return p;
+}
+const imgIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return; imgIO.unobserve(e.target); showImg(e.target);
+}), { rootMargin: "400px 0px" }) : null;
+function showImg(el){
+  if (el.dataset.loaded) return; el.dataset.loaded = "1";
+  fetchImg(el.dataset.img, el.dataset.v).then(src => { if (src) { el.src = src; el.classList.add("ready"); } }).catch(() => {});
+}
+function hydrateImgs(){
+  document.querySelectorAll("img.lazy-img:not([data-loaded])").forEach(el => imgIO ? imgIO.observe(el) : showImg(el));
+}
+const gradClass = o => hasImg(o) ? "g-" + (o.grad || "white") : "no-img";
 const pencil = light => `<svg viewBox="0 0 24 24" fill="none" stroke="${light ? "#fff" : "#8a8a8a"}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
 
 // ---------- 데이터: 첫 화면은 폴더만, 폴더 안에선 그 폴더 프롬프트만 받기 ----------
@@ -820,13 +847,14 @@ document.addEventListener("pointerover", e => {
 }, { passive: true });
 
 // ---------- 화면 ----------
-function render(){
+function render(){ renderInner(); try { hydrateImgs(); } catch(_) {} if (typeof dbgImgs === "function") setTimeout(dbgImgs, 0); }
+function renderInner(){
   const fid = currentFolderId();
   const admin = isAdmin();
   $("#backBtn").hidden = !fid;
   $("#plusBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
-  let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v2")) === "1"; } catch(_) {}
+  let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v3")) === "1"; } catch(_) {}
   $("#optBtn").hidden = !admin || optDone;
   $("#desc").hidden = true;
   $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
@@ -948,7 +976,7 @@ async function migrateOldGroups(){
     for (const g of old) {
       const kids = folderDocs.filter(f => parentOf(f) === g.id).map(f => f.id);
       await setDoc(doc(col), { type: "group", name: g.name, folderIds: kids, created: serverTimestamp(), order: num(g.order, 0), updated: serverTimestamp() });
-      await deleteDoc(doc(db, SITE.col, g.id)); deleteDoc(ORIG(g.id)).catch(() => {});
+      await deleteDoc(doc(db, SITE.col, g.id)); delAux(g.id);
     }
   } catch(_) {}
   migrating = false;
@@ -1137,8 +1165,8 @@ function promptHtml(p, admin){
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
   let inner;
   if (lo === "overlay") {
-    inner = `<div class="box pimg press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">
-      ${mediaHtml(p)}${edit(!!p.image)}
+    inner = `<div class="box pimg press ${hasImg(p) ? "" : "no-pic"}" data-tog="${p.id}">
+      ${mediaHtml(p)}${edit(!!hasImg(p))}
       <div class="ov-cap">${title}${hintHtml(p)}${copy}</div></div>`;
   } else if (lo === "side") {
     inner = `<div class="box pside press" data-tog="${p.id}">
@@ -1146,20 +1174,20 @@ function promptHtml(p, admin){
       <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
   } else if (lo === "col1" && (p.colMode === "left" || p.colMode === "right")) {
     inner = `<div class="pcol ${p.colMode} al-${p.textAlign || "left"} press" data-tog="${p.id}">
-      <div class="pcol-img" style="aspect-ratio:${colAR(p)}">${mediaHtml(p)}${edit(!!p.image)}</div>
+      <div class="pcol-img" style="aspect-ratio:${colAR(p)}">${mediaHtml(p)}${edit(!!hasImg(p))}</div>
       <div class="pcol-info">${title}${hintHtml(p)}${p.note ? `<div class="pcol-note">${esc(p.note)}</div>` : ""}${copy}</div></div>`;
   } else if (lo === "grid2" || lo === "tall3" || lo === "col1") {
     const few = textsOf(p).length <= 2 ? "few" : "";
     inner = p.tallPos === "inside"
-      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : lo === "col1" ? ` style="aspect-ratio:${colAR(p)}"` : ""}>${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
-      : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : lo === "col1" ? ` style="aspect-ratio:${colAR(p)}"` : ""}>${mediaHtml(p)}${edit(!!p.image)}</div>
+      ? `<div class="box ptall press ${hasImg(p) ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : lo === "col1" ? ` style="aspect-ratio:${colAR(p)}"` : ""}>${mediaHtml(p)}${edit(!!hasImg(p))}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
+      : `<div class="box ptall press ${hasImg(p) ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : lo === "col1" ? ` style="aspect-ratio:${colAR(p)}"` : ""}>${mediaHtml(p)}${edit(!!hasImg(p))}</div>
       <div class="tall-info ${few}">${title}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press ${textsOf(p).length >= 3 ? "grid2" : ""}" data-tog="${p.id}">
       ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
   } else {
-    inner = `${p.image ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
-      <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${p.image ? "" : edit(false)}${copy}</div>`;
+    inner = `${hasImg(p) ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
+      <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${hasImg(p) ? "" : edit(false)}${copy}</div>`;
   }
   return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${p.note && !(lo === "col1" && (p.colMode === "left" || p.colMode === "right")) ? `<div class="pnote">${esc(p.note)}</div>` : ""}${inner}
     <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
@@ -1173,7 +1201,7 @@ function renderReorder(){
       <span class="row"><button class="btn sm press" id="oCancel">취소</button><button class="btn sm primary press" id="oDone">완료</button></span></div>
     <div class="olist">${rows.map((o, i) => `
       <div class="orow" data-oid="${o.id}">
-        ${o.image ? `<img class="othumb" src="${o.image}" alt="" style="${viewStyle(o)}">` : `<span class="othumb"></span>`}
+        ${hasImg(o) ? imgTag(o, "othumb") : `<span class="othumb"></span>`}
         <span class="oname">${reorder.kind === "mixed" && o.type === "folder" ? `<span class="otag">폴더</span>` : ""}${esc(o.name || o.title || "제목 없음")}</span>
         <button class="oarrow press" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
         <button class="oarrow press" data-down="${i}" ${i === rows.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
@@ -1226,12 +1254,12 @@ async function finishReorder(save){
       reorder.ids.forEach((id, i) => batch.update(doc(db, SITE.col, id), { order: i }));
       if (reorder.kind === "mixed" && currentFolderId()) batch.update(doc(db, SITE.col, currentFolderId()), { mixedOrder: true });
       for (const id of reorder.removed) {
-        batch.delete(doc(db, SITE.col, id)); batch.delete(ORIG(id));
+        batch.delete(doc(db, SITE.col, id)); batch.delete(ORIG(id)); batch.delete(IMGD(id));
         const isFolders = isF(id);
         if (isFolders && isGroup(reorder.map[id])) { childFolders(id).forEach(k => batch.update(doc(db, SITE.col, k.id), { parentId: null })); continue; }
         if (isFolders) for (const fid of [id, ...descendants(id)]) {
-          if (fid !== id) { batch.delete(doc(db, SITE.col, fid)); batch.delete(ORIG(fid)); }
-          (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); });
+          if (fid !== id) { batch.delete(doc(db, SITE.col, fid)); batch.delete(ORIG(fid)); batch.delete(IMGD(fid)); }
+          (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); batch.delete(IMGD(d.id)); });
         }
       }
       await batch.commit(); toast(n ? "저장하고 삭제했어요" : "순서를 저장했어요");
@@ -1389,6 +1417,20 @@ const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
 const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
+const IMGD = id => doc(db, SITE.col, id + "_img");   // 화면용 그림 (보일 때만 불러옴)
+const delAux = id => Promise.all([deleteDoc(ORIG(id)).catch(() => {}), deleteDoc(IMGD(id)).catch(() => {})]);
+function makeThumb(src){
+  return new Promise(ok => { const i = new Image(); i.onload = () => {
+    const w = 48, h = Math.max(1, Math.round(48 * i.height / i.width)), c = document.createElement("canvas"); c.width = w; c.height = h;
+    c.getContext("2d").drawImage(i, 0, 0, w, h); ok(c.toDataURL("image/jpeg", .5)); }; i.onerror = () => ok(""); i.src = src; });
+}
+// 화면용 그림을 따로 저장하고, 본문에는 흐린 미리보기만 남김
+async function storeImage(id, shown){
+  const v = Date.now(), thumb = "";
+  await setDoc(IMGD(id), { type: "img", image: shown, v });
+  imgMem.set(id + ":" + v, Promise.resolve(shown));
+  return { image: "", thumb, imgSplit: true, imgV: v, baked: true };
+}
 // 화면에 실제로 보이는 크기(폰 2배 화질)에 맞춰 자름 — 너무 크면 로딩이 느려짐
 const ratioWH = (r, w) => { const [a, b] = String(r).split("/").map(Number); return [w, Math.round(w * b / a)]; };
 const bakeSize = (kind, layout, o = null) => {
@@ -1418,7 +1460,7 @@ async function bake(src, W, H, x = 50, y = 50, z = 1){
 // 저장 데이터 만들기: 화면용(잘린 것) + 원본 따로
 async function withBaked(id, kind, layout, ed){
   const d = ed.data();
-  if (!d.image) return { data: { ...d, image: "", baked: false }, orig: null };
+  if (!d.image) { deleteDoc(IMGD(id)).catch(() => {}); return { data: { ...d, image: "", thumb: "", imgSplit: false, baked: false }, orig: null }; }
   let [W, H] = bakeSize(kind, layout), extra = {};
   if (kind === "prompt" && layout === "col1" && curColRatio === "auto") {
     // 맞춤: 원본 이미지 비율 그대로
@@ -1426,7 +1468,7 @@ async function withBaked(id, kind, layout, ed){
     if (dm) { W = Math.min(560, dm[0]); H = Math.round(W * dm[1] / dm[0]); extra.imgRatio = `${dm[0]}/${dm[1]}`; }
   }
   const shown = await bake(d.image, W, H, d.imgX, d.imgY, d.zoom);
-  return { data: { ...d, ...extra, image: shown, baked: true }, orig: d.image };
+  return { data: { ...d, ...extra, ...(await storeImage(id, shown)) }, orig: d.image };
 }
 async function saveOrig(id, orig){
   if (orig) await setDoc(ORIG(id), { type: "orig", image: orig });
@@ -1434,8 +1476,9 @@ async function saveOrig(id, orig){
 }
 // 수정 창 열 때 원본 불러오기
 async function loadOriginal(id, o, ed){
-  if (!o.image || !o.baked) { ed.load(o); return; }
-  ed.load({ ...o, imgX: 50, imgY: 50, zoom: 1 }); // 원본 오기 전 잠깐
+  if (!hasImg(o) || !o.baked) { ed.load(o); return; }
+  const shownNow = o.imgSplit ? await fetchImg(id, o.imgV || 0).catch(() => "") : o.image;
+  ed.load({ ...o, image: shownNow, imgX: 50, imgY: 50, zoom: 1 }); // 원본 오기 전 잠깐
   try {
     const snap = await getDoc(ORIG(id));
     if (snap.exists()) ed.load({ ...o, image: snap.data().image });
@@ -1683,7 +1726,7 @@ $("#folderDelBtn").onclick = async () => {
     if (!confirm(kids.length ? `그룹만 지우고, 안의 폴더 ${kids.length}개는 첫 화면으로 꺼낼까요?` : "이 그룹을 삭제할까요?")) return;
     try {
       await Promise.all(kids.map(k => updateDoc(doc(db, SITE.col, k.id), { parentId: null })));
-      await deleteDoc(doc(db, SITE.col, editingFolder)); deleteDoc(ORIG(editingFolder)).catch(() => {});
+      await deleteDoc(doc(db, SITE.col, editingFolder)); delAux(editingFolder);
       $("#folderDlg").close(); location.hash = ""; toast("삭제했어요");
     } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
     return;
@@ -1694,8 +1737,8 @@ $("#folderDelBtn").onclick = async () => {
     const subN = ids.length - 1;
     if (!confirm(subN || inside.length ? `이 폴더와 안의 ${subN ? `폴더 ${subN}개, ` : ""}프롬프트 ${inside.length}개를 모두 삭제할까요?` : "이 폴더를 삭제할까요?")) return;
     const parent = parentOf(folderDocs.find(d => d.id === editingFolder));
-    await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), deleteDoc(ORIG(d.id)).catch(() => {})]));
-    await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, SITE.col, fid)), deleteDoc(ORIG(fid)).catch(() => {})]));
+    await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), delAux(d.id)]));
+    await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, SITE.col, fid)), delAux(fid)]));
     $("#folderDlg").close(); location.hash = parent ? "#/f/" + encodeURIComponent(parent) : ""; toast("삭제했어요");
   } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
@@ -1725,7 +1768,7 @@ $("#promptForm").addEventListener("submit", e => {
 });
 $("#promptDelBtn").onclick = async () => {
   if (!confirm("이 프롬프트를 삭제할까요?")) return;
-  try { await deleteDoc(doc(db, SITE.col, editingPrompt)); deleteDoc(ORIG(editingPrompt)).catch(() => {}); $("#promptDlg").close(); toast("삭제했어요"); }
+  try { await deleteDoc(doc(db, SITE.col, editingPrompt)); delAux(editingPrompt); $("#promptDlg").close(); toast("삭제했어요"); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
@@ -1781,14 +1824,14 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
 // 비율이 바뀌면 폴더 이미지를 원본에서 새 비율로 다시 잘라 저장
 async function rebakeFolders(){
   const [W, H] = bakeSize("folder");
-  const list = folderDocs.filter(f => f.image && f.baked);
+  const list = folderDocs.filter(f => hasImg(f) && f.baked);
   let n = 0;
   for (const f of list) {
     try {
       const o = await getDoc(ORIG(f.id));
       if (!o.exists()) continue;
       const shown = await bake(o.data().image, W, H, num(f.imgX, 50), num(f.imgY, 50), num(f.zoom, 1));
-      await updateDoc(doc(db, SITE.col, f.id), { image: shown });
+      await updateDoc(doc(db, SITE.col, f.id), await storeImage(f.id, shown));
       toast(`폴더 이미지 맞추는 중 ${++n}/${list.length}`);
     } catch(_) {}
   }
@@ -1801,7 +1844,7 @@ $("#optBtn").onclick = async () => {
   const btn = $("#optBtn"); btn.disabled = true;
   try {
     const docs = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }));
-    const all = docs.filter(d => d.image && (d.type === "folder" || d.type === "prompt"));
+    const all = docs.filter(d => hasImg(d) && (d.type === "folder" || d.type === "prompt"));
     let n = 0, done = 0;
     for (const o of all) {
       toast(`가볍게 바꾸는 중 ${++n}/${all.length}`);
@@ -1811,9 +1854,9 @@ $("#optBtn").onclick = async () => {
       const [W, H] = bakeSize(o.type === "folder" ? "folder" : "prompt", nl, o);
       const shown = await bake(src, W, H, num(o.imgX, 50), num(o.imgY, 50), num(o.zoom, 1));
       if (!o.baked) await setDoc(ORIG(o.id), { type: "orig", image: src });
-      if (shown.length < o.image.length || !o.baked) { await updateDoc(doc(db, SITE.col, o.id), { image: shown, baked: true }); done++; }
+      await updateDoc(doc(db, SITE.col, o.id), await storeImage(o.id, shown)); done++;
     }
-    try { localStorage.setItem(LS("pv-opt-v2"), "1"); } catch(_) {}
+    try { localStorage.setItem(LS("pv-opt-v3"), "1"); } catch(_) {}
     btn.hidden = true;
     toast(done ? `이미지 ${done}개를 가볍게 바꿨어요` : "이미 가벼워요");
   } catch(_) { toast("변환 중 문제가 생겼어요. 다시 눌러주세요"); }
@@ -1825,7 +1868,8 @@ $("#backupBtn").onclick = async () => {
   try {
     const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }));
     const origOf = id => all.find(d => d.id === id + "_orig")?.image;
-    const strip = o => { const { id, created, updated, type, folderId, ...rest } = o; const original = origOf(id); return original ? { ...rest, original } : rest; };
+    const imgOf = id => all.find(d => d.id === id + "_img")?.image;
+    const strip = o => { const { id, created, updated, type, folderId, thumb, ...rest } = o; if (rest.imgSplit) rest.image = imgOf(id) || ""; const original = origOf(id); return original ? { ...rest, original } : rest; };
     const data = all.filter(d => d.type === "folder").sort((a,b) => folderKey(a) - folderKey(b))
       .map(f => ({ ...strip(f), prompts: all.filter(p => p.folderId === f.id && p.type !== "folder").sort((a,b) => promptKey(a) - promptKey(b)).map(strip) }));
     const a = document.createElement("a");
