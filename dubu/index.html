@@ -183,7 +183,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 
 .plist{display:flex;flex-wrap:wrap;align-items:flex-start;row-gap:16px;column-gap:12px}
 .plist>.item{width:100%}
-.plist>.item.lo-tall2,.plist>.item.lo-sq2{width:calc((100% - 12px) / 2)}
+.plist>.item.lo-tall2,.plist>.item.lo-sq2,.plist>.item.lo-grid2{width:calc((100% - 12px) / 2)}
 .lo-sq2 .ptall{aspect-ratio:1/1}
 .mini.tl.sq .im{height:36px}
 .plist>.item.lo-tall3{width:calc((100% - 24px) / 3)}
@@ -217,7 +217,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
   .plist{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px}
   .plist>.item{width:calc(50% - 10px)}
   .plist{column-gap:20px;row-gap:20px}
-  .plist>.item.lo-tall2,.plist>.item.lo-sq2{width:calc((100% - 40px) / 3)}
+  .plist>.item.lo-tall2,.plist>.item.lo-sq2,.plist>.item.lo-grid2{width:calc((100% - 40px) / 3)}
   .plist>.item.lo-tall3{width:calc((100% - 60px) / 4)}
   #view.pc-col .plist{flex-direction:column;align-items:center}
   #view.pc-col .plist>.item{width:min(100%,560px)}
@@ -445,7 +445,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
-      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">글씨 색 (제목·부제목·버튼)<div class="cpick" id="pColor"></div></div><div class="field" style="padding:0 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px">제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
+      <div class="acc-body"><div><div class="lo-grid compact" id="pLayout"></div><div class="field" style="padding:2px 10px 10px">글씨 색 (제목·부제목·버튼)<div class="cpick" id="pColor"></div></div><div class="field" style="padding:0 10px 10px">버튼 테마<div class="seg" id="pTheme"><button type="button" data-th="basic">베이직</button><button type="button" data-th="glass">유리</button><button type="button" data-th="text">텍스트</button></div></div><div class="field" id="pTallWrap" style="padding:0 10px 10px"><div id="pRatioWrap" class="field" style="padding:0;margin-bottom:6px">이미지 비율<div class="seg" id="pRatio"><button type="button" data-gr="1/1">정사각 1:1</button><button type="button" data-gr="4/3">가로 4:3</button><button type="button" data-gr="3/4">세로 3:4</button></div></div>제목·버튼 위치<div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div><span style="margin-top:6px">버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div></div></div>
     </div>
     <label id="pFolderWrap">위치 (이 프롬프트를 넣을 폴더)<select id="pFolder"></select></label>
     <div class="row" style="justify-content:space-between">
@@ -1010,7 +1010,7 @@ document.addEventListener("click", e => {
 });
 
 function promptHtml(p, admin){
-  const lo = p.layout || "stack";
+  const [lo, gr] = normLayout(p);
   const title = `<span class="ptitle"${colorStyle(effColor(p.titleColor))}>${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
   const copy = `<span class="copies ${textsOf(p).length >= 5 ? "many" : ""}">${textsOf(p).map((t, i) => `<button class="copy-btn press" data-copy="${p.id}" data-i="${i}"${colorStyle(effColor(p.titleColor))}>${esc(t.label || "복사")}</button>`).join("")}</span>`;
   const edit = light => admin ? `<button class="edit-ic press" data-edit="${p.id}" aria-label="수정">${pencil(light)}</button>` : "";
@@ -1023,11 +1023,11 @@ function promptHtml(p, admin){
     inner = `<div class="box pside press" data-tog="${p.id}">
       <div class="sthumb">${mediaHtml(p)}</div>
       <div class="sinfo"><div class="sline">${title}${hintHtml(p)}${edit(false)}</div>${copy}</div></div>`;
-  } else if (lo === "tall2" || lo === "tall3" || lo === "sq2") {
+  } else if (lo === "grid2" || lo === "tall3") {
     const few = textsOf(p).length <= 2 ? "few" : "";
     inner = p.tallPos === "inside"
-      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
-      : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}">${mediaHtml(p)}${edit(!!p.image)}</div>
+      ? `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : ""}>${mediaHtml(p)}${edit(!!p.image)}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
+      : `<div class="box ptall press ${p.image ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : ""}>${mediaHtml(p)}${edit(!!p.image)}</div>
       <div class="tall-info ${few}">${title}${copy}</div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press ${textsOf(p).length >= 3 ? "grid2" : ""}" data-tog="${p.id}">
@@ -1264,7 +1264,7 @@ const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
 const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
-const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : layout === "sq2" ? [700, 700] : (layout === "tall2" || layout === "tall3") ? [600, 800] : [1200, 600];
+const bakeSize = (kind, layout) => kind === "folder" ? (RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"]) : layout === "side" ? [500, 500] : layout === "grid2" ? ({ "1/1": [700, 700], "4/3": [800, 600], "3/4": [600, 800] }[curGridRatio] || [700, 700]) : layout === "sq2" ? [700, 700] : (layout === "tall2" || layout === "tall3") ? [600, 800] : [1200, 600];
 async function bake(src, W, H, x = 50, y = 50, z = 1){
   const im = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
   const c = document.createElement("canvas"); c.width = W; c.height = H;
@@ -1338,6 +1338,7 @@ function setTallBtn(v){ curTallBtn = v; $("#pTallBtn").querySelectorAll("button"
 $("#pTallBtn").addEventListener("click", e => { const v = e.target.closest("[data-tb]")?.dataset.tb; if (v) setTallBtn(v); });
 let curTallPos = "below";
 function setTallPos(v){ curTallPos = v; $("#pTallPos").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tp === v)); }
+$("#pRatio").addEventListener("click", e => { const v = e.target.closest("[data-gr]")?.dataset.gr; if (v) setGridRatio(v); });
 $("#pTallPos").addEventListener("click", e => { const v = e.target.closest("[data-tp]")?.dataset.tp; if (v) setTallPos(v); });
 let curTheme = "basic";
 function setTheme(v){ curTheme = v; $("#pTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.th === v)); }
@@ -1345,7 +1346,15 @@ $("#pTheme").addEventListener("click", e => { const v = e.target.closest("[data-
 let curPc = "row";
 function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pc === v)); }
 $("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
-let curLayout = "stack";
+let curLayout = "stack", curGridRatio = "1/1";
+// 예전 '정사각 2열'·'세로형 2열'은 '2열 + 비율'로 통합
+function normLayout(p){
+  const l = p.layout || "stack";
+  if (l === "sq2") return ["grid2", "1/1"];
+  if (l === "tall2") return ["grid2", "3/4"];
+  return [l, p.gridRatio || "1/1"];
+}
+function setGridRatio(v){ curGridRatio = v; $("#pRatio").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.gr === v)); if (curLayout === "grid2") $("#pPicker").style.aspectRatio = v; }
 document.addEventListener("click", e => { const b = e.target.closest("#pLayout [data-lo]"); if (b) setLayout(b.dataset.lo); });
 $("#loAccBtn").onclick = () => $("#loAcc").classList.toggle("open");
 function setLayout(lo){
@@ -1354,9 +1363,11 @@ function setLayout(lo){
   requestAnimationFrame(() => { const on = $("#pLayout .lo-card.on"); if (on) $("#pLayout").scrollLeft = on.offsetLeft - 10; });
   $("#loCur").textContent = LAYOUTS.find(l => l.id === lo)?.name || "";
   const pk = $("#pPicker");
-  const tall = lo === "tall2" || lo === "tall3", sq = lo === "sq2";
-  pk.classList.toggle("r21", lo !== "side" && !tall && !sq); pk.classList.toggle("r11", lo === "side" || sq); pk.classList.toggle("r34", tall);
-  $("#pTallWrap").hidden = !tall && !sq;
+  const tall = lo === "tall3", g2 = lo === "grid2";
+  pk.classList.toggle("r21", lo !== "side" && !tall && !g2); pk.classList.toggle("r11", lo === "side" || g2); pk.classList.toggle("r34", tall);
+  pk.style.aspectRatio = g2 ? curGridRatio : "";
+  $("#pTallWrap").hidden = !tall && !g2;
+  $("#pRatioWrap").hidden = !g2;
   pk.hidden = $("#pTools").hidden = lo === "text";
 }
 
@@ -1366,8 +1377,7 @@ const LAYOUTS = [
   { id: "stack",   name: "기본",       desc: "위 이미지 + 아래 제목줄", mini: `<div class="mini"><i class="im"></i><i class="bar"></i></div>` },
   { id: "overlay", name: "이미지 위", desc: "이미지 안에 제목·복사", mini: `<div class="mini ov"><i class="im"></i><i class="bar"></i></div>` },
   { id: "side",    name: "가로형",      desc: "왼쪽 작은 이미지",     mini: `<div class="mini sd"><i class="im"></i><i class="bar"></i></div>` },
-  { id: "sq2",     name: "정사각 2열",  desc: "정사각 이미지 두 개씩", mini: `<div class="mini tl sq"><i class="im"></i><i class="im"></i></div>` },
-  { id: "tall2",   name: "세로형 2열",  desc: "세로 이미지 두 개씩",   mini: `<div class="mini tl"><i class="im"></i><i class="im"></i></div>` },
+  { id: "grid2",   name: "2열",         desc: "이미지 두 개씩 · 비율 선택", mini: `<div class="mini tl sq"><i class="im"></i><i class="im"></i></div>` },
   { id: "tall3",   name: "세로형 3열",  desc: "세로 이미지 세 개씩",   mini: `<div class="mini tl t3"><i class="im"></i><i class="im"></i><i class="im"></i></div>` },
   { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
 ];
@@ -1465,7 +1475,7 @@ function openPrompt(id, preset){
   setTallBtn(p.tallBtn || "long");
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
-  setLayout(p.layout || "stack");
+  { const [l0, r0] = normLayout(p); curGridRatio = r0; setLayout(l0); setGridRatio(r0); }
   $("#loAcc").classList.remove("open");
   $("#promptDelBtn").hidden = !id;
   $("#promptDlg").showModal();
@@ -1532,7 +1542,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, hint: $("#pHint").value.trim(), layout: curLayout, gridRatio: curGridRatio, ...img, updated: serverTimestamp() };
       if (editingPrompt) {
         const nf = $("#pFolder").value;
         if (nf && nf !== currentFolderId()) { data.folderId = nf; data.order = Date.now() / 1e3; }
