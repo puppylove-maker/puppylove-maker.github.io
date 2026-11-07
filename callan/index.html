@@ -318,13 +318,14 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .oarrow svg{width:15px;height:15px}
 .oarrow:disabled{opacity:.3}
 .oarrow.del{color:var(--danger)}
+.otag{font-size:10px;font-weight:600;color:var(--sub);background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-right:6px;vertical-align:1px}
 .oarrow.del svg{width:15px;height:15px}
 .orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
 .obar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
 
 .skel{background:linear-gradient(90deg,#f3f3f3 0%,#fafafa 50%,#f3f3f3 100%);background-size:200% 100%;animation:shimmer 1.2s linear infinite;border-color:#f0f0f0}
 @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
-#view>.list+.plist{margin-top:20px}
+#view>.list+.plist,#view>.plist+.list{margin-top:20px}
 /* 첫 화면은 좌우 여백 넓게 */
 body.home .wrap{padding-left:22px;padding-right:22px}
 @media (min-width:720px){body.home .wrap{padding-left:44px;padding-right:44px}}
@@ -749,8 +750,24 @@ function render(){
     $("#view").innerHTML = `<div class="empty">${isGroup(folder) ? (admin ? "‘+’를 눌러 이 그룹에 폴더를 만들거나, 폴더 편집에서 ‘위치’로 옮겨오세요." : "아직 폴더가 없어요.") : (admin ? "‘+’를 눌러 프롬프트를 넣어보세요." : "아직 프롬프트가 없어요.")}</div>`;
     return;
   }
-  $("#view").innerHTML = (subs.length ? folderListHtml(subs) : "") +
-    (items.length ? `<div class="plist">${items.map(p => promptHtml(p, admin)).join("")}</div>` : "");
+  // 폴더·프롬프트를 섞어 정리한 적이 있으면 그 순서대로, 아니면 폴더 먼저
+  const seq = mixedSeq(folder, subs, items);
+  let html = "", run = [], runK = null;
+  const flush = () => { if (!run.length) return; html += runK === "folder" ? folderListHtml(run) : `<div class="plist">${run.map(p => promptHtml(p, admin)).join("")}</div>`; run = []; };
+  seq.forEach(o => { const k = o.type === "folder" ? "folder" : "prompt"; if (k !== runK) { flush(); runK = k; } run.push(o); });
+  flush();
+  $("#view").innerHTML = html;
+}
+// 섞어 정리한 폴더에 새로 넣으면 맨 끝으로
+function nextOrder(def){
+  const fid = currentFolderId(), f = folderDocs.find(d => d.id === fid);
+  if (!f?.mixedOrder) return def;
+  const keys = [...childFolders(fid).map(folderKey), ...prompts().map(promptKey)];
+  return Math.max(def, keys.length ? Math.max(...keys) + 1 : 0);
+}
+function mixedSeq(folder, subs, items){
+  if (!folder?.mixedOrder) return [...subs, ...items];
+  return [...subs.map(o => [folderKey(o), o]), ...items.map(o => [promptKey(o), o])].sort((a, b) => a[0] - b[0]).map(x => x[1]);
 }
 function folderListHtml(list){
   return `<div class="list">${list.map(f => `
@@ -1030,7 +1047,7 @@ function renderReorder(){
     <div class="olist">${rows.map((o, i) => `
       <div class="orow" data-oid="${o.id}">
         ${o.image ? `<img class="othumb" src="${o.image}" alt="" style="${viewStyle(o)}">` : `<span class="othumb"></span>`}
-        <span class="oname">${esc(o.name || o.title || "제목 없음")}</span>
+        <span class="oname">${reorder.kind === "mixed" && o.type === "folder" ? `<span class="otag">폴더</span>` : ""}${esc(o.name || o.title || "제목 없음")}</span>
         <button class="oarrow press" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
         <button class="oarrow press" data-down="${i}" ${i === rows.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
         <button class="oarrow del press" data-del="${o.id}" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
@@ -1064,7 +1081,8 @@ function removeRow(id){
 }
 function startReorder(kind){
   const fid = currentFolderId();
-  const list = kind === "folders" ? childFolders(fid) : prompts();
+  const folder = folderDocs.find(d => d.id === fid);
+  const list = kind === "folders" ? childFolders(fid) : kind === "mixed" ? mixedSeq(folder, childFolders(fid), prompts()) : prompts();
   reorder = { kind, ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
   history.pushState({ reorder: 1 }, ""); // 뒤로가기 누르면 정리하기만 닫히게
   render(); window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1073,13 +1091,16 @@ window.addEventListener("popstate", () => { if (reorder) { reorder = null; rende
 
 async function finishReorder(save){
   if (save) {
-    const n = reorder.removed.size, isFolders = reorder.kind === "folders";
-    if (n && !confirm(isFolders ? `${n}개를 삭제할까요? 폴더는 안의 프롬프트도 같이 지워지고, 그룹은 안의 폴더가 첫 화면으로 나와요.` : `프롬프트 ${n}개를 삭제할까요?`)) return;
+    const n = reorder.removed.size, isF = id => reorder.kind === "folders" || (reorder.kind === "mixed" && reorder.map[id]?.type === "folder");
+    const anyF = [...reorder.removed].some(isF);
+    if (n && !confirm(anyF ? `${n}개를 삭제할까요? 폴더는 안의 프롬프트도 같이 지워지고, 그룹은 안의 폴더가 첫 화면으로 나와요.` : `프롬프트 ${n}개를 삭제할까요?`)) return;
     try {
       const batch = writeBatch(db);
       reorder.ids.forEach((id, i) => batch.update(doc(db, SITE.col, id), { order: i }));
+      if (reorder.kind === "mixed" && currentFolderId()) batch.update(doc(db, SITE.col, currentFolderId()), { mixedOrder: true });
       for (const id of reorder.removed) {
         batch.delete(doc(db, SITE.col, id)); batch.delete(ORIG(id));
+        const isFolders = isF(id);
         if (isFolders && isGroup(reorder.map[id])) { childFolders(id).forEach(k => batch.update(doc(db, SITE.col, k.id), { parentId: null })); continue; }
         if (isFolders) for (const fid of [id, ...descendants(id)]) {
           if (fid !== id) { batch.delete(doc(db, SITE.col, fid)); batch.delete(ORIG(fid)); }
@@ -1305,7 +1326,7 @@ async function addBlankPrompt(lo, title, hint, texts = [{ label: "복사", conte
   try {
     const last = prompts().at(-1);
     const ref = await addDoc(col, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), updated: serverTimestamp(),
-      order: last ? promptKey(last) + 1 : 0, layout: lo, title: title || "새 프롬프트", hint, content: texts[0].content, texts, image: "", imgX: 50, imgY: 50, zoom: 1 });
+      order: nextOrder(last ? promptKey(last) + 1 : 0), layout: lo, title: title || "새 프롬프트", hint, content: texts[0].content, texts, image: "", imgX: 50, imgY: 50, zoom: 1 });
     toast("추가됐어요");
     setTimeout(() => document.getElementById("it-" + ref.id)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
   } catch(_) { toast("추가 실패: 권한을 확인해주세요"); }
@@ -1359,8 +1380,8 @@ function openMenu(){
        [["view", "화면 설정", "보관함 이름 · 카드 비율 · 몇 열"]]]
     : isGroup(cur)
     ? [[["new", "새 폴더", "이 그룹 안에 폴더 추가"], ...(hasSubs ? [["forder", "폴더 정리하기", "순서 바꾸기 · 삭제"]] : [])]]
-    : [[["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "프롬프트 정리하기", "순서 바꾸기 · 삭제"]] : [])],
-       [["new", "새 폴더", "이 폴더 안에 폴더 추가"], ...(hasSubs ? [["forder", "폴더 정리하기", "안에 든 폴더 순서 바꾸기 · 삭제"]] : [])]];
+    : [[["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ["new", "새 폴더", "이 폴더 안에 폴더 추가"]],
+       ...(prompts().length || hasSubs ? [[[hasSubs && prompts().length ? "morder" : hasSubs ? "forder" : "order", "정리하기", hasSubs && prompts().length ? "폴더·프롬프트 섞어서 순서 바꾸기 · 삭제" : "순서 바꾸기 · 삭제"]]] : [])];
   $("#menu").innerHTML = sections.map(sec => sec.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("")).join(`<div class="msep"></div>`);
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
 }
@@ -1376,6 +1397,7 @@ $("#menu").addEventListener("click", e => {
   if (k === "view") openViewDlg();
   if (k === "order") startReorder("prompts");
   if (k === "forder") startReorder("folders");
+  if (k === "morder") startReorder("mixed");
   if (k === "tpl") { openPrompt(null, { layout: "stack" }); $("#loAcc").classList.add("open"); }
 });
 let newLo = "stack";
@@ -1470,7 +1492,7 @@ $("#folderForm").addEventListener("submit", e => {
       } else {
         const last = childFolders(currentFolderId()).at(-1);
         if (currentFolderId() && !editingIsGroup) data.parentId = currentFolderId();
-        await setDoc(ref, { type: "folder", created: serverTimestamp(), order: last ? folderKey(last) + 1 : 0, ...data });
+        await setDoc(ref, { type: "folder", created: serverTimestamp(), order: nextOrder(last ? folderKey(last) + 1 : 0), ...data });
       }
       await saveOrig(ref.id, orig);
       $("#folderDlg").close(); toast("저장됐어요");
@@ -1516,7 +1538,7 @@ $("#promptForm").addEventListener("submit", e => {
       }
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
-        await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: last ? promptKey(last) + 1 : 0, ...data });
+        await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: nextOrder(last ? promptKey(last) + 1 : 0), ...data });
       }
       await saveOrig(ref.id, orig);
       $("#promptDlg").close(); toast("저장됐어요");
