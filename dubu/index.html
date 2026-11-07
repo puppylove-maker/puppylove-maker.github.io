@@ -63,6 +63,7 @@ h1{font-size:17px;font-weight:700;margin:0;letter-spacing:-.02em;overflow:hidden
 .menu button{display:flex;flex-direction:column;align-items:flex-start;width:100%;border:none;background:none;padding:10px 12px;border-radius:10px;font:inherit;font-size:14px;color:var(--text);cursor:pointer;text-align:left}
 .menu button:hover{background:var(--soft)}
 .menu small{font-size:11px;color:var(--muted);margin-top:1px}
+.menu .msep{height:1px;background:var(--line);margin:5px 8px}
 /* 박스 디자인: 오버레이 */
 .lo-overlay .pimg{margin-bottom:0}
 .ov-cap{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:10px;padding:30px 10px 10px 14px;background:linear-gradient(to top,rgba(255,255,255,.92),rgba(255,255,255,0))}
@@ -1350,14 +1351,17 @@ const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card pr
 function openMenu(){
   const fid = currentFolderId();
   const cur = folderDocs.find(d => d.id === fid);
-  const items = !fid
-    ? [["group", "그룹", "새 그룹 · 편집 · 순서"], ["new", "새 폴더", "프롬프트를 넣는 폴더"], ["view", "화면 설정", "보관함 이름 · 카드 비율 · 몇 열"], ...(childFolders(null).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
+  // 비슷한 기능끼리 묶음, 묶음 사이에 줄
+  const hasSubs = childFolders(fid).length;
+  const sections = !fid
+    ? [[["new", "새 폴더", "프롬프트를 넣는 폴더"], ...(childFolders(null).length ? [["forder", "폴더 정리하기", "순서 바꾸기 · 삭제"]] : [])],
+       [["group", "그룹", "새 그룹 · 편집 · 순서"]],
+       [["view", "화면 설정", "보관함 이름 · 카드 비율 · 몇 열"]]]
     : isGroup(cur)
-    ? [["new", "새 폴더", "이 그룹 안에 폴더 추가"], ...(childFolders(fid).length ? [["forder", "정리하기", "순서 바꾸기 · 삭제"]] : [])]
-    : [["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ["new", "새 폴더", "이 폴더 안에 폴더 추가"],
-       ...(prompts().length ? [["order", childFolders(fid).length ? "프롬프트 정리하기" : "정리하기", "프롬프트 순서 바꾸기 · 삭제"]] : []),
-       ...(childFolders(fid).length ? [["forder", "폴더 정리하기", "안에 든 폴더 순서 바꾸기 · 삭제"]] : [])];
-  $("#menu").innerHTML = items.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("");
+    ? [[["new", "새 폴더", "이 그룹 안에 폴더 추가"], ...(hasSubs ? [["forder", "폴더 정리하기", "순서 바꾸기 · 삭제"]] : [])]]
+    : [[["tpl", "새 프롬프트", "제목·부제목·디자인 정해서 추가"], ...(prompts().length ? [["order", "프롬프트 정리하기", "순서 바꾸기 · 삭제"]] : [])],
+       [["new", "새 폴더", "이 폴더 안에 폴더 추가"], ...(hasSubs ? [["forder", "폴더 정리하기", "안에 든 폴더 순서 바꾸기 · 삭제"]] : [])]];
+  $("#menu").innerHTML = sections.map(sec => sec.map(([k, t, d]) => `<button class="press" data-m="${k}">${t}<small>${d}</small></button>`).join("")).join(`<div class="msep"></div>`);
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
 }
 function closeMenu(){ $("#menu").classList.remove("show"); $("#plusBtn").classList.remove("on"); }
