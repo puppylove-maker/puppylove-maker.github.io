@@ -638,6 +638,7 @@ function dbgShow(){
     `로그인 확인: ${f(T.auth)}`,
     `화면 그림 다 뜸: ${f(T.imgs)} (${T.imgN ?? "…"}장)`,
     `폴더 열 때 프롬프트: ${T.fold ?? "폴더를 열면 표시"}`,
+    ...(T.imgErr ? [`그림 오류: ${T.imgErr}`] : []),
   ].join("\n");
 }
 function dbgImgs(){
@@ -719,18 +720,28 @@ const imgMem = new Map();
 async function fetchImg(id, v){
   const key = id + ":" + v;
   if (imgMem.has(key)) return imgMem.get(key);
-  const p = (async () => {
-    try { const c = await getDocFromCache(IMGD(id)); if (c.exists() && String(c.data().v || 0) === String(v)) return c.data().image; } catch(_) {}
-    const sn = await getDoc(IMGD(id)); return sn.exists() ? sn.data().image : "";
-  })();
-  imgMem.set(key, p); return p;
+  // 실시간 구독으로 받음: 저장된 게 있으면 바로, 없으면 서버 연결되는 대로 (오프라인 오류 없이)
+  const p = new Promise(res => {
+    let un = null, done = false;
+    const finish = img => { if (done) return; done = true; res(img); setTimeout(() => un && un(), 0); };
+    un = onSnapshot(IMGD(id), { includeMetadataChanges: true }, sn => {
+      if (sn.exists() && String(sn.data().v || 0) === String(v)) finish(sn.data().image);
+      else if (!sn.metadata.fromCache) finish(sn.exists() ? sn.data().image : "");
+    }, err => { if (DBG) { T.imgErr = String(err && err.code || err); dbgShow(); } finish(""); });
+  });
+  imgMem.set(key, p);
+  p.then(img => { if (!img) imgMem.delete(key); });
+  return p;
 }
 const imgIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => {
   if (!e.isIntersecting) return; imgIO.unobserve(e.target); showImg(e.target);
 }), { rootMargin: "400px 0px" }) : null;
 function showImg(el){
   if (el.dataset.loaded) return; el.dataset.loaded = "1";
-  fetchImg(el.dataset.img, el.dataset.v).then(src => { if (src) { el.src = src; el.classList.add("ready"); } }).catch(() => {});
+  fetchImg(el.dataset.img, el.dataset.v).then(src => {
+    if (src) { el.src = src; el.classList.add("ready"); }
+    else setTimeout(() => { delete el.dataset.loaded; if (el.isConnected) showImg(el); }, 3000); // 실패하면 잠시 뒤 다시
+  });
 }
 function hydrateImgs(){
   document.querySelectorAll("img.lazy-img:not([data-loaded])").forEach(el => imgIO ? imgIO.observe(el) : showImg(el));
