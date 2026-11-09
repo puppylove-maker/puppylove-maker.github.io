@@ -230,6 +230,12 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
   .plist>.item.lo-tall2,.plist>.item.lo-sq2,.plist>.item.lo-grid2{width:calc((100% - 20px) / 2)}
   .plist>.item.lo-tall3{width:calc((100% - 40px) / 3)}
   #view.pc-col .plist{flex-direction:column;align-items:center}
+  #view.pc-mobile .plist{max-width:600px;margin-left:auto;margin-right:auto;justify-content:flex-start;column-gap:12px;row-gap:12px}
+  #view.pc-mobile .plist>.item{width:100%}
+  #view.pc-mobile .plist>.item.lo-grid2,#view.pc-mobile .plist>.item.lo-tall2,#view.pc-mobile .plist>.item.lo-sq2{width:calc((100% - 12px) / 2)}
+  #view.pc-mobile .plist>.item.lo-tall3{width:calc((100% - 24px) / 3)}
+  body.pc-mobile #desc,#view.pc-mobile>.list{max-width:600px;width:100%;margin-left:auto;margin-right:auto}
+  body:not(.fc-2):not(.fc-3) #view.pc-mobile>.list>.folder{width:100%}
   #view.pc-col .plist>.item{width:min(100%,560px)}
   #view>.list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
   #view>.list>.folder{width:calc(50% - 7px)}
@@ -440,7 +446,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 .plist .item .tall-info .copy-btn,.plist .item .tall-cap .copy-btn{height:25px;font-size:10.5px}
 .tall-info{padding-top:6px;gap:5px}
 .tall-info .ptitle,.tall-cap .ptitle{font-size:12px}
-.pcol{padding:8px;gap:10px}
+.pcol{padding:0;gap:12px}
 .pcol-info .ptitle{font-size:13.5px}
 .plist .item .pcol-info .copy-btn{height:26px}
 .ptext.grid2 .copies.copies{gap:5px}
@@ -493,7 +499,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field"><div class="lab-row">안내글 (폴더 맨 위에 보여요)<label class="chk mini"><input type="checkbox" id="fDescLine">구분선</label></div><textarea class="short" id="fDesc" placeholder="선택"></textarea></div>
     <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="fPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
-    <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="row">가로로 나란히</button><button type="button" data-pc="col">세로로 한 줄씩</button></div></div>
+    <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="mobile">폰이랑 똑같이</button><button type="button" data-pc="wide">넓게 2개씩</button></div></div>
 
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
@@ -874,7 +880,7 @@ function renderInner(){
   renderGroups(fid, admin);
   document.body.classList.toggle("home", !fid);
   if (!fid) {
-    $("#view").classList.remove("pc-col");
+    $("#view").classList.remove("pc-col", "pc-mobile"); document.body.classList.remove("pc-mobile");
     $("#pageTitle").textContent = siteName(); document.title = siteName();
     const g = groupDocs.find(x => x.id === selGroup);
     const list = g ? homeFolders().filter(f => (g.folderIds || []).includes(f.id)) : homeFolders();
@@ -903,7 +909,10 @@ function renderInner(){
     $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
   $("#pageTitle").textContent = folder.name;
-  $("#view").classList.toggle("pc-col", folder.pcLayout === "col");
+  // PC 기본: 폰 화면을 그대로 가운데에 (카드마다 디자인이 달라도 안 어긋남)
+  $("#view").classList.remove("pc-col");
+  $("#view").classList.toggle("pc-mobile", folder.pcMode !== "wide");
+  document.body.classList.toggle("pc-mobile", folder.pcMode !== "wide");
   $("#desc").classList.toggle("line", !!folder.descLine);
   if (folder.desc && !reorder) { $("#desc").textContent = folder.desc; $("#desc").hidden = false; }
   const items = isGroup(folder) ? [] : prompts().filter(p => admin || !p.hidden), subs = childFolders(fid);
@@ -1553,7 +1562,7 @@ $("#pTallPos").addEventListener("click", e => { const v = e.target.closest("[dat
 let curTheme = "basic";
 function setTheme(v){ curTheme = v; $("#pTheme").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.th === v)); }
 $("#pTheme").addEventListener("click", e => { const v = e.target.closest("[data-th]")?.dataset.th; if (v) setTheme(v); });
-let curPc = "row";
+let curPc = "mobile";
 function setPc(v){ curPc = v; $("#fPc").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pc === v)); }
 $("#fPc").addEventListener("click", e => { const v = e.target.closest("[data-pc]")?.dataset.pc; if (v) setPc(v); });
 let curLayout = "stack", curGridRatio = "1/1";
@@ -1661,7 +1670,7 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#fDescLine").checked = !!f.descLine;
   $("#fPw").value = f.pw || "";
   setColor("fColor", f.textColor);
-  setPc(f.pcLayout || "row");
+  setPc(f.pcMode === "wide" ? "wide" : "mobile");
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
@@ -1714,7 +1723,7 @@ $("#folderForm").addEventListener("submit", e => {
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
       const data = editingIsGroup
         ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
-        : { name, desc: $("#fDesc").value.trim(), pcLayout: curPc, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
+        : { name, desc: $("#fDesc").value.trim(), pcMode: curPc, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
       if (editingFolder) {
         const np = $("#fParent").value || null;
         if (!editingIsGroup && np !== (parentOf(folderDocs.find(d => d.id === editingFolder)) || null)) {
