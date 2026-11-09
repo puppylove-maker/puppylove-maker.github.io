@@ -226,8 +226,9 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
   .plist{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;gap:20px}
   .plist>.item{width:calc(50% - 10px)}
   .plist{column-gap:20px;row-gap:20px}
-  .plist>.item.lo-tall2,.plist>.item.lo-sq2,.plist>.item.lo-grid2{width:calc((100% - 40px) / 3)}
-  .plist>.item.lo-tall3{width:calc((100% - 60px) / 4)}
+  /* PC에서도 2열은 2개, 3열은 3개씩 (폰과 똑같이) */
+  .plist>.item.lo-tall2,.plist>.item.lo-sq2,.plist>.item.lo-grid2{width:calc((100% - 20px) / 2)}
+  .plist>.item.lo-tall3{width:calc((100% - 40px) / 3)}
   #view.pc-col .plist{flex-direction:column;align-items:center}
   #view.pc-col .plist>.item{width:min(100%,560px)}
   #view>.list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
@@ -1449,7 +1450,7 @@ const bakeSize = (kind, layout, o = null) => {
   const gr = o ? (layout === "sq2" ? "1/1" : layout === "tall2" ? "3/4" : o.gridRatio || "1/1") : curGridRatio;
   const cr = o ? (o.colRatio || "3/4") : curColRatio;
   if (layout === "side") return [320, 320];
-  if (layout === "grid2" || layout === "sq2" || layout === "tall2") return ratioWH(gr, 520);
+  if (layout === "grid2" || layout === "sq2" || layout === "tall2") return ratioWH(gr, 640);
   if (layout === "tall3") return [420, 560];
   if (layout === "col1") return cr === "auto" ? ratioWH((o && o.imgRatio) || "3/4", 560) : ratioWH(cr, 560);
   return [900, 450];
