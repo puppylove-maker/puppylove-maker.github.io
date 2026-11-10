@@ -688,7 +688,7 @@ catch(_) { db = getFirestore(app); }
 const col = collection(db, SITE.col); // 폴더와 프롬프트를 한 곳에 저장 (type으로 구분)
 
 const $ = s => document.querySelector(s);
-let folderDocs = [], promptDocs = [], promptsFor = null, promptsReady = false;
+let folderDocs = [], promptDocs = [], promptsFor = null, promptsReady = false, rawFolders = [], rawGroups = [];
 let user = null, editingFolder = null, editingPrompt = null, reorder = null;
 const openItems = new Set();
 const isAdmin = () => !!user && ADMINS.includes(user.email);
@@ -697,7 +697,23 @@ function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show")
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 const ts = v => v?.toMillis ? v.toMillis() : (typeof v === "number" ? v : 0);
 const num = (v, d) => (typeof v === "number" && isFinite(v)) ? v : d;
-const currentFolderId = () => { const m = location.hash.match(/^#\/f\/(.+)$/); return m ? decodeURIComponent(m[1]) : null; };
+// 폴더 주소: 짧은 코드(#/Xk3pQ) — 예전 긴 주소(#/f/전체ID)도 계속 열림
+const currentFolderId = () => {
+  const h = location.hash;
+  const m = h.match(/^#\/f\/(.+)$/); if (m) return decodeURIComponent(m[1]);
+  const c = h.match(/^#\/([A-Za-z0-9]+)$/); if (!c) return null;
+  const hit = rawFolders.filter(f => f.id.startsWith(c[1]));
+  return hit.length === 1 ? hit[0].id : (hit.find(f => f.id === c[1])?.id || null);
+};
+// 다른 폴더와 안 겹치는 가장 짧은 앞부분(최소 5글자)
+function shortCode(id){
+  for (let n = 5; n < id.length; n++) {
+    const pre = id.slice(0, n);
+    if (!rawFolders.some(f => f.id !== id && f.id.startsWith(pre))) return pre;
+  }
+  return id;
+}
+const folderHash = id => id ? "#/" + shortCode(id) : "";
 
 // 정렬: 순서(order)가 있으면 그 순서, 없으면 폴더는 만든 순 / 프롬프트는 최신이 위
 const folderKey = f => num(f.order, ts(f.created) / 1e3);
@@ -791,11 +807,14 @@ onSnapshot(query(col, where("type", "==", "folder")), DBG ? { includeMetadataCha
   rawFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   refilter();
   foldersReady = true; $("#status").textContent = "";
+  if (promptsFor !== currentFolderId()) watchPrompts(); // 짧은 주소로 들어왔을 때 폴더 목록이 온 뒤 연결
+  // 예전 긴 주소로 들어오면 주소창을 짧게 바꿔줌
+  const lf = location.hash.match(/^#\/f\/(.+)$/);
+  if (lf && rawFolders.some(f => f.id === decodeURIComponent(lf[1]))) history.replaceState(history.state, "", folderHash(decodeURIComponent(lf[1])));
   render();
 }, () => { $("#status").textContent = "불러오기에 실패했어요"; });
 
 // 비공개: 로그인한 주인에게만 보이고, 방문자에게는 아예 안 보임
-let rawFolders = [], rawGroups = [];
 function hiddenChain(f, seen = 0){
   if (!f || seen > 20) return false;
   return !!f.hidden || hiddenChain(rawFolders.find(d => d.id === f.parentId), seen + 1);
@@ -1299,7 +1318,7 @@ window.addEventListener("hashchange", onRoute);
 $("#backBtn").onclick = () => {
   if (reorder) return history.back();
   const f = folderDocs.find(d => d.id === currentFolderId());
-  location.hash = parentOf(f) ? "#/f/" + encodeURIComponent(parentOf(f)) : "";
+  location.hash = folderHash(parentOf(f));
 };
 
 $("#view").addEventListener("click", e => {
@@ -1312,7 +1331,7 @@ $("#view").addEventListener("click", e => {
   if (t.dataset.down) return moveRow(+t.dataset.down, +t.dataset.down + 1);
   if (t.dataset.edit) return openPrompt(t.dataset.edit);
   if (t.dataset.copy) { const pd = promptDocs.find(x => x.id === t.dataset.copy); return copyText(pd ? (textsOf(pd)[+t.dataset.i || 0]?.content || "") : ""); }
-  if (t.dataset.open) location.hash = "#/f/" + encodeURIComponent(t.dataset.open);
+  if (t.dataset.open) location.hash = folderHash(t.dataset.open);
   if (t.dataset.tog) {
     const id = t.dataset.tog;
     if (promptDocs.find(x => x.id === id)?.noExpand) return;
@@ -1760,7 +1779,7 @@ $("#folderDelBtn").onclick = async () => {
     const parent = parentOf(folderDocs.find(d => d.id === editingFolder));
     await Promise.all(inside.flatMap(d => [deleteDoc(d.ref), delAux(d.id)]));
     await Promise.all(ids.flatMap(fid => [deleteDoc(doc(db, SITE.col, fid)), delAux(fid)]));
-    $("#folderDlg").close(); location.hash = parent ? "#/f/" + encodeURIComponent(parent) : ""; toast("삭제했어요");
+    $("#folderDlg").close(); location.hash = folderHash(parent); toast("삭제했어요");
   } catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
