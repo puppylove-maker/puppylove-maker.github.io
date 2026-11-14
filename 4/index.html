@@ -911,7 +911,7 @@ function renderInner(){
   let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v3")) === "1"; } catch(_) {}
   $("#optBtn").hidden = !admin || optDone;
   $("#desc").hidden = true;
-  $("#folderEditBtn").hidden = !admin || !fid || !!reorder;
+  $("#folderEditBtn").hidden = true; // 편집은 톱니바퀴 메뉴에서
 
   renderGroups(fid, admin);
   document.body.classList.toggle("home", !fid);
