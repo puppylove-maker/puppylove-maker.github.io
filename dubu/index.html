@@ -580,6 +580,13 @@ html.dark body.sq .folder.group,html.dark body.sq .list.cap-b>.folder.group .fpi
 html.dark body.sq .th-basic .copy-btn{background:#1c1c1f;border-color:#d8d8db;color:var(--text)}
 html.dark body.sq .th-basic .pbar .copy-btn,html.dark body.sq .th-basic .tall-info .copy-btn,html.dark body.sq .th-basic .pcol-info .copy-btn{background:#e8e8ea!important;border-color:#e8e8ea!important;color:#141416!important}
 html.dark body.sq .expand-inner{border-color:#d8d8db;color:var(--text)}
+/* 설정 줄: 이름 왼쪽, 고르기 오른쪽 한 줄 */
+.field.inl{display:flex;align-items:center;gap:10px}
+.field.inl>span{flex:0 0 44px;font-size:12px;color:var(--sub)}
+.field.inl>.seg{flex:1;padding:2px;gap:2px}
+.field.inl>.seg button{height:26px;font-size:11.5px}
+.field.inl+.field.inl{margin-top:-6px}
+.vsec{padding-top:8px;margin:2px 0 -6px;font-size:11.5px}
 </style>
 </head>
 <body>
@@ -625,13 +632,13 @@ html.dark body.sq .expand-inner{border-color:#d8d8db;color:var(--text)}
     <div class="field"><div class="lab-row">안내글 (폴더 맨 위에 보여요)<label class="chk mini"><input type="checkbox" id="fDescLine">구분선</label></div><textarea class="short" id="fDesc" placeholder="선택"></textarea></div>
     <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="fPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
-    <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="mobile">폰이랑 똑같이</button><button type="button" data-pc="wide">넓게 2개씩</button></div></div>
+    <div class="field inl" id="fPcWrap"><span>PC 배치</span><div class="seg" id="fPc"><button type="button" data-pc="mobile">폰이랑 똑같이</button><button type="button" data-pc="wide">넓게 2개씩</button></div></div>
     <div id="fsWrap" style="display:contents">
     <div class="vsec" id="fsTitle">이 폴더 안에 든 폴더</div>
-    <div class="field">카드 비율<div class="seg" id="fsRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
-    <div class="field">한 줄에 몇 개<div class="seg" id="fsCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
-    <div class="field">폴더 이름<div class="seg" id="fsCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
-    <div class="field">이름 흰 칸 <small style="color:var(--muted)">(각지게 · 그림 안일 때)</small><div class="seg" id="fsBox"><button type="button" data-v="on">켜기</button><button type="button" data-v="off">끄기</button></div></div>
+    <div class="field inl"><span>비율</span><div class="seg" id="fsRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">3:4</button></div></div>
+    <div class="field inl"><span>열</span><div class="seg" id="fsCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
+    <div class="field inl"><span>이름</span><div class="seg" id="fsCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
+    <div class="field inl"><span>흰 칸</span><div class="seg" id="fsBox"><button type="button" data-v="on">켬</button><button type="button" data-v="off">끔</button></div></div>
     </div>
 
     <div class="row" style="justify-content:space-between">
@@ -738,12 +745,12 @@ html.dark body.sq .expand-inner{border-color:#d8d8db;color:var(--text)}
     <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
     <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
     <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
-    <div class="field">모양<div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
+    <div class="field inl"><span>모양</span><div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
     <div class="vsec">첫 화면 폴더</div>
-    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
-    <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
-    <div class="field">폴더 이름<div class="seg" id="vCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
-    <div class="field">이름 흰 칸 <small style="color:var(--muted)">(각지게 · 그림 안일 때)</small><div class="seg" id="vBox"><button type="button" data-v="on">켜기</button><button type="button" data-v="off">끄기</button></div></div>
+    <div class="field inl"><span>비율</span><div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">3:4</button></div></div>
+    <div class="field inl"><span>열</span><div class="seg" id="vCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
+    <div class="field inl"><span>이름</span><div class="seg" id="vCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
+    <div class="field inl"><span>흰 칸</span><div class="seg" id="vBox"><button type="button" data-v="on">켬</button><button type="button" data-v="off">끔</button></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">취소</button>
       <button type="button" class="btn primary press" id="vSave">저장</button>
