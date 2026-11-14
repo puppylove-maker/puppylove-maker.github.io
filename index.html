@@ -405,6 +405,8 @@ body.sq .th-basic .ov-cap .phint{opacity:.85}
 /* 그림 아래(제목줄): 복사 버튼 검정 바탕 흰 글씨 */
 body.sq .th-basic .pbar .copy-btn,body.sq .th-basic .tall-info .copy-btn,body.sq .th-basic .pcol-info .copy-btn{background:#111!important;border-color:#111!important;color:#fff!important}
 body.sq .th-basic .pbar .copy-btn:active,body.sq .th-basic .tall-info .copy-btn:active{background:#333}
+/* 배경에 바로 놓이는 세로 1열(옆 그림): 첫 버튼만 검정, 나머지는 흰 바탕 검정 글씨 */
+body.sq .th-basic .pcol-info .copy-btn~.copy-btn{background:#fff!important;border-color:#111!important;color:#111!important}
 body.sq .expand-inner{background:#fff;border:1px solid #111;color:#111}
 .vsec{margin:4px 0 -4px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
