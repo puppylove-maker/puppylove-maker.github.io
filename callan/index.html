@@ -875,9 +875,9 @@ const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3
 let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
 // 폴더 안 폴더는 따로 정한 적 없으면 첫 화면 설정을 따라감
 const homeRatio = () => RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
-// 폴더 안 폴더: 그 폴더(부모)에 정한 값 → 없으면 첫 화면 설정
+// 폴더 안 폴더: 첫 화면 설정과 완전히 따로. 그 폴더(부모)에 정한 값 → 없으면 기본(헤더·1열·그림 안)
 const subCfg = pid => { const p = pid && rawFolders.find(d => d.id === pid) || {};
-  return { ratio: RATIO_PX[p.subRatio] ? p.subRatio : homeRatio(), cols: +p.subCols || +viewCfg.folderCols || 0, cap: p.subCap || "in" }; };
+  return { ratio: RATIO_PX[p.subRatio] ? p.subRatio : "4/1", cols: +p.subCols || 0, cap: p.subCap || "in" }; };
 const subRatio = pid => subCfg(pid).ratio;
 const folderRatioOf = f => parentOf(f) ? subRatio(parentOf(f)) : homeRatio();
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
@@ -1074,7 +1074,7 @@ function folderListHtml(list){
 }
 
 function renderGroups(fid, admin){
-  if (admin) migrateOldGroups();
+  if (admin) { migrateOldGroups(); migrateSubSep(); }
   const home = !fid && !reorder;
   const show = home && (groupDocs.length > 0 || admin);
   $("#grpToggle").hidden = !show;
@@ -1116,6 +1116,16 @@ $("#pills").addEventListener("click", e => {
 });
 // 이전 방식(큰 폴더) 그룹이 있으면 알약 그룹으로 자동 변환 (한 번만)
 let migrating = false;
+// 한 번만: 첫 화면 비율로 잘려 있던 폴더 안 폴더 이미지를 폴더 안 비율로 다시 자르기
+let subSepRun = false;
+async function migrateSubSep(){
+  if (subSepRun || !foldersReady) return;
+  try { if (localStorage.getItem(LS("pv-subsep-v1")) === "1") return; } catch(_) {}
+  subSepRun = true;
+  const list = folderDocs.filter(f => parentOf(f) && hasImg(f) && f.baked && folderRatioOf(f) !== homeRatio());
+  if (list.length) await rebakeFolders(f => list.includes(f));
+  try { localStorage.setItem(LS("pv-subsep-v1"), "1"); } catch(_) {}
+}
 async function migrateOldGroups(){
   if (migrating || !isAdmin() || !foldersReady) return;
   const old = folderDocs.filter(isGroup); if (!old.length) return;
@@ -2005,7 +2015,6 @@ Object.entries(VSEG).forEach(([id, k]) => $("#" + id).addEventListener("click", 
 }));
 $("#vSave").onclick = () => withBusy("vSave", async () => {
   const homeChanged = vs.folderRatio !== homeRatio();
-  const followsHome = f => { const p = rawFolders.find(d => d.id === parentOf(f)); return !p || !RATIO_PX[p.subRatio]; };
   try {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
@@ -2014,7 +2023,7 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
     viewCfg = { ...viewCfg, ...upd }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
-  if (homeChanged) await rebakeFolders(f => !parentOf(f) || followsHome(f));
+  if (homeChanged) await rebakeFolders(f => !parentOf(f));
 });
 // 비율이 바뀌면 폴더 이미지를 원본에서 새 비율로 다시 잘라 저장
 async function rebakeFolders(which = () => true, ratioOf = null){
