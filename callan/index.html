@@ -609,6 +609,13 @@ body.sq .ooc-black .ooc-text{border-top-color:rgba(255,255,255,.5)}
   body.home #view>.list.c-2.r-wide{grid-template-columns:repeat(4,minmax(0,1fr))}
   body.home #view>.list.r-hdr{--fr:var(--frpc)!important}
 }
+/* 폴더 안 폴더: 사진 없으면 여백 없이 글자만 있는 상자 */
+body:not(.home) #view>.list{align-items:start}
+body:not(.home) #view>.list>.folder.no-img{aspect-ratio:auto!important;min-height:44px;display:flex;align-items:center}
+body:not(.home) #view>.list>.folder.no-img .fpic{display:none}
+body:not(.home) #view>.list>.folder.no-img .cap{position:static!important;display:block;padding:11px 14px!important;font-size:14px;background:none!important;color:var(--text);text-shadow:none!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body:not(.home) #view>.list.cap-b>.folder.no-img{border:1px solid var(--line)!important;border-radius:14px;background:var(--soft)}
+body.sq:not(.home) #view>.list>.folder.no-img,body.sq:not(.home) #view>.list.cap-b>.folder.no-img{border:1px solid #111!important;border-radius:0!important;background:#fff}
 </style>
 </head>
 <body>
