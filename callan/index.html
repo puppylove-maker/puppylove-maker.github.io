@@ -1714,7 +1714,12 @@ $("#view").addEventListener("click", e => {
   if (t.dataset.up) return moveRow(+t.dataset.up, +t.dataset.up - 1);
   if (t.dataset.down) return moveRow(+t.dataset.down, +t.dataset.down + 1);
   if (t.dataset.edit) return openPrompt(t.dataset.edit);
-  if (t.dataset.copy) { const pd = promptDocs.find(x => x.id === t.dataset.copy); return copyText(pd ? (textsOf(pd)[+t.dataset.i || 0]?.content || "") : ""); }
+  if (t.dataset.copy) {
+    const pd = promptDocs.find(x => x.id === t.dataset.copy), txt = pd ? (textsOf(pd)[+t.dataset.i || 0]?.content || "") : "";
+    // 내용이 링크(https://…) 하나뿐이면 복사 대신 그 주소로 이동
+    if (/^https?:\/\/\S+$/.test(txt.trim())) { window.open(txt.trim(), "_blank", "noopener"); return; }
+    return copyText(txt);
+  }
   if (t.dataset.open) location.hash = folderHash(t.dataset.open);
   if (t.dataset.tog) {
     const id = t.dataset.tog;
