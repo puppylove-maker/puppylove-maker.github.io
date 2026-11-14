@@ -602,6 +602,13 @@ body.sq .ooc-black .ooc-text{border-top-color:rgba(255,255,255,.5)}
 .field.inl>.seg button{height:26px;font-size:11.5px}
 .field.inl+.field.inl{margin-top:-6px}
 .vsec{padding-top:8px;margin:2px 0 -6px;font-size:11.5px}
+/* PC 첫 화면: 설정한 열보다 한 열 더 */
+@media (min-width:720px){
+  body.home .wrap{max-width:1000px}
+  body.home #view>.list.c-1{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body.home #view>.list.c-2{grid-template-columns:repeat(3,minmax(0,1fr))}
+  body.home #view>.list.c-3{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
@@ -960,7 +967,7 @@ $("#status").textContent = "불러오는 중…";
 let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
-const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800] };
+const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800], "2/1": [900, 450], "3/2": [750, 500] };
 let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", homeBox: "on", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
 // 폴더 안 폴더는 따로 정한 적 없으면 첫 화면 설정을 따라감
 const homeRatio = () => RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
@@ -968,7 +975,22 @@ const homeRatio = () => RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4
 const subCfg = pid => { const p = pid && rawFolders.find(d => d.id === pid) || {};
   return { ratio: RATIO_PX[p.subRatio] ? p.subRatio : "4/1", cols: +p.subCols || 0, cap: p.subCap || "in", box: p.subBox || "on" }; };
 const subRatio = pid => subCfg(pid).ratio;
-const folderRatioOf = f => parentOf(f) ? subRatio(parentOf(f)) : homeRatio();
+// 헤더(4:1)를 2열·3열로 놓으면 폰에서 너무 얇아서 자동으로 두껍게 (2열 2:1, 3열 3:2)
+const effRatio = (r, cols) => r === "4/1" && cols >= 2 ? (cols === 2 ? "2/1" : "3/2") : r;
+const homeEff = () => effRatio(homeRatio(), +viewCfg.folderCols || 0);
+const subEff = pid => { const c = subCfg(pid); return effRatio(c.ratio, c.cols); };
+const folderRatioOf = f => parentOf(f) ? subEff(parentOf(f)) : homeEff();
+const rawRatioOf = f => parentOf(f) ? subRatio(parentOf(f)) : homeRatio();
+// 한 번만: 위 규칙에 맞게 폴더 이미지 다시 자르기
+let effRun = false;
+async function migrateEff(){
+  if (effRun || !foldersReady) return;
+  try { if (localStorage.getItem(LS("pv-eff-v1")) === "1") return; } catch(_) {}
+  effRun = true;
+  const list = folderDocs.filter(f => hasImg(f) && f.baked && folderRatioOf(f) !== rawRatioOf(f));
+  if (list.length) await rebakeFolders(f => list.includes(f));
+  try { localStorage.setItem(LS("pv-eff-v1"), "1"); } catch(_) {}
+}
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
@@ -1315,7 +1337,7 @@ function folderListHtml(list){
   const fid = currentFolderId(), sc = subCfg(fid);
   const cols = fid ? sc.cols : +viewCfg.folderCols, cap = fid ? sc.cap : viewCfg.homeCap, box = fid ? sc.box : viewCfg.homeBox;
   const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}${box === "off" ? " nobox" : ""}`;
-  return `<div class="${cls}" style="--fr:${fid ? sc.ratio : homeRatio()}">${list.map(f => `
+  return `<div class="${cls}" style="--fr:${fid ? effRatio(sc.ratio, sc.cols) : homeEff()};--frpc:${fid ? sc.ratio : homeRatio()}">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       <span class="fpic">${mediaHtml(f)}
       ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : isLockedF(f) ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}</span>
@@ -1324,7 +1346,7 @@ function folderListHtml(list){
 }
 
 function renderGroups(fid, admin){
-  if (admin) { migrateOldGroups(); migrateSubSep(); }
+  if (admin) { migrateOldGroups(); migrateSubSep(); migrateEff(); }
   const home = !fid && !reorder;
   const show = home && (groupDocs.length > 0 || admin);
   $("#grpToggle").hidden = !show;
@@ -2163,7 +2185,7 @@ Object.entries(FSEG).forEach(([id, k]) => $("#" + id).addEventListener("click", 
   fs[k] = k === "subCols" ? +v : v; fsTouched = true; paintFs();
 }));
 function setFolderPickRatio(parent){
-  fBakeRatio = parent ? subRatio(parent) : homeRatio();
+  fBakeRatio = parent ? subEff(parent) : homeEff();
   $("#fPicker").style.aspectRatio = fBakeRatio;
 }
 $("#fParent").addEventListener("change", () => setFolderPickRatio($("#fParent").value || null));
@@ -2213,7 +2235,7 @@ $("#folderForm").addEventListener("submit", e => {
     try {
       const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
-      const subRatioChanged = editingFolder && fsTouched && fs.subRatio !== subRatio(editingFolder);
+      const newSubEff = effRatio(fs.subRatio, +fs.subCols || 0), subRatioChanged = editingFolder && fsTouched && newSubEff !== subEff(editingFolder);
       // 비밀번호: 보안 모드에선 폴더 문서엔 '잠김' 표시만, 진짜 비밀번호는 주인만 읽는 곳에
       const pwv = $("#fPw").value.trim();
       const pwData = secure ? { locked: !!pwv, pw: editingFolder ? deleteField() : null } : { pw: pwv };
@@ -2236,7 +2258,7 @@ $("#folderForm").addEventListener("submit", e => {
       }
       await saveOrig(ref.id, orig);
       $("#folderDlg").close(); toast("저장됐어요");
-      if (subRatioChanged) { const pid = ref.id, r = fs.subRatio; await rebakeFolders(f => parentOf(f) === pid, () => r); }
+      if (subRatioChanged) { const pid = ref.id, r = newSubEff; await rebakeFolders(f => parentOf(f) === pid, () => r); }
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
   });
 });
@@ -2337,7 +2359,7 @@ Object.entries(VSEG).forEach(([id, k]) => $("#" + id).addEventListener("click", 
   vs[k] = /Cols$/.test(k) ? +v : v; paintView();
 }));
 $("#vSave").onclick = () => withBusy("vSave", async () => {
-  const homeChanged = vs.folderRatio !== homeRatio();
+  const homeChanged = effRatio(vs.folderRatio, +vs.folderCols || 0) !== homeEff();
   try {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
