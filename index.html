@@ -397,8 +397,8 @@ body.sq .th-basic .copy-btn:active{background:#f0f0f0}
 /* 그림 위에 얹힌 버튼은 검정으로 채워서 또렷하게 */
 body.sq .th-basic .ov-cap .copy-btn{background:#fff!important;border-color:#111!important;color:#111!important}
 /* 각진 테마엔 그라데이션 없이: 그림 안 글씨는 흰 칸에 */
-body.sq .list:not(.cap-b)>.folder:not(.no-img) .cap{left:0;right:auto;bottom:0;max-width:calc(100% - 12px);padding:4px 8px!important;line-height:1.35;font-size:12.5px!important;background:#fff!important;color:#111!important;text-shadow:none!important;border-top:1px solid #111;border-right:1px solid #111;font-weight:700}
-body.sq .list.c-3:not(.cap-b)>.folder:not(.no-img) .cap{font-size:11.5px!important;padding:3px 6px!important}
+body.sq .list:not(.cap-b):not(.nobox)>.folder:not(.no-img) .cap{left:0;right:auto;bottom:0;max-width:calc(100% - 12px);padding:4px 8px!important;line-height:1.35;font-size:12.5px!important;background:#fff!important;color:#111!important;text-shadow:none!important;border-top:1px solid #111;border-right:1px solid #111;font-weight:700}
+body.sq .list.c-3:not(.cap-b):not(.nobox)>.folder:not(.no-img) .cap{font-size:11.5px!important;padding:3px 6px!important}
 /* 그림 안: 띠·그라데이션 없이 글씨만 (버튼만 박스) */
 body.sq .th-basic .ov-cap,body.sq .th-text .ov-cap{background:none!important}
 body.sq .th-basic .ov-cap .ptitle,body.sq .th-basic .ov-cap .phint,body.sq .th-text .ov-cap .ptitle{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.55)}
@@ -537,6 +537,8 @@ body.sq .list.cap-b.c-3>.folder .cap{font-size:11.5px;padding:4px 6px!important}
 .expand-inner{padding:9px 11px;font-size:11.5px}
 .item.open .expand{margin-top:3px}
 @media (min-width:720px){.wrap{padding-top:24px}}
+/* 각진 + 흰 칸 끄기: 글씨만 (그라데이션 없음) */
+body.sq .list.nobox:not(.cap-b)>.folder .cap{background:none!important}
 /* 각진 테마: 글씨 그림자(글로우) 없음 */
 body.sq *{text-shadow:none!important}
 /* ---------- 다크 모드 (순검정 대신 짙은 회색) ---------- */
@@ -571,7 +573,7 @@ html.dark body.sq #view .folder,html.dark body.sq .th-basic .box,html.dark body.
 html.dark body.sq .folder.no-img,html.dark body.sq .th-basic :is(.pbar,.ptext,.pside),html.dark body.sq .th-text :is(.pbar,.ptext,.pside),html.dark body.sq .list.cap-b>.folder,html.dark body.sq .expand-inner{background:#242428}
 html.dark body.sq .list.cap-b>.folder .fpic{border-bottom-color:#5a5a60}
 html.dark body.sq .list.cap-b>.folder .cap{color:var(--text)!important}
-html.dark body.sq .list:not(.cap-b)>.folder:not(.no-img) .cap{background:#242428!important;color:var(--text)!important;border-color:#5a5a60}
+html.dark body.sq .list:not(.cap-b):not(.nobox)>.folder:not(.no-img) .cap{background:#242428!important;color:var(--text)!important;border-color:#5a5a60}
 html.dark body.sq .pill{border-color:#44444a;color:var(--sub)}
 html.dark body.sq .pill.on{border-color:#d0d0d4;color:var(--text);background:transparent}
 html.dark body.sq .folder.group,html.dark body.sq .list.cap-b>.folder.group .fpic{box-shadow:5px 5px 0 -1px var(--bg),5px 5px 0 0 #5a5a60}
@@ -629,6 +631,7 @@ html.dark body.sq .expand-inner{border-color:#5a5a60;color:var(--text)}
     <div class="field">카드 비율<div class="seg" id="fsRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
     <div class="field">한 줄에 몇 개<div class="seg" id="fsCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
     <div class="field">폴더 이름<div class="seg" id="fsCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
+    <div class="field">이름 흰 칸 <small style="color:var(--muted)">(각지게 · 그림 안일 때)</small><div class="seg" id="fsBox"><button type="button" data-v="on">켜기</button><button type="button" data-v="off">끄기</button></div></div>
     </div>
 
     <div class="row" style="justify-content:space-between">
@@ -740,6 +743,7 @@ html.dark body.sq .expand-inner{border-color:#5a5a60;color:var(--text)}
     <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
     <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
     <div class="field">폴더 이름<div class="seg" id="vCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
+    <div class="field">이름 흰 칸 <small style="color:var(--muted)">(각지게 · 그림 안일 때)</small><div class="seg" id="vBox"><button type="button" data-v="on">켜기</button><button type="button" data-v="off">끄기</button></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">취소</button>
       <button type="button" class="btn primary press" id="vSave">저장</button>
@@ -915,12 +919,12 @@ let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
 const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800] };
-let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", homeBox: "on", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
 // 폴더 안 폴더는 따로 정한 적 없으면 첫 화면 설정을 따라감
 const homeRatio = () => RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
 // 폴더 안 폴더: 첫 화면 설정과 완전히 따로. 그 폴더(부모)에 정한 값 → 없으면 기본(헤더·1열·그림 안)
 const subCfg = pid => { const p = pid && rawFolders.find(d => d.id === pid) || {};
-  return { ratio: RATIO_PX[p.subRatio] ? p.subRatio : "4/1", cols: +p.subCols || 0, cap: p.subCap || "in" }; };
+  return { ratio: RATIO_PX[p.subRatio] ? p.subRatio : "4/1", cols: +p.subCols || 0, cap: p.subCap || "in", box: p.subBox || "on" }; };
 const subRatio = pid => subCfg(pid).ratio;
 const folderRatioOf = f => parentOf(f) ? subRatio(parentOf(f)) : homeRatio();
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
@@ -940,7 +944,7 @@ $("#darkBtn").onclick = () => {
 };
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
@@ -1111,8 +1115,8 @@ function mixedSeq(folder, subs, items){
 }
 function folderListHtml(list){
   const fid = currentFolderId(), sc = subCfg(fid);
-  const cols = fid ? sc.cols : +viewCfg.folderCols, cap = fid ? sc.cap : viewCfg.homeCap;
-  const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}`;
+  const cols = fid ? sc.cols : +viewCfg.folderCols, cap = fid ? sc.cap : viewCfg.homeCap, box = fid ? sc.box : viewCfg.homeBox;
+  const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}${box === "off" ? " nobox" : ""}`;
   return `<div class="${cls}" style="--fr:${fid ? sc.ratio : homeRatio()}">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       <span class="fpic">${mediaHtml(f)}
@@ -1884,13 +1888,13 @@ function openFolder(id, newParent = null, asGroup = false){
   const kids = id ? childFolders(id) : [];
   $("#fsWrap").hidden = false;
   $("#fsTitle").textContent = "이 폴더 안에 든 폴더 모양" + (kids.length ? ` (${kids.slice(0, 3).map(k => k.name).join(", ")}${kids.length > 3 ? ` 외 ${kids.length - 3}개` : ""})` : "");
-  const sc = subCfg(id); fs = { subRatio: sc.ratio, subCols: sc.cols || defCols(), subCap: sc.cap }; fsTouched = false; paintFs();
+  const sc = subCfg(id); fs = { subRatio: sc.ratio, subCols: sc.cols || defCols(), subCap: sc.cap, subBox: sc.box }; fsTouched = false; paintFs();
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
 }
 // 폴더 고르기 목록 (안쪽 폴더는 들여쓰기)
-const FSEG = { fsRatio: "subRatio", fsCols: "subCols", fsCap: "subCap" };
+const FSEG = { fsRatio: "subRatio", fsCols: "subCols", fsCap: "subCap", fsBox: "subBox" };
 let fs = {}, fsTouched = false; // 건드렸을 때만 저장 (안 건드리면 계속 첫 화면 설정을 따라감)
 const paintFs = () => Object.entries(FSEG).forEach(([id, k]) =>
   $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(fs[k]))));
@@ -2046,12 +2050,12 @@ const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
 const defCols = () => matchMedia("(min-width:720px)").matches ? 2 : 1;
-const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap" };
+const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", vBox: "homeBox" };
 let vs = {};
 const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
   $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(vs[k]))));
 function openViewDlg(){
-  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in" };
+  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on" };
   $("#vTitle").value = viewCfg.siteTitle || "";
   setColor("vColor", viewCfg.textColor);
   $("#vFollow").checked = !!viewCfg.followAll;
