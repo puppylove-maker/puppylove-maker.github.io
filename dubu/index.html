@@ -560,7 +560,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 <dialog id="groupsDlg">
   <div class="dlg">
     <h2>그룹</h2>
-    <p style="margin:-6px 0 0;font-size:12px;color:var(--sub)">스위치를 끄면 방문자에게 그 그룹이 안 보여요.</p>
+    <p style="margin:-6px 0 0;font-size:12px;color:var(--sub)">스위치를 끄면 그 그룹이 아무에게도 안 보여요.</p>
     <div class="olist" id="gmList"></div>
     <button type="button" class="btn press" id="gmNew">+ 새 그룹 만들기</button>
     <div class="row" style="justify-content:flex-end">
@@ -844,7 +844,7 @@ function refilter(){
   const all = isAdmin();
   folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f) && !lockedAncestor(f));
   groupDocs = all ? rawGroups : rawGroups.filter(g => !g.hidden);
-  if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
+  if (selGroup && !groupDocs.some(g => g.id === selGroup && !g.off)) selGroup = null;
 }
 const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
 // 그룹 (이름 + 넣을 폴더 목록)
@@ -990,7 +990,7 @@ function renderGroups(fid, admin){
   if (!show) return;
   $("#pills").innerHTML =
     `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
-    groups().map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
+    groups().filter(g => !g.off).map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
     "";
 }
 let pwFor = null, pwThen = null, lastAsked = null;
@@ -1042,8 +1042,8 @@ function paintManager(){
   const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
   $("#gmList").innerHTML = gmIds.length ? gmIds.map((id, i) => `
     <div class="orow" data-oid="${esc(id)}">
-      <button type="button" class="gsw ${map[id]?.hidden ? "" : "on"}" data-gvis="${esc(id)}" role="switch" aria-checked="${map[id]?.hidden ? "false" : "true"}" aria-label="방문자에게 보이기"></button>
-      <span class="oname" style="${map[id]?.hidden ? "color:var(--muted)" : ""}">${esc(map[id]?.name || "")}</span>
+      <button type="button" class="gsw ${map[id]?.off ? "" : "on"}" data-gvis="${esc(id)}" role="switch" aria-checked="${map[id]?.off ? "false" : "true"}" aria-label="그룹 보이기"></button>
+      <span class="oname" style="${map[id]?.off ? "color:var(--muted)" : ""}">${map[id]?.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(map[id]?.name || "")}</span>
       <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
       <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
       <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
@@ -1059,11 +1059,12 @@ function openGroupManager(){
 $("#gmList").addEventListener("click", e => {
   const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel],[data-gvis]"); if (!t) return;
   if (t.dataset.gvis) {
-    // 켜기/끄기: 꺼진 그룹은 방문자에게 안 보임 (주인에게는 흐리게 보임)
+    // 켜기/끄기: 꺼진 그룹은 알약이 아예 안 보임 (주인 포함 모두)
     const id = t.dataset.gvis, g = rawGroups.find(x => x.id === id); if (!g) return;
-    g.hidden = !g.hidden; paintManager(); renderGroups(currentFolderId(), isAdmin());
-    updateDoc(doc(db, SITE.col, id), { hidden: g.hidden }).then(() => toast(g.hidden ? "방문자에게 숨겼어요" : "방문자에게 보여요"))
-      .catch(() => { g.hidden = !g.hidden; paintManager(); toast("바꾸지 못했어요"); });
+    g.off = !g.off; if (g.off && selGroup === id) selGroup = null;
+    paintManager(); renderGroups(currentFolderId(), isAdmin());
+    updateDoc(doc(db, SITE.col, id), { off: g.off }).then(() => toast(g.off ? "그룹을 껐어요" : "그룹을 켰어요"))
+      .catch(() => { g.off = !g.off; paintManager(); renderGroups(currentFolderId(), isAdmin()); toast("바꾸지 못했어요"); });
     return;
   }
   if (t.dataset.gdel) {
