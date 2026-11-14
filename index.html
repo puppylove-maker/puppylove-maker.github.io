@@ -1016,7 +1016,7 @@ function renderInner(){
     $("#view").classList.remove("pc-col", "pc-mobile"); document.body.classList.remove("pc-mobile");
     $("#pageTitle").textContent = siteName(); document.title = siteName();
     const g = groupDocs.find(x => x.id === curGroup());
-    const list = g ? homeFolders().filter(f => (g.folderIds || []).includes(f.id)) : homeFolders();
+    const list = g ? groupFolders(g) : homeFolders();
     if (reorder) return renderReorder();
     if (!foldersReady) { $("#view").innerHTML = ""; return; }
     if (!list.length) {
@@ -1377,7 +1377,7 @@ function promptHtml(p, admin){
 function renderReorder(){
   const rows = reorder.ids.map(id => reorder.map[id]);
   $("#view").innerHTML = `
-    <div class="obar"><span>${reorder.removed.size ? `${reorder.removed.size}개 삭제 예정` : "순서 바꾸기·삭제"}</span>
+    <div class="obar"><span>${reorder.kind === "gfolders" ? (reorder.removed.size ? `${reorder.removed.size}개 그룹에서 빼기` : `‘${esc(groupDocs.find(x => x.id === reorder.gid)?.name || "")}’ 안 순서`) : reorder.removed.size ? `${reorder.removed.size}개 삭제 예정` : "순서 바꾸기·삭제"}</span>
       <span class="row"><button class="btn sm press" id="oCancel">취소</button><button class="btn sm primary press" id="oDone">완료</button></span></div>
     <div class="olist">${rows.map((o, i) => `
       <div class="orow" data-oid="${o.id}">
@@ -1414,17 +1414,29 @@ function removeRow(id){
   };
   if (el) { el.classList.add("leaving"); setTimeout(go, 200); } else go();
 }
+// 그룹(첫 화면 위 버튼) 안 폴더: 그룹에 넣은 순서대로
+const groupFolders = g => { const ids = g.folderIds || []; return homeFolders().filter(f => ids.includes(f.id)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); };
 function startReorder(kind){
   const fid = currentFolderId();
   const folder = folderDocs.find(d => d.id === fid);
-  const list = kind === "folders" ? childFolders(fid) : kind === "mixed" ? mixedSeq(folder, childFolders(fid), prompts()) : prompts();
-  reorder = { kind, ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
+  const grp = kind === "gfolders" ? groupDocs.find(x => x.id === curGroup()) : null;
+  const list = grp ? groupFolders(grp) : kind === "folders" ? childFolders(fid) : kind === "mixed" ? mixedSeq(folder, childFolders(fid), prompts()) : prompts();
+  reorder = { kind, gid: grp?.id, ids: list.map(o => o.id), map: Object.fromEntries(list.map(o => [o.id, o])), removed: new Set() };
   history.pushState({ reorder: 1 }, ""); // 뒤로가기 누르면 정리하기만 닫히게
   render(); window.scrollTo({ top: 0, behavior: "smooth" });
 }
 window.addEventListener("popstate", () => { if (reorder) { reorder = null; render(); } });
 
 async function finishReorder(save){
+  if (save && reorder.kind === "gfolders") {
+    // 그룹 안 순서: 그룹의 folderIds만 바꿈 (뺀 폴더는 그룹에서만 빠지고 지워지진 않음)
+    const g = groupDocs.find(x => x.id === reorder.gid), n = reorder.removed.size;
+    if (n && !confirm(`폴더 ${n}개를 이 그룹에서 뺄까요? 폴더는 지워지지 않아요.`)) return;
+    const rest = (g?.folderIds || []).filter(id => !reorder.ids.includes(id) && !reorder.removed.has(id));
+    try { await updateDoc(doc(db, SITE.col, reorder.gid), { folderIds: [...reorder.ids, ...rest], updated: serverTimestamp() }); toast(n ? "저장하고 그룹에서 뺐어요" : "순서를 저장했어요"); }
+    catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
+    save = false;
+  }
   if (save) {
     const n = reorder.removed.size, isF = id => reorder.kind === "folders" || (reorder.kind === "mixed" && reorder.map[id]?.type === "folder");
     const anyF = [...reorder.removed].some(isF);
@@ -1783,7 +1795,7 @@ function openMenu(){
   };
   const orderKey = hasSubs && prompts().length ? "morder" : hasSubs ? "forder" : "order";
   const sections = !fid
-    ? [["관리", [...(childFolders(null).length ? [["forder", "폴더 정리하기", I.list]] : []), ["group", "그룹", I.tag]]],
+    ? [["관리", [...(curGroup() && groupDocs.some(x => x.id === curGroup()) ? [["gorder", "이 그룹 안 순서 정리", I.list]] : childFolders(null).length ? [["forder", "폴더 정리하기", I.list]] : []), ["group", "그룹", I.tag]]],
        ["설정", [["view", "화면 설정", I.view]]]]
     : isGroup(cur)
     ? [["관리", [...(hasSubs ? [["forder", "폴더 정리하기", I.list]] : []), ["fedit", "그룹 편집", I.edit]]]]
@@ -1809,6 +1821,7 @@ $("#menu").addEventListener("click", e => {
   if (k === "fedit") $("#folderEditBtn").click();
   if (k === "order") startReorder("prompts");
   if (k === "forder") startReorder("folders");
+  if (k === "gorder") startReorder("gfolders");
   if (k === "morder") startReorder("mixed");
   if (k === "tpl") { openPrompt(null, { layout: "stack" }); $("#loAcc").classList.add("open"); }
 });
