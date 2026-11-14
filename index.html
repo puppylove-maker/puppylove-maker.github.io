@@ -1326,9 +1326,12 @@ document.addEventListener("submit", async e => {
     // 서버(규칙)가 비밀번호를 확인: 맞으면 기록이 써지고, 틀리면 거절됨
     const btn = $("#pwForm").querySelector("[type=submit]"); if (btn) btn.disabled = true;
     try {
-      if (!auth.currentUser) await signInAnonymously(auth);
+      if (!auth.currentUser) {
+        try { await signInAnonymously(auth); }
+        catch(ae) { if (btn) btn.disabled = false; $("#pwErr").textContent = "지금은 열 수 없어요 (주인: Firebase 익명 로그인 켜기 필요 · " + (ae.code || "") + ")"; return; }
+      }
       await setDoc(UNLOCKD(auth.currentUser.uid, pwFor.id), { f: pwFor.id, h: await sha256hex(pwFor.id + ":" + val) });
-    } catch(_) { if (btn) btn.disabled = false; $("#pwErr").textContent = "비밀번호가 달라요"; $("#pwIn").select(); return; }
+    } catch(e2) { if (btn) btn.disabled = false; $("#pwErr").textContent = e2.code === "permission-denied" ? "비밀번호가 달라요" : "열기 실패 (" + (e2.code || "오류") + ")"; $("#pwIn").select(); return; }
     if (btn) btn.disabled = false;
     unlocked[pwFor.id] = true;
     try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
