@@ -602,12 +602,12 @@ body.sq .ooc-black .ooc-text{border-top-color:rgba(255,255,255,.5)}
 .field.inl>.seg button{height:26px;font-size:11.5px}
 .field.inl+.field.inl{margin-top:-6px}
 .vsec{padding-top:8px;margin:2px 0 -6px;font-size:11.5px}
-/* PC 첫 화면: 설정한 열보다 한 열 더 */
+/* PC 첫 화면: 폰 1열→PC 2열, 폰 2열 와이드→PC 4열(나머지 2열 그대로), 3열은 그대로. 헤더는 PC에서 원래 4:1 */
 @media (min-width:720px){
   body.home .wrap{max-width:1000px}
   body.home #view>.list.c-1{grid-template-columns:repeat(2,minmax(0,1fr))}
-  body.home #view>.list.c-2{grid-template-columns:repeat(3,minmax(0,1fr))}
-  body.home #view>.list.c-3{grid-template-columns:repeat(4,minmax(0,1fr))}
+  body.home #view>.list.c-2.r-wide{grid-template-columns:repeat(4,minmax(0,1fr))}
+  body.home #view>.list.r-hdr{--fr:var(--frpc)!important}
 }
 </style>
 </head>
@@ -1336,7 +1336,8 @@ function mixedSeq(folder, subs, items){
 function folderListHtml(list){
   const fid = currentFolderId(), sc = subCfg(fid);
   const cols = fid ? sc.cols : +viewCfg.folderCols, cap = fid ? sc.cap : viewCfg.homeCap, box = fid ? sc.box : viewCfg.homeBox;
-  const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}${box === "off" ? " nobox" : ""}`;
+  const raw = fid ? sc.ratio : homeRatio();
+  const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}${box === "off" ? " nobox" : ""}${raw === "16/9" ? " r-wide" : raw === "4/1" ? " r-hdr" : ""}`;
   return `<div class="${cls}" style="--fr:${fid ? effRatio(sc.ratio, sc.cols) : homeEff()};--frpc:${fid ? sc.ratio : homeRatio()}">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       <span class="fpic">${mediaHtml(f)}
