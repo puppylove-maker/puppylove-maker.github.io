@@ -751,6 +751,7 @@ body.sq .ooc-black .ooc-text{border-top-color:rgba(255,255,255,.5)}
   <div class="dlg">
     <h2>화면 설정</h2>
     <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
+    <label id="vPwWrap">보관함 비밀번호 <small style="color:var(--muted)">(선택 · 비우면 누구나 들어옴)</small><input id="vPw" type="text" autocomplete="off" placeholder="비밀번호 없음"></label>
     <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
     <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
     <div class="field inl"><span>모양</span><div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
@@ -981,7 +982,7 @@ applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
   secure = d.secureV === 1; settingsReady = true;
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", siteLocked: !!d.siteLocked, shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
   subscribeData();
@@ -1000,7 +1001,7 @@ function subscribeData(){
   dataKey = key;
   dataSubs.forEach(u => u()); dataSubs = [];
   promptCache.forEach(e => e.unsub && e.unsub()); promptCache.clear();
-  lockSubs.forEach(u => u()); lockSubs.clear(); lockFolders.clear();
+  lockSubs.forEach(u => u()); lockSubs.clear(); lockFolders.clear(); lockGroups = [];
   const pub = secure && !admin;
   dataSubs.push(onSnapshot(pub ? query(col, where("type", "==", "folder"), where("priv", "==", false)) : query(col, where("type", "==", "folder")), DBG ? { includeMetadataChanges: true } : {}, onFolders, () => { $("#status").textContent = "불러오기에 실패했어요"; }));
   dataSubs.push(onSnapshot(pub ? query(col, where("type", "==", "group"), where("priv", "==", false)) : query(col, where("type", "==", "group")), onGroups, () => {}));
@@ -1008,16 +1009,22 @@ function subscribeData(){
   promptsFor = undefined; watchPrompts();
 }
 // 비밀번호를 맞힌 잠금 폴더: 그 안의 폴더도 받아옴
+let pubGroups = [], lockGroups = [];
 function watchLock(L){
   if (!secure || isAdmin() || lockSubs.has(L)) return;
-  lockSubs.set(L, onSnapshot(query(col, where("type", "==", "folder"), where("lk", "==", L)), snap => {
+  const u1 = onSnapshot(query(col, where("type", "==", "folder"), where("lk", "==", L)), snap => {
     lockFolders.set(L, snap.docs.map(d => ({ id: d.id, ...d.data() }))); mergeFolders(); refilter(); render();
-  }, () => relock(L)));
+  }, () => relock(L));
+  // 보관함 전체 잠금이면 그룹도 같이
+  const u2 = L === "_site" ? onSnapshot(query(col, where("type", "==", "group"), where("lk", "==", "_site")), snap => {
+    lockGroups = snap.docs.map(d => ({ id: d.id, ...d.data() })); rawGroups = [...pubGroups, ...lockGroups]; groupsReady = true; refilter(); render();
+  }, () => {}) : null;
+  lockSubs.set(L, () => { u1(); u2 && u2(); });
 }
 // 맞힌 기록이 없어졌으면 다시 잠금
 function relock(L){
   delete unlocked[L]; try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
-  lockSubs.get(L)?.(); lockSubs.delete(L); lockFolders.delete(L);
+  lockSubs.get(L)?.(); lockSubs.delete(L); lockFolders.delete(L); if (L === "_site") lockGroups = [];
   [...promptCache.keys()].forEach(k => { const e = promptCache.get(k); if (e.lk === L) { e.unsub && e.unsub(); promptCache.delete(k); } });
   mergeFolders(); refilter(); if (foldersReady) render();
 }
@@ -1070,7 +1077,7 @@ try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
 const curGroup = () => selGroup || (viewCfg.hideAll ? (groups()[0]?.id || null) : null);
 const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
 function onGroups(snap){
-  rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() })); groupsReady = true;
+  pubGroups = snap.docs.map(d => ({ id: d.id, ...d.data() })); rawGroups = [...pubGroups, ...lockGroups]; groupsReady = true;
   refilter();
   if (isAdmin()) healGroups();
   render();
@@ -1088,8 +1095,9 @@ function ensurePrompts(fid){
     if (!foldersReady) return { docs: [], ready: false }; // 폴더 목록(잠금 여부)을 먼저 알아야 함
     const F = rawFolders.find(d => d.id === fid);
     const L = isLockedF(F) ? F : nearestLockAbove(F);
-    if (L && !unlocked[L.id]) return { docs: [], ready: true };
-    lk = L ? L.id : null;
+    const lid = L ? L.id : viewCfg.siteLocked ? "_site" : null;
+    if (lid && !unlocked[lid]) return { docs: [], ready: true };
+    lk = lid;
     q = lk ? query(col, where("folderId", "==", fid), where("lk", "==", lk)) : query(col, where("folderId", "==", fid), where("priv", "==", false));
   }
   const entry = { docs: [], ready: false, unsub: null, lk };
@@ -1123,16 +1131,17 @@ function nearestLockAbove(f, fl = rawFolders){
   return null;
 }
 function hiddenIn(f, fl = rawFolders){ let n = 0; while (f && n++ < 30) { if (f.hidden) return true; f = fl.find(d => d.id === f.parentId); } return false; }
+const siteLk = () => viewCfg.siteLocked ? { priv: true, lk: "_site" } : { priv: false, lk: null };
 function protOfFolder(f, fl = rawFolders){
   if (hiddenIn(f, fl)) return { priv: true, lk: null };
   const L = nearestLockAbove(f, fl);
-  return L ? { priv: true, lk: L.id } : { priv: false, lk: null };
+  return L ? { priv: true, lk: L.id } : siteLk();
 }
 function protOfPrompt(p, fid, fl = rawFolders){
   const F = fl.find(d => d.id === fid);
   if (p.hidden || hiddenIn(F, fl)) return { priv: true, lk: null };
   const L = isLockedF(F) ? F : nearestLockAbove(F, fl);
-  return L ? { priv: true, lk: L.id } : { priv: false, lk: null };
+  return L ? { priv: true, lk: L.id } : siteLk();
 }
 const protDiff = (o, w) => o.priv !== w.priv || (o.lk || null) !== w.lk;
 const hasImgDoc = o => !!o.imgSplit;
@@ -1146,7 +1155,7 @@ function healFolders(){
   healT = setTimeout(async () => {
     const tasks = [];
     rawFolders.forEach(f => { const w = protOfFolder(f); if (protDiff(f, w)) tasks.push(...protFix(f, w)); });
-    const sig = rawFolders.map(f => f.id + (f.hidden ? "h" : "") + (isLockedF(f) ? "l" : "") + (f.parentId || "")).sort().join("|");
+    const sig = (viewCfg.siteLocked ? "S|" : "") + rawFolders.map(f => f.id + (f.hidden ? "h" : "") + (isLockedF(f) ? "l" : "") + (f.parentId || "")).sort().join("|");
     if (lastSig !== null && sig !== lastSig) {
       const ps = (await getDocs(query(col, where("type", "==", "prompt")))).docs.map(d => ({ id: d.id, ...d.data() }));
       ps.forEach(p => { const w = protOfPrompt(p, p.folderId); if (protDiff(p, w)) tasks.push(...protFix(p, w)); });
@@ -1164,7 +1173,7 @@ function healPrompts(list){
 function healGroups(){
   if (!secure || !isAdmin()) return;
   const tasks = [];
-  rawGroups.forEach(g => { const w = { priv: !!g.hidden, lk: null }; if (protDiff(g, w)) tasks.push(() => updateDoc(doc(db, SITE.col, g.id), w)); });
+  rawGroups.forEach(g => { const w = g.hidden ? { priv: true, lk: null } : siteLk(); if (protDiff(g, w)) tasks.push(() => updateDoc(doc(db, SITE.col, g.id), w)); });
   if (tasks.length) runAll(tasks);
 }
 function protForId(id){
@@ -1223,6 +1232,18 @@ function renderInner(){
   $("#desc").hidden = true;
   $("#folderEditBtn").hidden = true; // 편집은 톱니바퀴 메뉴에서
 
+  // 보관함 전체 비밀번호
+  if (secure && viewCfg.siteLocked && !admin && !unlocked._site) {
+    $("#backBtn").hidden = true; $("#gAcc").hidden = true; $("#pills").hidden = true;
+    document.body.classList.add("home");
+    $("#pageTitle").textContent = siteName(); document.title = siteName();
+    pwFor = { id: "_site", name: siteName() }; pwThen = render;
+    $("#view").innerHTML = `<form class="lockpage" id="pwForm">
+      <div class="lp-head"><span class="lock-ic-big">${LOCK}</span><div class="lp-t"><b>잠긴 보관함이에요</b><span>비밀번호를 넣으면 열려요</span></div></div>
+      <div class="lp-body"><div class="lp-row"><input id="pwIn" type="password" autocomplete="off" placeholder="비밀번호" aria-label="비밀번호"><button type="submit" class="press">열기</button></div><div id="pwErr" class="lp-err"></div></div>
+    </form>`;
+    return;
+  }
   renderGroups(fid, admin);
   document.body.classList.toggle("home", !fid);
   if (!fid) {
@@ -2305,6 +2326,8 @@ const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
 function openViewDlg(){
   vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on" };
   $("#vTitle").value = viewCfg.siteTitle || "";
+  $("#vPwWrap").hidden = !secure; $("#vPw").value = "";
+  if (secure && viewCfg.siteLocked) getDoc(LOCKD("_site")).then(sn => { if (sn.exists()) $("#vPw").value = sn.data().pw || ""; }).catch(() => {});
   setColor("vColor", viewCfg.textColor);
   $("#vFollow").checked = !!viewCfg.followAll;
   paintView(); $("#viewDlg").showModal();
@@ -2319,8 +2342,17 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
     const upd = { ...vs, siteTitle, textColor, followAll };
+    if (secure) {
+      // 보관함 전체 비밀번호: 진짜 비밀번호는 주인만 읽는 곳에, 설정엔 '잠김' 표시만
+      const spw = $("#vPw").value.trim();
+      if (spw) await setDoc(LOCKD("_site"), { pw: spw, h: await sha256hex("_site:" + spw) });
+      else await deleteDoc(LOCKD("_site")).catch(() => {});
+      upd.siteLocked = !!spw;
+    }
     await setDoc(SETTINGS(), { type: "settings", ...upd, priv: false }, { merge: true });
+    const siteChanged = secure && !!upd.siteLocked !== !!viewCfg.siteLocked;
     viewCfg = { ...viewCfg, ...upd }; applyView(); render();
+    if (siteChanged) { lastSig = ""; healFolders(); healGroups(); }
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
   if (homeChanged) await rebakeFolders(f => !parentOf(f));
