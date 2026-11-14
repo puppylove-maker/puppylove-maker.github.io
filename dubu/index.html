@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>프롬프트 보관함</title>
-<script>try{var d=localStorage.getItem("pv-dark");if(d==="1"||(d===null&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}</script>
 <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js">
@@ -541,45 +540,6 @@ body.sq .list.cap-b.c-3>.folder .cap{font-size:11.5px;padding:4px 6px!important}
 body.sq .list.nobox:not(.cap-b)>.folder .cap{background:none!important}
 /* 각진 테마: 글씨 그림자(글로우) 없음 */
 body.sq *{text-shadow:none!important}
-/* ---------- 다크 모드 (순검정 대신 짙은 회색) ---------- */
-#darkBtn .sun{display:none}
-html.dark #darkBtn .sun{display:inline}html.dark #darkBtn .moon{display:none}
-html.dark{--bg:#141416;--text:#ececee;--sub:#b3b3b8;--muted:#88888e;--line:#2c2c30;--soft:#1d1d20;color-scheme:dark}
-html.dark .icon-btn{color:#a0a0a6}
-html.dark .icon-btn.plus,html.dark .icon-btn.add{color:#d0d0d4}
-html.dark :is(.pill,.copy-btn,.lo-card,.acc,.tpl,.orow,.menu,.toast,.cpick .c-def){background:#1e1e21;color:var(--text)}
-html.dark .pill{color:var(--sub)}
-html.dark .pill.on,html.dark .btn.primary,html.dark .seg button.on{background:#2c2c31;border-color:#2c2c31;color:var(--text)}
-html.dark .menu{box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06)}
-html.dark .menu button svg{color:#c8c8cc}
-html.dark .ov-cap{background:linear-gradient(to top,rgba(20,20,22,.92),rgba(20,20,22,0))}
-html.dark .ov-cap .phint{color:#a0a0a6}
-html.dark .g-white .cap{color:var(--text);background:linear-gradient(to top,rgba(20,20,22,.85),rgba(20,20,22,0))}
-html.dark .folder.group,html.dark .list.cap-b>.folder.group .fpic{box-shadow:0 5px 0 -2px var(--bg),0 5px 0 -1px var(--line),0 10px 0 -4px var(--bg),0 10px 0 -3px #2a2a2e}
-html.dark .cpick .on{box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--text)}
-html.dark .chk input{accent-color:#d0d0d4}
-html.dark input:focus,html.dark textarea:focus{border-color:#55555b}
-html.dark .gsw{background:#48484d}html.dark .gsw.on{background:#9a9aa0}
-html.dark .skel{background:linear-gradient(90deg,#1c1c1f 0%,#2c2c30 50%,#1c1c1f 100%);background-size:200% 100%;border-color:#2a2a2e}
-html.dark .tools input[type=range]{background:#2c2c31}
-html.dark .picker{border-color:#d8d8db}
-html.dark .th-glass :is(.pbar,.ptext,.pside){background:linear-gradient(150deg,rgba(48,48,54,.95),rgba(36,36,40,.8))}
-html.dark .th-glass:not(.lo-overlay) .copy-btn{color:var(--text);background:rgba(255,255,255,.08)}
-html.dark .th-text .copy-btn{background:none;color:var(--text)}
-html.dark .th-text .copy-btn+.copy-btn{border-left-color:rgba(255,255,255,.15)}
-html.dark .expand-inner{background:var(--soft);color:var(--sub)}
-/* 다크 + 각진: 선은 밝은 회색, 칸은 짙은 회색 */
-html.dark body.sq #view .folder,html.dark body.sq .th-basic .box,html.dark body.sq .th-text .box,html.dark body.sq .list.cap-b>.folder{border-color:#d8d8db!important}
-html.dark body.sq .folder.no-img,html.dark body.sq .th-basic :is(.pbar,.ptext,.pside),html.dark body.sq .th-text :is(.pbar,.ptext,.pside),html.dark body.sq .list.cap-b>.folder,html.dark body.sq .expand-inner{background:#1c1c1f}
-html.dark body.sq .list.cap-b>.folder .fpic{border-bottom-color:#d8d8db}
-html.dark body.sq .list.cap-b>.folder .cap{color:var(--text)!important}
-html.dark body.sq .list:not(.cap-b):not(.nobox)>.folder:not(.no-img) .cap{background:#1c1c1f!important;color:var(--text)!important;border-color:#d8d8db}
-html.dark body.sq .pill{border-color:#d8d8db;color:var(--sub);opacity:.75}
-html.dark body.sq .pill.on{border-color:#d0d0d4;color:var(--text);background:transparent}
-html.dark body.sq .folder.group,html.dark body.sq .list.cap-b>.folder.group .fpic{box-shadow:5px 5px 0 -1px var(--bg),5px 5px 0 0 #d8d8db}
-html.dark body.sq .th-basic .copy-btn{background:#1c1c1f;border-color:#d8d8db;color:var(--text)}
-html.dark body.sq .th-basic .pbar .copy-btn,html.dark body.sq .th-basic .tall-info .copy-btn,html.dark body.sq .th-basic .pcol-info .copy-btn{background:#e8e8ea!important;border-color:#e8e8ea!important;color:#141416!important}
-html.dark body.sq .expand-inner{border-color:#d8d8db;color:var(--text)}
 /* 설정 줄: 이름 왼쪽, 고르기 오른쪽 한 줄 */
 .field.inl{display:flex;align-items:center;gap:10px}
 .field.inl>span{flex:0 0 44px;font-size:12px;color:var(--sub)}
@@ -599,7 +559,6 @@ html.dark body.sq .expand-inner{border-color:#d8d8db;color:var(--text)}
     </div>
     <div class="hbtns">
       <button class="icon-btn press" id="folderEditBtn" hidden aria-label="폴더 편집"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-      <button class="icon-btn press" id="darkBtn" aria-label="다크 모드"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/><g class="sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></svg></button>
       <button class="icon-btn add press" id="addBtn" hidden aria-label="새 폴더"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="icon-btn plus press" id="plusBtn" hidden aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <div class="menu" id="menu"></div>
@@ -939,16 +898,11 @@ try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "
 function applyView(){
   const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
   document.documentElement.style.setProperty("--fr", r);
-  $("#pageTitle").style.color = document.documentElement.classList.contains("dark") ? "" : (viewCfg.textColor || "");
+  $("#pageTitle").style.color = viewCfg.textColor || "";
   document.body.classList.toggle("sq", viewCfg.shape === "square");
   if (!currentFolderId()) { $("#pageTitle").textContent = siteName(); document.title = siteName(); }
 }
 applyView();
-$("#darkBtn").onclick = () => {
-  const on = document.documentElement.classList.toggle("dark");
-  try { localStorage.setItem("pv-dark", on ? "1" : "0"); } catch(_) {}
-  applyView(); if (foldersReady) render();
-};
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
   viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
@@ -2052,7 +2006,7 @@ function setColor(id, v){
 }
 ["fColor", "pColor", "vColor"].forEach(initColor);
 // 실제로 쓸 색: '전체 따라가기'면 테마 색, 아니면 박스 색 → 없으면 테마 색
-const effColor = own => document.documentElement.classList.contains("dark") ? "" : ((viewCfg.followAll && viewCfg.textColor) ? viewCfg.textColor : (own || viewCfg.textColor || ""));
+const effColor = own => (viewCfg.followAll && viewCfg.textColor) ? viewCfg.textColor : (own || viewCfg.textColor || "");
 const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
