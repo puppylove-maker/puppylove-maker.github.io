@@ -398,8 +398,13 @@ body.sq .th-basic .ov-cap .copy-btn{background:rgba(255,255,255,.9);border-color
 /* 각진 테마엔 그라데이션 없이: 그림 안 글씨는 흰 칸에 */
 body.sq .list:not(.cap-b)>.folder:not(.no-img) .cap{left:0;right:auto;bottom:0;max-width:calc(100% - 12px);padding:2px 6px!important;line-height:1.35;font-size:11.5px!important;background:#fff!important;color:#111!important;text-shadow:none!important;border-top:1px solid #111;border-right:1px solid #111;font-weight:700}
 body.sq .list.c-3:not(.cap-b)>.folder:not(.no-img) .cap{font-size:10.5px!important;padding:1px 5px!important}
-body.sq .th-basic .ov-cap,body.sq .th-text .ov-cap{background:#fff!important;border-top:1px solid #111;padding-top:3px!important;padding-bottom:3px!important;padding-left:8px!important;padding-right:4px!important}
-body.sq .th-basic .ov-cap .ptitle,body.sq .th-basic .ov-cap .phint,body.sq .th-text .ov-cap .ptitle{color:#111;text-shadow:none}
+/* 그림 안: 띠·그라데이션 없이 글씨만 (버튼만 박스) */
+body.sq .th-basic .ov-cap,body.sq .th-text .ov-cap{background:none!important}
+body.sq .th-basic .ov-cap .ptitle,body.sq .th-basic .ov-cap .phint,body.sq .th-text .ov-cap .ptitle{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.55)}
+body.sq .th-basic .ov-cap .phint{opacity:.85}
+/* 그림 아래(제목줄): 복사 버튼 검정 바탕 흰 글씨 */
+body.sq .th-basic .pbar .copy-btn,body.sq .th-basic .tall-info .copy-btn,body.sq .th-basic .pcol-info .copy-btn{background:#111;border-color:#111;color:#fff}
+body.sq .th-basic .pbar .copy-btn:active,body.sq .th-basic .tall-info .copy-btn:active{background:#333}
 body.sq .expand-inner{background:#fff;border:1px solid #111;color:#111}
 .vsec{margin:4px 0 -4px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
