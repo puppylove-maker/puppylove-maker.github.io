@@ -742,7 +742,10 @@ function imgStyle(o){
 const viewStyle = o => o.baked ? "" : imgStyle(o);
 // 그림은 따로 저장(<id>_img): 목록에는 흐린 미리보기만 오고, 화면에 보일 때 진짜 그림을 받아옴 → 첫 화면이 빨라짐
 const hasImg = o => !!(o && (o.image || o.imgSplit));
-const imgTag = (o, cls = "", style = "") => o.imgSplit
+const imgReady = new Map(); // 이미 받은 그림: 다시 그릴 때 바로 보여줌 (깜빡임 없게)
+const imgTag = (o, cls = "", style = "") => o.imgSplit && imgReady.has(o.id + ":" + (o.imgV || 0))
+  ? `<img class="${cls} lazy-img ready" src="${imgReady.get(o.id + ":" + (o.imgV || 0))}" data-loaded="1" alt="" style="${style}">`
+  : o.imgSplit
   ? `<img class="${cls} lazy-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-img="${o.id}" data-v="${o.imgV || 0}" alt="" style="${style}">`
   : `<img class="${cls}" src="${o.image}" alt="" loading="lazy" style="${style || viewStyle(o)}">`;
 const mediaHtml = o => hasImg(o) ? `<div class="media">${imgTag(o)}</div>` : "";
@@ -760,7 +763,7 @@ async function fetchImg(id, v){
     }, err => { if (DBG) { T.imgErr = String(err && err.code || err); dbgShow(); } finish(""); });
   });
   imgMem.set(key, p);
-  p.then(img => { if (!img) imgMem.delete(key); });
+  p.then(img => { if (!img) imgMem.delete(key); else imgReady.set(key, img); });
   return p;
 }
 const imgIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => {
@@ -1005,7 +1008,11 @@ $("#pwForm").addEventListener("submit", e => {
   try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
   $("#pwDlg").close(); refilter(); pwThen && pwThen();
 });
-$("#grpToggle").onclick = () => { gOpen = !gOpen; try { localStorage.setItem(LS("pv-gopen"), gOpen ? "1" : "0"); } catch(_) {} render(); };
+$("#grpToggle").onclick = () => {
+  gOpen = !gOpen; try { localStorage.setItem(LS("pv-gopen"), gOpen ? "1" : "0"); } catch(_) {}
+  // 화면 전체를 다시 그리지 않고 그룹 칸만 열고 닫음 (깜빡임 없게)
+  $("#grpToggle").classList.toggle("on", gOpen); $("#gAcc").classList.toggle("open", gOpen);
+};
 $("#pills").addEventListener("click", e => {
   const t = e.target.closest("[data-g],[data-gadd],[data-gedit]"); if (!t) return;
   if (t.dataset.gadd) return openGroup(null);
@@ -1484,7 +1491,7 @@ function makeThumb(src){
 async function storeImage(id, shown){
   const v = Date.now(), thumb = "";
   await setDoc(IMGD(id), { type: "img", image: shown, v });
-  imgMem.set(id + ":" + v, Promise.resolve(shown));
+  imgMem.set(id + ":" + v, Promise.resolve(shown)); imgReady.set(id + ":" + v, shown);
   return { image: "", thumb, imgSplit: true, imgV: v, baked: true };
 }
 // 화면에 실제로 보이는 크기(폰 2배 화질)에 맞춰 자름 — 너무 크면 로딩이 느려짐
