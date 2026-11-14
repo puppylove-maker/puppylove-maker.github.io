@@ -1824,8 +1824,8 @@ function openFolder(id, newParent = null, asGroup = false){
   setColor("fColor", f.textColor);
   setPc(f.pcMode === "wide" ? "wide" : "mobile");
   const kids = id ? childFolders(id) : [];
-  $("#fsWrap").hidden = !kids.length;
-  $("#fsTitle").textContent = `이 폴더 안에 든 폴더 모양 (${kids.slice(0, 3).map(k => k.name).join(", ")}${kids.length > 3 ? ` 외 ${kids.length - 3}개` : ""})`;
+  $("#fsWrap").hidden = false;
+  $("#fsTitle").textContent = "이 폴더 안에 든 폴더 모양" + (kids.length ? ` (${kids.slice(0, 3).map(k => k.name).join(", ")}${kids.length > 3 ? ` 외 ${kids.length - 3}개` : ""})` : "");
   const sc = subCfg(id); fs = { subRatio: sc.ratio, subCols: sc.cols || defCols(), subCap: sc.cap }; fsTouched = false; paintFs();
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
