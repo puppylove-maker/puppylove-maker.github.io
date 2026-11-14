@@ -542,6 +542,32 @@ body.sq .list.cap-b.c-3>.folder .cap{font-size:11.5px;padding:4px 6px!important}
 body.sq .list.nobox:not(.cap-b)>.folder .cap{background:none!important}
 /* 각진 테마: 글씨 그림자(글로우) 없음 */
 body.sq *{text-shadow:none!important}
+/* ---- OOC 박스: 제목·부제목·복사 + 아래 글(펼침), 배경 이미지는 박스 전체 + 흰/검 덮개 ---- */
+.pooc{position:relative;overflow:hidden;display:grid;padding:10px 8px 10px 12px;cursor:pointer;background:var(--soft)}
+.pooc>.media{z-index:0}
+.ooc-ov{position:absolute;inset:0;z-index:1;pointer-events:none}
+.ooc-white .ooc-ov{background:rgba(255,255,255,var(--oa,.7))}
+.ooc-black .ooc-ov{background:rgba(18,18,20,var(--oa,.7))}
+.ooc-head,.ooc-body{position:relative;z-index:2}
+.ooc-head{display:flex;align-items:center;gap:6px;min-height:28px}
+.ooc-tt{flex:1;min-width:0;display:grid;gap:1px}
+.ooc-tt .ptitle{max-width:none;white-space:normal}
+.ooc-sub{font-size:11.5px;color:var(--sub);line-height:1.4}
+.pooc .edit-ic{position:static;width:24px;height:24px;flex:none}
+.pooc .copies{flex:none;max-width:60%;flex-wrap:wrap;justify-content:flex-end}
+.ooc-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .36s var(--ease)}
+.ooc-body>div{overflow:hidden}
+.item.open .ooc-body{grid-template-rows:1fr}
+.ooc-text{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.55;color:var(--sub);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.1)}
+.ooc-black{color:#fff}
+.ooc-black .ptitle{color:#fff}
+.ooc-black .ooc-sub,.ooc-black .ooc-text{color:rgba(255,255,255,.82)}
+.ooc-black .ooc-text{border-top-color:rgba(255,255,255,.18)}
+.ooc-black .ex-label{color:#fff}
+body.sq .th-basic .pooc{background:#fff}
+body.sq .ooc-text{border-top-color:#111}
+body.sq .ooc-black .ooc-text{border-top-color:rgba(255,255,255,.5)}
+.mini.ooc{background:#f6f6f6;border-radius:6px;padding:5px}
 /* 설정 줄: 이름 왼쪽, 고르기 오른쪽 한 줄 */
 .field.inl{display:flex;align-items:center;gap:10px}
 .field.inl>span{flex:0 0 44px;font-size:12px;color:var(--sub)}
@@ -630,6 +656,11 @@ body.sq *{text-shadow:none!important}
   <div class="orow2" id="pColRatioWrap"><span>이미지 비율</span><div class="seg" id="pColRatio"><button type="button" data-cr="4/5">4:5</button><button type="button" data-cr="3/4">3:4</button><button type="button" data-cr="2/3">2:3</button><button type="button" data-cr="9/16">9:16</button><button type="button" data-cr="1/1">1:1</button><button type="button" data-cr="auto">맞춤</button></div></div>
   <div class="orow2" id="pAlignWrap"><span>글자 정렬</span><div class="seg" id="pAlign"><button type="button" data-al="left">왼쪽</button><button type="button" data-al="center">가운데</button><button type="button" data-al="right">오른쪽</button></div></div>
   <div class="orow2" id="pRatioWrap"><span>이미지 비율</span><div class="seg" id="pRatio"><button type="button" data-gr="1/1">1:1</button><button type="button" data-gr="4/3">가로 4:3</button><button type="button" data-gr="3/4">세로 3:4</button></div></div>
+  <div class="opt-sub" id="pOocWrap">
+    <div class="orow2"><span>처음에</span><div class="seg" id="pOocOpen"><button type="button" data-oo="0">접어서</button><button type="button" data-oo="1">펼쳐서</button></div></div>
+    <div class="orow2"><span>덮개 색</span><div class="seg" id="pOocTone"><button type="button" data-ot="white">흰색</button><button type="button" data-ot="black">검은색</button></div></div>
+    <div class="orow2" style="grid-template-columns:62px minmax(0,1fr) 34px"><span>덮개 진하기</span><input type="range" id="pOocAlpha" min="0" max="100" step="5" style="flex:1;min-width:0;width:auto;padding:0;border:none;accent-color:#111"><b id="pOocAlphaV" style="flex:0 0 34px;text-align:right;font-size:11.5px;font-weight:600;color:var(--sub)"></b></div>
+  </div>
   <div class="opt-sub" id="pTallWrap">
     <div class="orow2"><span>제목·버튼</span><div class="seg" id="pTallPos"><button type="button" data-tp="below">이미지 아래</button><button type="button" data-tp="inside">이미지 안</button></div></div>
     <div class="orow2"><span>버튼 길이</span><div class="seg" id="pTallBtn"><button type="button" data-tb="long">길게</button><button type="button" data-tb="short">짧게</button></div></div>
@@ -1340,6 +1371,7 @@ document.addEventListener("click", e => {
   if (rm) { const box = rm.closest(".texts"); rm.closest(".tblock").remove(); syncTextBtns(box); }
 });
 
+const exText = p => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); };
 function promptHtml(p, admin){
   const [lo, gr] = normLayout(p);
   const title = `<span class="ptitle"${colorStyle(effColor(p.titleColor))}>${p.hidden && admin ? `<span class="lock-ic" title="비공개">${LOCK}</span>` : ""}${esc(p.title || "제목 없음")}</span>`;
@@ -1364,6 +1396,13 @@ function promptHtml(p, admin){
       ? `<div class="box ptall press ${hasImg(p) ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : lo === "col1" ? ` style="aspect-ratio:${colAR(p)}"` : ""}>${mediaHtml(p)}${edit(!!hasImg(p))}<div class="ov-cap tall-cap ${few}">${title}${copy}</div></div>`
       : `<div class="box ptall press ${hasImg(p) ? "" : "no-pic"}" data-tog="${p.id}"${lo === "grid2" ? ` style="aspect-ratio:${gr}"` : lo === "col1" ? ` style="aspect-ratio:${colAR(p)}"` : ""}>${mediaHtml(p)}${edit(!!hasImg(p))}</div>
       <div class="tall-info ${few}">${title}${copy}</div>`;
+  } else if (lo === "ooc") {
+    const tone = p.oocTone === "black" ? "black" : "white";
+    const sub = (p.hint && p.hint !== DEFAULT_HINT && p.hint !== OLD_HINT) ? `<span class="ooc-sub">${esc(p.hint)}</span>` : "";
+    inner = `<div class="box pooc press ooc-${tone} ${hasImg(p) ? "has-pic" : ""}" data-tog="${p.id}" style="--oa:${Math.min(100, Math.max(0, p.oocAlpha ?? 70)) / 100}">
+      ${hasImg(p) ? mediaHtml(p) : ""}<span class="ooc-ov"></span>
+      <div class="ooc-head"><div class="ooc-tt">${title}${sub}</div>${edit(tone === "black")}${copy}</div>
+      <div class="ooc-body"><div><div class="ooc-text">${exText(p)}</div></div></div></div>`;
   } else if (lo === "text") {
     inner = `<div class="box ptext press ${textsOf(p).length >= 3 ? "grid2" : ""}" data-tog="${p.id}">
       ${title}${hintHtml(p)}${edit(false)}${copy}</div>`;
@@ -1371,8 +1410,10 @@ function promptHtml(p, admin){
     inner = `${hasImg(p) ? `<div class="box pimg press" data-tog="${p.id}">${mediaHtml(p)}${edit(true)}</div>` : ""}
       <div class="box pbar press" data-tog="${p.id}">${title}${hintHtml(p)}${hasImg(p) ? "" : edit(false)}${copy}</div>`;
   }
-  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : openItems.has(p.id) ? "open" : ""}" id="it-${p.id}">${p.note && !(lo === "col1" && (p.colMode === "left" || p.colMode === "right")) ? `<div class="pnote">${esc(p.note)}</div>` : ""}${inner}
-    <div class="expand"><div><div class="expand-inner">${(() => { const ts = textsOf(p); return ts.length > 1 ? ts.map(t => `<div class="ex-label">${esc(t.label || "복사")}</div>${esc(t.content)}`).join("") : esc(ts[0].content); })()}</div></div></div></div>`;
+  const def = lo === "ooc" && !!p.oocOpen;
+  const isOpen = lo === "ooc" ? (p.noExpand ? def : openItems.has(p.id) !== def) : (!p.noExpand && openItems.has(p.id));
+  return `<div class="item lo-${lo} th-${p.theme || "basic"} ${p.tallBtn === "short" ? "btn-short" : ""} ${p.noExpand ? "noexp" : ""} ${isOpen ? "open" : ""}" id="it-${p.id}" data-def="${def ? 1 : 0}">${p.note && !(lo === "col1" && (p.colMode === "left" || p.colMode === "right")) ? `<div class="pnote">${esc(p.note)}</div>` : ""}${inner}
+    ${lo === "ooc" ? "" : `<div class="expand"><div><div class="expand-inner">${exText(p)}</div></div></div>`}</div>`;
 }
 
 // ---------- 순서 바꾸기 ----------
@@ -1490,7 +1531,8 @@ $("#view").addEventListener("click", e => {
     const id = t.dataset.tog;
     if (promptDocs.find(x => x.id === id)?.noExpand) return;
     openItems.has(id) ? openItems.delete(id) : openItems.add(id);
-    document.getElementById("it-" + id)?.classList.toggle("open", openItems.has(id));
+    const it = document.getElementById("it-" + id);
+    it?.classList.toggle("open", openItems.has(id) !== (it.dataset.def === "1"));
   }
 });
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => $("#" + b.dataset.close).close());
@@ -1726,7 +1768,13 @@ $("#pColRatio").addEventListener("click", e => { const v = e.target.closest("[da
 $("#pAlign").addEventListener("click", e => { const v = e.target.closest("[data-al]")?.dataset.al; if (v) setAlign(v); });
 function setColMode(v){ curColMode = v; $("#pColMode").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.cm === v)); if (curLayout === "col1") { $("#pTallWrap").hidden = v !== "plain"; $("#pAlignWrap").hidden = v === "plain"; } }
 $("#pColMode").addEventListener("click", e => { const v = e.target.closest("[data-cm]")?.dataset.cm; if (v) setColMode(v); });
-let curTallBtn = "long";
+let curTallBtn = "long", curOocOpen = "0", curOocTone = "white";
+function setOocOpen(v){ curOocOpen = v; $("#pOocOpen").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.oo === v)); }
+function setOocTone(v){ curOocTone = v; $("#pOocTone").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.ot === v)); }
+function setOocAlpha(v){ $("#pOocAlpha").value = v; $("#pOocAlphaV").textContent = v + "%"; }
+$("#pOocOpen").addEventListener("click", e => { const v = e.target.closest("[data-oo]")?.dataset.oo; if (v) setOocOpen(v); });
+$("#pOocTone").addEventListener("click", e => { const v = e.target.closest("[data-ot]")?.dataset.ot; if (v) setOocTone(v); });
+$("#pOocAlpha").addEventListener("input", e => setOocAlpha(e.target.value));
 function setTallBtn(v){ curTallBtn = v; $("#pTallBtn").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.tb === v)); }
 $("#pTallBtn").addEventListener("click", e => { const v = e.target.closest("[data-tb]")?.dataset.tb; if (v) setTallBtn(v); });
 let curTallPos = "below";
@@ -1766,6 +1814,7 @@ function setLayout(lo){
   $("#pRatioWrap").hidden = !g2;
   $("#pColWrap").hidden = $("#pColRatioWrap").hidden = lo !== "col1";
   $("#pAlignWrap").hidden = lo !== "col1" || curColMode === "plain";
+  $("#pOocWrap").hidden = lo !== "ooc";
   pk.hidden = $("#pTools").hidden = lo === "text";
 }
 
@@ -1778,6 +1827,7 @@ const LAYOUTS = [
   { id: "grid2",   name: "2열",         desc: "이미지 두 개씩 · 비율 선택", mini: `<div class="mini tl sq"><i class="im"></i><i class="im"></i></div>` },
   { id: "col1",    name: "세로 1열",    desc: "세로 이미지 한 줄에 하나", mini: `<div class="mini tl" style="grid-template-columns:1fr"><i class="im" style="height:46px"></i></div>` },
   { id: "tall3",   name: "세로형 3열",  desc: "세로 이미지 세 개씩",   mini: `<div class="mini tl t3"><i class="im"></i><i class="im"></i><i class="im"></i></div>` },
+  { id: "ooc",     name: "OOC",         desc: "제목·부제목 + 글 펼침 · 배경 이미지 선택", mini: `<div class="mini tx ooc"><i class="bar" style="width:60%"></i><i class="ln" style="width:35%"></i><i class="ln"></i><i class="ln" style="width:80%"></i></div>` },
   { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
 ];
 const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><span class="d"><br>${l.desc}</span></span></button>`).join("");
@@ -1914,6 +1964,7 @@ function openPrompt(id, preset){
   setTheme(p.theme || "basic");
   setTallPos(p.tallPos || "below");
   setTallBtn(p.tallBtn || "long");
+  setOocOpen(p.oocOpen ? "1" : "0"); setOocTone(p.oocTone || "white"); setOocAlpha(p.oocAlpha ?? 70);
   curColMode = p.colMode || "plain"; setColMode(curColMode); curColRatio = p.colRatio || "3/4"; setColRatio(curColRatio); setAlign(p.textAlign || "left");
   $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
@@ -1987,7 +2038,7 @@ $("#promptForm").addEventListener("submit", e => {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
-      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, colMode: curColMode, colRatio: curColRatio, textAlign: curAlign, hint: $("#pHint").value.trim(), note: $("#pNote").value.trim(), layout: curLayout, gridRatio: curGridRatio, ...img, updated: serverTimestamp() };
+      const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, oocOpen: curOocOpen === "1", oocTone: curOocTone, oocAlpha: +$("#pOocAlpha").value, colMode: curColMode, colRatio: curColRatio, textAlign: curAlign, hint: $("#pHint").value.trim(), note: $("#pNote").value.trim(), layout: curLayout, gridRatio: curGridRatio, ...img, updated: serverTimestamp() };
       if (editingPrompt) {
         const nf = $("#pFolder").value;
         if (nf && nf !== currentFolderId()) { data.folderId = nf; data.order = Date.now() / 1e3; }
