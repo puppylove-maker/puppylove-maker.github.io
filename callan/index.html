@@ -336,6 +336,10 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .oarrow svg{width:15px;height:15px}
 .oarrow:disabled{opacity:.3}
 .oarrow.del{color:var(--danger)}
+.gsw{position:relative;flex:none;width:34px;height:20px;border-radius:10px;border:none;padding:0;background:#d4d4d4;cursor:pointer;transition:background .2s}
+.gsw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .2s var(--ease)}
+.gsw.on{background:#111}
+.gsw.on::after{transform:translateX(14px)}
 .otag{font-size:10px;font-weight:600;color:var(--sub);background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-right:6px;vertical-align:1px}
 .oarrow.del svg{width:15px;height:15px}
 .orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
@@ -556,6 +560,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 <dialog id="groupsDlg">
   <div class="dlg">
     <h2>그룹</h2>
+    <p style="margin:-6px 0 0;font-size:12px;color:var(--sub)">스위치를 끄면 방문자에게 그 그룹이 안 보여요.</p>
     <div class="olist" id="gmList"></div>
     <button type="button" class="btn press" id="gmNew">+ 새 그룹 만들기</button>
     <div class="row" style="justify-content:flex-end">
@@ -1030,7 +1035,8 @@ function paintManager(){
   const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
   $("#gmList").innerHTML = gmIds.length ? gmIds.map((id, i) => `
     <div class="orow" data-oid="${esc(id)}">
-      <span class="oname">${map[id]?.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(map[id]?.name || "")}</span>
+      <button type="button" class="gsw ${map[id]?.hidden ? "" : "on"}" data-gvis="${esc(id)}" role="switch" aria-checked="${map[id]?.hidden ? "false" : "true"}" aria-label="방문자에게 보이기"></button>
+      <span class="oname" style="${map[id]?.hidden ? "color:var(--muted)" : ""}">${esc(map[id]?.name || "")}</span>
       <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
       <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
       <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
@@ -1044,7 +1050,15 @@ function openGroupManager(){
   $("#groupsDlg").showModal();
 }
 $("#gmList").addEventListener("click", e => {
-  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel]"); if (!t) return;
+  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel],[data-gvis]"); if (!t) return;
+  if (t.dataset.gvis) {
+    // 켜기/끄기: 꺼진 그룹은 방문자에게 안 보임 (주인에게는 흐리게 보임)
+    const id = t.dataset.gvis, g = rawGroups.find(x => x.id === id); if (!g) return;
+    g.hidden = !g.hidden; paintManager(); renderGroups(currentFolderId(), isAdmin());
+    updateDoc(doc(db, SITE.col, id), { hidden: g.hidden }).then(() => toast(g.hidden ? "방문자에게 숨겼어요" : "방문자에게 보여요"))
+      .catch(() => { g.hidden = !g.hidden; paintManager(); toast("바꾸지 못했어요"); });
+    return;
+  }
   if (t.dataset.gdel) {
     const id = t.dataset.gdel, g = groupDocs.find(x => x.id === id);
     if (!confirm(`"${g?.name || ""}" 그룹을 지울까요? 폴더는 그대로 남아요.`)) return;
