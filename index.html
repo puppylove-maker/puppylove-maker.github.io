@@ -412,6 +412,7 @@ body.sq .th-basic .pcol-info .copy-btn~.copy-btn{background:#fff!important;borde
 body.sq .expand-inner{background:#fff;border:1px solid #111;color:#111}
 .vsec{margin:4px 0 -4px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
+.lock-ic-big{display:block;width:26px;height:26px;margin:0 auto 10px;color:var(--sub)}.lock-ic-big svg{width:100%;height:100%}
 .status{font-size:12px;color:var(--muted)}
 .who{font-size:11px;color:var(--muted);text-align:center}
 
@@ -1230,7 +1231,7 @@ function renderInner(){
   const lockG = foldersReady && !admin && lockOf(folder || rawFolders.find(d => d.id === fid));
   if (lockG && !hiddenChain(lockG)) {
     $("#pageTitle").textContent = folder ? folder.name : "비밀번호가 필요해요";
-    $("#view").innerHTML = `<div class="empty">🔒 비밀번호가 걸린 폴더예요<br><br><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
+    $("#view").innerHTML = `<div class="empty"><span class="lock-ic-big">${LOCK}</span>비밀번호가 걸린 폴더예요<br><br><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
     $("#lockOpen").onclick = () => askPw(lockG, render);
     $("#plusBtn").hidden = $("#addBtn").hidden = true; $("#folderEditBtn").hidden = true;
     if (lastAsked !== lockG.id) { lastAsked = lockG.id; askPw(lockG, render); }
