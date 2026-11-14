@@ -1672,13 +1672,11 @@ function openMenu(){
   };
   const orderKey = hasSubs && prompts().length ? "morder" : hasSubs ? "forder" : "order";
   const sections = !fid
-    ? [["만들기", [["new", "새 폴더", I.folder]]],
-       ["관리", [...(childFolders(null).length ? [["forder", "폴더 정리하기", I.list]] : []), ["group", "그룹", I.tag]]],
+    ? [["관리", [...(childFolders(null).length ? [["forder", "폴더 정리하기", I.list]] : []), ["group", "그룹", I.tag]]],
        ["설정", [["view", "화면 설정", I.view]]]]
     : isGroup(cur)
-    ? [["만들기", [["new", "새 폴더", I.folder]]],
-       ["관리", [...(hasSubs ? [["forder", "폴더 정리하기", I.list]] : []), ["fedit", "그룹 편집", I.edit]]]]
-    : [["만들기", [["tpl", "새 프롬프트", I.doc], ["new", "새 폴더", I.folder]]],
+    ? [["관리", [...(hasSubs ? [["forder", "폴더 정리하기", I.list]] : []), ["fedit", "그룹 편집", I.edit]]]]
+    : [["만들기", [["tpl", "새 프롬프트", I.doc]]],
        ["관리", [...(prompts().length || hasSubs ? [[orderKey, "정리하기", I.list]] : []), ["fedit", "폴더 편집", I.edit]]]];
   $("#menu").innerHTML = sections.filter(([, items]) => items.length)
     .map(([lab, items]) => `<div class="mlab">${lab}</div>` + items.map(([k, t, ic]) => `<button class="press" data-m="${k}">${ic}${t}</button>`).join(""))
