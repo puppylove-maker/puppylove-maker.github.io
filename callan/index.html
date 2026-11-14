@@ -38,7 +38,8 @@ img.lazy-img.ready{opacity:1}
 .hbtns{display:flex;gap:6px;position:relative;flex:none}
 .icon-btn{width:30px;height:30px;border-radius:10px;border:none;background:none;color:#888;display:grid;place-items:center;cursor:pointer}
 .icon-btn svg{width:16px;height:16px}
-.icon-btn.plus{color:#555}
+.icon-btn.plus,.icon-btn.add{color:#555}
+.icon-btn.add svg{width:18px;height:18px}
 .icon-btn.plus svg{transition:transform .3s var(--ease)}
 .icon-btn.plus svg{width:18px;height:18px}
 .icon-btn.plus.on svg{transform:rotate(60deg)}
@@ -477,6 +478,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     </div>
     <div class="hbtns">
       <button class="icon-btn press" id="folderEditBtn" hidden aria-label="폴더 편집"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="icon-btn add press" id="addBtn" hidden aria-label="새 폴더"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       <button class="icon-btn plus press" id="plusBtn" hidden aria-label="설정"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       <div class="menu" id="menu"></div>
     </div>
@@ -904,7 +906,7 @@ function renderInner(){
   const fid = currentFolderId();
   const admin = isAdmin();
   $("#backBtn").hidden = !fid;
-  $("#plusBtn").hidden = !admin || !!reorder;
+  $("#plusBtn").hidden = $("#addBtn").hidden = !admin || !!reorder;
   $("#backupBtn").hidden = !admin;
   let optDone = false; try { optDone = localStorage.getItem(LS("pv-opt-v3")) === "1"; } catch(_) {}
   $("#optBtn").hidden = !admin || optDone;
@@ -934,13 +936,13 @@ function renderInner(){
     $("#pageTitle").textContent = folder ? folder.name : "비밀번호가 필요해요";
     $("#view").innerHTML = `<div class="empty">🔒 비밀번호가 걸린 폴더예요<br><br><button class="btn press" id="lockOpen">비밀번호 입력</button></div>`;
     $("#lockOpen").onclick = () => askPw(lockG, render);
-    $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true;
+    $("#plusBtn").hidden = $("#addBtn").hidden = true; $("#folderEditBtn").hidden = true;
     if (lastAsked !== lockG.id) { lastAsked = lockG.id; askPw(lockG, render); }
     return;
   }
   if (!folder) {
     $("#pageTitle").textContent = foldersReady ? "폴더를 찾을 수 없어요" : "";
-    $("#view").innerHTML = ""; $("#plusBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
+    $("#view").innerHTML = ""; $("#plusBtn").hidden = $("#addBtn").hidden = true; $("#folderEditBtn").hidden = true; return;
   }
   $("#pageTitle").textContent = folder.name;
   // PC 기본: 폰 화면을 그대로 가운데에 (카드마다 디자인이 달라도 안 어긋남)
@@ -1684,6 +1686,8 @@ function openMenu(){
   $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
 }
 function closeMenu(){ $("#menu").classList.remove("show"); $("#plusBtn").classList.remove("on"); }
+// + : 바로 새 폴더 만들기 (지금 보는 곳 안에)
+$("#addBtn").onclick = () => { closeMenu(); openFolder(null, currentFolderId()); };
 $("#plusBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.contains("show") ? closeMenu() : openMenu(); };
 document.addEventListener("click", e => { if (!e.target.closest("#menu,#plusBtn")) closeMenu(); });
 $("#menu").addEventListener("click", e => {
