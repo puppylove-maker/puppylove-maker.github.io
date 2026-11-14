@@ -239,7 +239,7 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
   #view.pc-mobile .plist>.item.lo-grid2,#view.pc-mobile .plist>.item.lo-tall2,#view.pc-mobile .plist>.item.lo-sq2{width:calc((100% - 12px) / 2)}
   #view.pc-mobile .plist>.item.lo-tall3{width:calc((100% - 24px) / 3)}
   body.pc-mobile #desc,#view.pc-mobile>.list{max-width:600px;width:100%;margin-left:auto;margin-right:auto}
-  body:not(.fc-2):not(.fc-3) #view.pc-mobile>.list>.folder{width:100%}
+  #view.pc-mobile>.list:not(.c-2):not(.c-3)>.folder{width:100%}
   #view.pc-col .plist>.item{width:min(100%,560px)}
   #view>.list{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
   #view>.list>.folder{width:calc(50% - 7px)}
@@ -356,15 +356,26 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 body.home .wrap{padding-left:22px;padding-right:22px}
 @media (min-width:720px){body.home .wrap{padding-left:44px;padding-right:44px}}
 /* 폴더 화면 설정: 몇 줄로 */
-body.fc-1 #view>.list,body.fc-2 #view>.list,body.fc-3 #view>.list{display:grid!important;gap:10px}
-body.fc-1 #view>.list{grid-template-columns:minmax(0,1fr)}
-body.fc-2 #view>.list{grid-template-columns:repeat(2,minmax(0,1fr))}
-body.fc-3 #view>.list{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-body.fc-1 #view>.list>.folder,body.fc-2 #view>.list>.folder,body.fc-3 #view>.list>.folder{width:auto!important}
-body.fc-3 .folder .cap{font-size:12px;padding:20px 8px 8px 9px}
-body.fc-2 .folder .cap{font-size:14px;padding:24px 10px 10px 11px}
-body.fc-3 .folder.no-img .cap,body.fc-2 .folder.no-img .cap{padding-top:0;padding-bottom:0}
-@media (min-width:720px){body.fc-1 #view>.list,body.fc-2 #view>.list{gap:14px}body.fc-3 #view>.list{gap:12px}}
+.list.c-1,.list.c-2,.list.c-3{display:grid!important;gap:10px}
+.list.c-1{grid-template-columns:minmax(0,1fr)}
+.list.c-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.list.c-3{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#view>.list.c-1>.folder,#view>.list.c-2>.folder,#view>.list.c-3>.folder{width:auto!important}
+.list.c-3 .folder .cap{font-size:12px;padding:20px 8px 8px 9px}
+.list.c-2 .folder .cap{font-size:14px;padding:24px 10px 10px 11px}
+.list.c-3 .folder.no-img .cap,.list.c-2 .folder.no-img .cap{padding-top:0;padding-bottom:0}
+@media (min-width:720px){.list.c-1,.list.c-2{gap:14px}.list.c-3{gap:12px}}
+/* 폴더 이름: 그림 안(기본) / 그림 아래 */
+.folder .fpic{position:absolute;inset:0;display:block}
+.list.cap-b>.folder{aspect-ratio:auto;overflow:visible;border:none;background:none;border-radius:0;display:flex;flex-direction:column}
+.list.cap-b>.folder .fpic{position:relative;inset:auto;aspect-ratio:var(--fr,4/1);border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--soft)}
+.list.cap-b>.folder .cap{position:static;background:none!important;text-shadow:none!important;color:var(--text);padding:7px 2px 0!important}
+.list.cap-b>.folder.group{box-shadow:none;margin-bottom:0}
+.list.cap-b>.folder.group .fpic{overflow:visible;box-shadow:0 5px 0 -2px #fff,0 5px 0 -1px var(--line),0 10px 0 -4px #fff,0 10px 0 -3px #ececec;margin-bottom:8px}
+/* 각진 테마 */
+body.sq :is(.icon-btn,.menu,.menu button,.pside,.sthumb,.ptext,.box,.folder,.folder .media,.fpic,.ptall,.pimg,.pbar,.tblock,.copy-btn,.pill,.btn,.pcol-img,.expand-inner,.lock-badge,.toast){border-radius:2px!important}
+body.sq .list.cap-b>.folder{border-radius:0!important}
+.vsec{margin:4px 0 -4px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted)}
 .who{font-size:11px;color:var(--muted);text-align:center}
@@ -616,8 +627,15 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
     <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
     <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
-    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-vr="4/1">헤더</button><button type="button" data-vr="16/9">와이드</button><button type="button" data-vr="1/1">정사각</button><button type="button" data-vr="3/4">세로 (3:4)</button></div></div>
-    <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-vc="1">1열</button><button type="button" data-vc="2">2열</button><button type="button" data-vc="3">3열</button></div></div>
+    <div class="field">모양<div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
+    <div class="vsec">첫 화면 폴더</div>
+    <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
+    <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
+    <div class="field">폴더 이름<div class="seg" id="vCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
+    <div class="vsec">폴더 안 폴더</div>
+    <div class="field">카드 비율<div class="seg" id="sRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
+    <div class="field">한 줄에 몇 개<div class="seg" id="sCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
+    <div class="field">폴더 이름<div class="seg" id="sCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">취소</button>
       <button type="button" class="btn primary press" id="vSave">저장</button>
@@ -793,22 +811,24 @@ let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
 const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800] };
-let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "", followAll: false, hideAll: false };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", subRatio: "", subCols: 0, subCap: "in", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
+// 폴더 안 폴더는 따로 정한 적 없으면 첫 화면 설정을 따라감
+const subRatio = () => RATIO_PX[viewCfg.subRatio] ? viewCfg.subRatio : (RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1");
+const homeRatio = () => RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
+const folderRatioOf = f => parentOf(f) ? subRatio() : homeRatio();
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
   const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
   document.documentElement.style.setProperty("--fr", r);
   $("#pageTitle").style.color = viewCfg.textColor || "";
-  document.body.classList.remove("fc-1", "fc-2", "fc-3");
-  if ([1, 2, 3].includes(+viewCfg.folderCols)) document.body.classList.add("fc-" + viewCfg.folderCols);
-  const pk = document.getElementById("fPicker"); if (pk) pk.style.aspectRatio = r;
+  document.body.classList.toggle("sq", viewCfg.shape === "square");
   if (!currentFolderId()) { $("#pageTitle").textContent = siteName(); document.title = siteName(); }
 }
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", subRatio: d.subRatio || "", subCols: d.subCols ?? (d.folderCols || 0), subCap: d.subCap || "in", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
@@ -978,10 +998,13 @@ function mixedSeq(folder, subs, items){
   return [...subs.map(o => [folderKey(o), o]), ...items.map(o => [promptKey(o), o])].sort((a, b) => a[0] - b[0]).map(x => x[1]);
 }
 function folderListHtml(list){
-  return `<div class="list">${list.map(f => `
+  const home = !currentFolderId();
+  const cols = +(home ? viewCfg.folderCols : viewCfg.subCols), cap = home ? viewCfg.homeCap : viewCfg.subCap;
+  const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}`;
+  return `<div class="${cls}" style="--fr:${home ? homeRatio() : subRatio()}">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
-      ${mediaHtml(f)}
-      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : f.pw ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}
+      <span class="fpic">${mediaHtml(f)}
+      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : f.pw ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}</span>
       <span class="cap"${colorStyle(effColor(f.textColor))}>${esc(f.name)}</span>
     </button>`).join("")}</div>`;
 }
@@ -1502,9 +1525,10 @@ async function storeImage(id, shown){
   return { image: "", thumb, imgSplit: true, imgV: v, baked: true };
 }
 // 화면에 실제로 보이는 크기(폰 2배 화질)에 맞춰 자름 — 너무 크면 로딩이 느려짐
+let fBakeRatio = "4/1"; // 지금 편집 중인 폴더가 놓일 곳의 비율
 const ratioWH = (r, w) => { const [a, b] = String(r).split("/").map(Number); return [w, Math.round(w * b / a)]; };
 const bakeSize = (kind, layout, o = null) => {
-  if (kind === "folder") return RATIO_PX[viewCfg.folderRatio] || RATIO_PX["4/1"];
+  if (kind === "folder") return RATIO_PX[o ? folderRatioOf(o) : fBakeRatio] || RATIO_PX["4/1"];
   const gr = o ? (layout === "sq2" ? "1/1" : layout === "tall2" ? "3/4" : o.gridRatio || "1/1") : curGridRatio;
   const cr = o ? (o.colRatio || "3/4") : curColRatio;
   if (layout === "side") return [320, 320];
@@ -1725,6 +1749,7 @@ function openFolder(id, newParent = null, asGroup = false){
   if (id) { const walk = pid => { banned.add(pid); folderDocs.filter(d => parentOf(d) === pid).forEach(d => walk(d.id)); }; walk(id); }
   $("#fParent").innerHTML = `<option value="" ${!cur ? "selected" : ""}>첫 화면</option>` + folderOptions(cur, banned);
   $("#fParentWrap").hidden = !id || editingIsGroup;
+  setFolderPickRatio(editingIsGroup ? null : cur);
   $("#fPcWrap").hidden = editingIsGroup;
   $("#folderDlgTitle").textContent = editingIsGroup ? (id ? "그룹 편집" : "새 그룹") : (id ? "폴더 편집" : "새 폴더");
   $("#fName").value = f.name || "";
@@ -1739,6 +1764,11 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#folderDlg").showModal();
 }
 // 폴더 고르기 목록 (안쪽 폴더는 들여쓰기)
+function setFolderPickRatio(parent){
+  fBakeRatio = parent ? subRatio() : homeRatio();
+  $("#fPicker").style.aspectRatio = fBakeRatio;
+}
+$("#fParent").addEventListener("change", () => setFolderPickRatio($("#fParent").value || null));
 function folderOptions(cur, banned = new Set()){
   const opts = [];
   const tree = (pid, depth) => childFolders(pid).filter(o => !isGroup(o) && !banned.has(o.id)).forEach(o => {
@@ -1879,41 +1909,44 @@ const effColor = own => (viewCfg.followAll && viewCfg.textColor) ? viewCfg.textC
 const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
-let vr = "4/1", vc = 1;
-const paintView = () => {
-  $("#vRatio").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.vr === vr));
-  $("#vCols").querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.vc === vc));
-};
+const defCols = () => matchMedia("(min-width:720px)").matches ? 2 : 1;
+const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", sRatio: "subRatio", sCols: "subCols", sCap: "subCap" };
+let vs = {};
+const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
+  $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(vs[k]))));
 function openViewDlg(){
-  vr = viewCfg.folderRatio || "4/1";
-  vc = +viewCfg.folderCols || (matchMedia("(min-width:720px)").matches ? 2 : 1);
+  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in",
+         subRatio: subRatio(), subCols: +viewCfg.subCols || defCols(), subCap: viewCfg.subCap || "in" };
   $("#vTitle").value = viewCfg.siteTitle || "";
   setColor("vColor", viewCfg.textColor);
   $("#vFollow").checked = !!viewCfg.followAll;
   paintView(); $("#viewDlg").showModal();
 }
-$("#vRatio").addEventListener("click", e => { const v = e.target.closest("[data-vr]")?.dataset.vr; if (v) { vr = v; paintView(); } });
-$("#vCols").addEventListener("click", e => { const v = e.target.closest("[data-vc]")?.dataset.vc; if (v) { vc = +v; paintView(); } });
+Object.entries(VSEG).forEach(([id, k]) => $("#" + id).addEventListener("click", e => {
+  const v = e.target.closest("[data-v]")?.dataset.v; if (v == null) return;
+  vs[k] = /Cols$/.test(k) ? +v : v; paintView();
+}));
 $("#vSave").onclick = () => withBusy("vSave", async () => {
-  const ratioChanged = vr !== (viewCfg.folderRatio || "4/1");
+  const homeChanged = vs.folderRatio !== homeRatio(), subChanged = vs.subRatio !== subRatio();
   try {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
-    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }, { merge: true });
-    viewCfg = { ...viewCfg, folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }; applyView(); render();
+    const upd = { ...vs, siteTitle, textColor, followAll };
+    await setDoc(SETTINGS(), { type: "settings", ...upd }, { merge: true });
+    viewCfg = { ...viewCfg, ...upd }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
-  if (ratioChanged) await rebakeFolders();
+  if (homeChanged || subChanged) await rebakeFolders(f => parentOf(f) ? subChanged : homeChanged);
 });
 // 비율이 바뀌면 폴더 이미지를 원본에서 새 비율로 다시 잘라 저장
-async function rebakeFolders(){
-  const [W, H] = bakeSize("folder");
-  const list = folderDocs.filter(f => hasImg(f) && f.baked);
+async function rebakeFolders(which = () => true){
+  const list = folderDocs.filter(f => hasImg(f) && f.baked && which(f));
   let n = 0;
   for (const f of list) {
     try {
       const o = await getDoc(ORIG(f.id));
       if (!o.exists()) continue;
+      const [W, H] = bakeSize("folder", null, f);
       const shown = await bake(o.data().image, W, H, num(f.imgX, 50), num(f.imgY, 50), num(f.zoom, 1));
       await updateDoc(doc(db, SITE.col, f.id), await storeImage(f.id, shown));
       toast(`폴더 이미지 맞추는 중 ${++n}/${list.length}`);
