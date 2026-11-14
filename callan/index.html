@@ -815,8 +815,8 @@ const LS = k => SITE.col + ":" + k; // 기기 저장 키도 보관함별로
 // ==========================================
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, getDoc, getDocFromCache, setDoc, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, query, where, onSnapshot, getDocs, getDoc, getDocFromCache, setDoc, addDoc, updateDoc, deleteDoc, doc, writeBatch, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -830,7 +830,14 @@ const $ = s => document.querySelector(s);
 let folderDocs = [], promptDocs = [], promptsFor = null, promptsReady = false, rawFolders = [], rawGroups = [];
 let user = null, editingFolder = null, editingPrompt = null, reorder = null;
 const openItems = new Set();
-const isAdmin = () => !!user && ADMINS.includes(user.email);
+const isAdmin = () => !!user && !user.isAnonymous && ADMINS.includes(user.email);
+// ---- 보안: 비공개·잠금 내용은 규칙으로 막음 ----
+// priv=false 인 문서만 방문자가 받을 수 있음. 잠금 폴더 안 내용은 lk=잠금폴더id, 비밀번호를 맞힌 사람만 받음.
+let secure = false, settingsReady = false, authReady = false;
+const LOCKD = id => doc(db, SITE.col + "__locks", id);       // 비밀번호 (주인만 읽음)
+const UNLOCKD = (uid, fid) => doc(db, SITE.col + "__unlocks", uid + "_" + fid); // 맞힌 기록
+async function sha256hex(t){ const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join(""); }
+const isLockedF = f => !!(f && (f.locked || f.pw));
 
 function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),1800); }
 function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
@@ -959,26 +966,65 @@ function applyView(){
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
+  secure = d.secureV === 1; settingsReady = true;
   viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
-}, () => {});
-onSnapshot(query(col, where("type", "==", "folder")), DBG ? { includeMetadataChanges: true } : {}, snap => {
+  subscribeData();
+}, () => { settingsReady = true; subscribeData(); });
+let pubFolders = [], dataKey = "", dataSubs = [];
+const lockFolders = new Map(), lockSubs = new Map();
+function mergeFolders(){
+  const m = new Map(); pubFolders.forEach(f => m.set(f.id, f)); lockFolders.forEach(l => l.forEach(f => m.set(f.id, f)));
+  rawFolders = [...m.values()];
+}
+// 로그인 상태·보안 모드에 맞춰 데이터 연결 (바뀌면 다시 연결)
+function subscribeData(){
+  if (!authReady || !settingsReady) return;
+  const admin = isAdmin(), key = (secure ? "s" : "o") + (admin ? "A" : "V");
+  if (key === dataKey) return;
+  dataKey = key;
+  dataSubs.forEach(u => u()); dataSubs = [];
+  promptCache.forEach(e => e.unsub && e.unsub()); promptCache.clear();
+  lockSubs.forEach(u => u()); lockSubs.clear(); lockFolders.clear();
+  const pub = secure && !admin;
+  dataSubs.push(onSnapshot(pub ? query(col, where("type", "==", "folder"), where("priv", "==", false)) : query(col, where("type", "==", "folder")), DBG ? { includeMetadataChanges: true } : {}, onFolders, () => { $("#status").textContent = "불러오기에 실패했어요"; }));
+  dataSubs.push(onSnapshot(pub ? query(col, where("type", "==", "group"), where("priv", "==", false)) : query(col, where("type", "==", "group")), onGroups, () => {}));
+  if (pub) Object.keys(unlocked).forEach(watchLock);
+  promptsFor = undefined; watchPrompts();
+}
+// 비밀번호를 맞힌 잠금 폴더: 그 안의 폴더도 받아옴
+function watchLock(L){
+  if (!secure || isAdmin() || lockSubs.has(L)) return;
+  lockSubs.set(L, onSnapshot(query(col, where("type", "==", "folder"), where("lk", "==", L)), snap => {
+    lockFolders.set(L, snap.docs.map(d => ({ id: d.id, ...d.data() }))); mergeFolders(); refilter(); render();
+  }, () => relock(L)));
+}
+// 맞힌 기록이 없어졌으면 다시 잠금
+function relock(L){
+  delete unlocked[L]; try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
+  lockSubs.get(L)?.(); lockSubs.delete(L); lockFolders.delete(L);
+  [...promptCache.keys()].forEach(k => { const e = promptCache.get(k); if (e.lk === L) { e.unsub && e.unsub(); promptCache.delete(k); } });
+  mergeFolders(); refilter(); if (foldersReady) render();
+}
+function onFolders(snap){
   if (DBG) {
     const kb = Math.round(snap.docs.reduce((a, d) => a + JSON.stringify(d.data()).length, 0) / 1024);
     if (!T.first) { T.first = performance.now(); T.firstCache = snap.metadata.fromCache; T.n = snap.size; T.kb = kb; }
     if (!snap.metadata.fromCache && !T.server) { T.server = performance.now(); T.skb = kb; }
     setTimeout(() => { dbgImgs(); dbgShow(); }, 0);
   }
-  rawFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  pubFolders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  mergeFolders();
   refilter();
-  foldersReady = true; $("#status").textContent = "";
-  if (promptsFor !== currentFolderId()) watchPrompts(); // 짧은 주소로 들어왔을 때 폴더 목록이 온 뒤 연결
+  foldersReady = true;
+  if (isAdmin()) { healFolders(); migrateSecure(); } $("#status").textContent = "";
+  if (promptsFor !== currentFolderId() || !promptCache.has(currentFolderId())) watchPrompts(); // 짧은 주소로 들어왔을 때 폴더 목록이 온 뒤 연결
   // 예전 긴 주소로 들어오면 주소창을 짧게 바꿔줌
   const lf = location.hash.match(/^#\/f\/(.+)$/);
   if (lf && rawFolders.some(f => f.id === decodeURIComponent(lf[1]))) history.replaceState(history.state, "", folderHash(decodeURIComponent(lf[1])));
   render();
-}, () => { $("#status").textContent = "불러오기에 실패했어요"; });
+}
 
 // 비공개: 로그인한 주인에게만 보이고, 방문자에게는 아예 안 보임
 function hiddenChain(f, seen = 0){
@@ -989,7 +1035,7 @@ function hiddenChain(f, seen = 0){
 let unlocked = {};
 try { unlocked = JSON.parse(localStorage.getItem(LS("pv-unlock")) || "{}"); } catch(_) {}
 // 폴더 비밀번호: 맞게 입력한 폴더는 이 브라우저에서 계속 열려 있음
-const folderOpen = f => !f.pw || isAdmin() || unlocked[f.id] === f.pw;
+const folderOpen = f => !isLockedF(f) || isAdmin() || (secure ? !!unlocked[f.id] : unlocked[f.id] === f.pw);
 function lockedAncestor(f, seen = 0){
   const par = f && rawFolders.find(d => d.id === f.parentId);
   if (!par || seen > 20) return null;
@@ -1009,22 +1055,35 @@ try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
 // 지금 보여줄 그룹: 고른 그룹, 없으면 ('전체'가 꺼졌을 때) 첫 번째 그룹
 const curGroup = () => selGroup || (viewCfg.hideAll ? (groups()[0]?.id || null) : null);
 const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
-onSnapshot(query(col, where("type", "==", "group")), snap => {
+function onGroups(snap){
   rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() })); groupsReady = true;
   refilter();
+  if (isAdmin()) healGroups();
   render();
-}, () => {});
+}
 
 // 폴더별로 한 번 연결해두고 계속 기억 (다시 들어가면 바로 보임)
 const promptCache = new Map(); // fid -> { docs, ready, unsub }
 function ensurePrompts(fid){
   if (!fid || promptCache.has(fid)) return promptCache.get(fid);
+  if (!dataKey) return { docs: [], ready: false };
   if (isGroup(folderDocs.find(d => d.id === fid))) return { docs: [], ready: true };
-  const entry = { docs: [], ready: false, unsub: null };
+  // 방문자: 공개된 것만 / 잠금 폴더 안이면 맞힌 경우에만 그 잠금 표시로
+  let q = query(col, where("folderId", "==", fid)), lk = null;
+  if (secure && !isAdmin()) {
+    if (!foldersReady) return { docs: [], ready: false }; // 폴더 목록(잠금 여부)을 먼저 알아야 함
+    const F = rawFolders.find(d => d.id === fid);
+    const L = isLockedF(F) ? F : nearestLockAbove(F);
+    if (L && !unlocked[L.id]) return { docs: [], ready: true };
+    lk = L ? L.id : null;
+    q = lk ? query(col, where("folderId", "==", fid), where("lk", "==", lk)) : query(col, where("folderId", "==", fid), where("priv", "==", false));
+  }
+  const entry = { docs: [], ready: false, unsub: null, lk };
   promptCache.set(fid, entry);
   const t0 = performance.now();
-  entry.unsub = onSnapshot(query(col, where("folderId", "==", fid)), snap => {
+  entry.unsub = onSnapshot(q, snap => {
     entry.docs = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(d => d.type !== "folder");
+    if (isAdmin()) healPrompts(entry.docs);
     if (DBG && !entry.dbg) {
       entry.dbg = 1;
       const kb = Math.round(snap.docs.reduce((a, d) => a + JSON.stringify(d.data()).length, 0) / 1024);
@@ -1033,7 +1092,7 @@ function ensurePrompts(fid){
     }
     entry.ready = true;
     if (currentFolderId() === fid) { promptDocs = entry.docs; promptsReady = true; render(); }
-  }, () => { promptCache.delete(fid); if (currentFolderId() === fid) $("#status").textContent = "불러오기에 실패했어요"; });
+  }, () => { promptCache.delete(fid); if (lk) return relock(lk); if (currentFolderId() === fid) $("#status").textContent = "불러오기에 실패했어요"; });
   return entry;
 }
 function watchPrompts(){
@@ -1042,6 +1101,92 @@ function watchPrompts(){
   if (!fid) { promptDocs = []; promptsReady = false; return; }
   const e = ensurePrompts(fid);
   promptDocs = e.docs; promptsReady = e.ready;
+}
+// ---- 보호 표시 계산 (주인 화면에서만 씀) ----
+function nearestLockAbove(f, fl = rawFolders){
+  let par = f && fl.find(d => d.id === f.parentId), n = 0;
+  while (par && n++ < 30) { if (isLockedF(par)) return par; par = fl.find(d => d.id === par.parentId); }
+  return null;
+}
+function hiddenIn(f, fl = rawFolders){ let n = 0; while (f && n++ < 30) { if (f.hidden) return true; f = fl.find(d => d.id === f.parentId); } return false; }
+function protOfFolder(f, fl = rawFolders){
+  if (hiddenIn(f, fl)) return { priv: true, lk: null };
+  const L = nearestLockAbove(f, fl);
+  return L ? { priv: true, lk: L.id } : { priv: false, lk: null };
+}
+function protOfPrompt(p, fid, fl = rawFolders){
+  const F = fl.find(d => d.id === fid);
+  if (p.hidden || hiddenIn(F, fl)) return { priv: true, lk: null };
+  const L = isLockedF(F) ? F : nearestLockAbove(F, fl);
+  return L ? { priv: true, lk: L.id } : { priv: false, lk: null };
+}
+const protDiff = (o, w) => o.priv !== w.priv || (o.lk || null) !== w.lk;
+const hasImgDoc = o => !!o.imgSplit;
+async function runAll(tasks, n = 15){ for (let i = 0; i < tasks.length; i += n) await Promise.all(tasks.slice(i, i + n).map(t => t().catch(() => {}))); }
+function protFix(o, w){ return [() => updateDoc(doc(db, SITE.col, o.id), w), ...(hasImgDoc(o) ? [() => updateDoc(IMGD(o.id), w)] : [])]; }
+// 폴더 구조(잠금·비공개·위치)가 바뀌면 그 아래 프롬프트까지 다시 계산
+let lastSig = null, healT = null;
+function healFolders(){
+  if (!secure || !isAdmin()) return;
+  clearTimeout(healT);
+  healT = setTimeout(async () => {
+    const tasks = [];
+    rawFolders.forEach(f => { const w = protOfFolder(f); if (protDiff(f, w)) tasks.push(...protFix(f, w)); });
+    const sig = rawFolders.map(f => f.id + (f.hidden ? "h" : "") + (isLockedF(f) ? "l" : "") + (f.parentId || "")).sort().join("|");
+    if (lastSig !== null && sig !== lastSig) {
+      const ps = (await getDocs(query(col, where("type", "==", "prompt")))).docs.map(d => ({ id: d.id, ...d.data() }));
+      ps.forEach(p => { const w = protOfPrompt(p, p.folderId); if (protDiff(p, w)) tasks.push(...protFix(p, w)); });
+    }
+    lastSig = sig;
+    await runAll(tasks);
+  }, 800);
+}
+function healPrompts(list){
+  if (!secure || !isAdmin()) return;
+  const tasks = [];
+  list.forEach(p => { const w = protOfPrompt(p, p.folderId); if (protDiff(p, w)) tasks.push(...protFix(p, w)); });
+  if (tasks.length) runAll(tasks);
+}
+function healGroups(){
+  if (!secure || !isAdmin()) return;
+  const tasks = [];
+  rawGroups.forEach(g => { const w = { priv: !!g.hidden, lk: null }; if (protDiff(g, w)) tasks.push(() => updateDoc(doc(db, SITE.col, g.id), w)); });
+  if (tasks.length) runAll(tasks);
+}
+function protForId(id){
+  const f = rawFolders.find(d => d.id === id); if (f) return protOfFolder(f);
+  for (const e of promptCache.values()) { const p = e.docs.find(d => d.id === id); if (p) return protOfPrompt(p, p.folderId); }
+  return { priv: true, lk: null };
+}
+// 처음 한 번: 기존 데이터 전부에 보호 표시 달고, 비밀번호는 따로 옮김
+let secMigrating = false;
+async function migrateSecure(){
+  if (secure || secMigrating || !isAdmin() || !settingsReady) return;
+  secMigrating = true;
+  try {
+    toast("보안 설정 적용 중… 창을 닫지 말아주세요");
+    const all = (await getDocs(col)).docs.map(d => ({ id: d.id, ...d.data() }));
+    const fl = all.filter(d => d.type === "folder");
+    for (const f of fl.filter(f => f.pw)) {
+      await setDoc(LOCKD(f.id), { pw: f.pw, h: await sha256hex(f.id + ":" + f.pw) });
+      await updateDoc(doc(db, SITE.col, f.id), { locked: true, pw: deleteField() });
+      f.locked = true;
+    }
+    const byId = new Map(all.map(d => [d.id, d]));
+    const want = d => {
+      if (d.id === "_settings") return { priv: false, lk: null };
+      if (d.id.endsWith("_orig")) return { priv: true, lk: null };
+      if (d.id.endsWith("_img")) { const o = byId.get(d.id.slice(0, -4)); return o ? want(o) : { priv: true, lk: null }; }
+      if (d.type === "folder") return protOfFolder(d, fl);
+      if (d.type === "group") return { priv: !!d.hidden, lk: null };
+      if (d.folderId) return protOfPrompt(d, d.folderId, fl);
+      return { priv: false, lk: null };
+    };
+    await runAll(all.map(d => () => updateDoc(doc(db, SITE.col, d.id), want(d))));
+    await setDoc(SETTINGS(), { type: "settings", secureV: 1, priv: false }, { merge: true });
+    toast("보안 설정 완료");
+  } catch(e) { toast("보안 설정 실패: " + (e.code || e.message)); }
+  secMigrating = false;
 }
 // 폴더에 손가락이 닿는 순간 미리 받기 시작
 document.addEventListener("pointerdown", e => {
@@ -1135,7 +1280,7 @@ function folderListHtml(list){
   return `<div class="${cls}" style="--fr:${fid ? sc.ratio : homeRatio()}">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       <span class="fpic">${mediaHtml(f)}
-      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : f.pw ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}</span>
+      ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : isLockedF(f) ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}</span>
       <span class="cap"${colorStyle(effColor(f.textColor))}>${esc(f.name)}</span>
     </button>`).join("")}</div>`;
 }
@@ -1161,10 +1306,27 @@ function askPw(g, then){
   $("#pwIn").value = ""; $("#pwErr").textContent = "";
   $("#pwDlg").showModal(); setTimeout(() => $("#pwIn").focus(), 50);
 }
-$("#pwForm").addEventListener("submit", e => {
+$("#pwForm").addEventListener("submit", async e => {
   e.preventDefault();
   if (!pwFor) return;
-  if ($("#pwIn").value.trim() !== pwFor.pw) { $("#pwErr").textContent = "비밀번호가 달라요"; $("#pwIn").select(); return; }
+  const val = $("#pwIn").value.trim();
+  if (secure) {
+    // 서버(규칙)가 비밀번호를 확인: 맞으면 기록이 써지고, 틀리면 거절됨
+    const btn = $("#pwForm").querySelector("[type=submit]"); if (btn) btn.disabled = true;
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      await setDoc(UNLOCKD(auth.currentUser.uid, pwFor.id), { f: pwFor.id, h: await sha256hex(pwFor.id + ":" + val) });
+    } catch(_) { if (btn) btn.disabled = false; $("#pwErr").textContent = "비밀번호가 달라요"; $("#pwIn").select(); return; }
+    if (btn) btn.disabled = false;
+    unlocked[pwFor.id] = true;
+    try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
+    watchLock(pwFor.id);
+    [...promptCache.keys()].forEach(k => { const e = promptCache.get(k); if (!e.docs.length) { e.unsub && e.unsub(); promptCache.delete(k); } });
+    promptsFor = undefined; watchPrompts();
+    $("#pwDlg").close(); refilter(); pwThen && pwThen();
+    return;
+  }
+  if (val !== pwFor.pw) { $("#pwErr").textContent = "비밀번호가 달라요"; $("#pwIn").select(); return; }
   unlocked[pwFor.id] = pwFor.pw;
   try { localStorage.setItem(LS("pv-unlock"), JSON.stringify(unlocked)); } catch(_) {}
   $("#pwDlg").close(); refilter(); pwThen && pwThen();
@@ -1235,7 +1397,7 @@ $("#gmList").addEventListener("click", e => {
     // '전체' 알약 켜기/끄기 (모두에게)
     viewCfg.hideAll = !viewCfg.hideAll; selGroup = null;
     paintManager(); render();
-    setDoc(SETTINGS(), { type: "settings", hideAll: viewCfg.hideAll }, { merge: true }).then(() => toast(viewCfg.hideAll ? "'전체'를 껐어요" : "'전체'를 켰어요"))
+    setDoc(SETTINGS(), { type: "settings", hideAll: viewCfg.hideAll, priv: false }, { merge: true }).then(() => toast(viewCfg.hideAll ? "'전체'를 껐어요" : "'전체'를 켰어요"))
       .catch(() => { viewCfg.hideAll = !viewCfg.hideAll; paintManager(); render(); toast("바꾸지 못했어요"); });
     return;
   }
@@ -1686,7 +1848,7 @@ function makeThumb(src){
 // 화면용 그림을 따로 저장하고, 본문에는 흐린 미리보기만 남김
 async function storeImage(id, shown){
   const v = Date.now(), thumb = "";
-  await setDoc(IMGD(id), { type: "img", image: shown, v });
+  await setDoc(IMGD(id), { type: "img", image: shown, v, ...protForId(id) });
   imgMem.set(id + ":" + v, Promise.resolve(shown)); imgReady.set(id + ":" + v, shown);
   return { image: "", thumb, imgSplit: true, imgV: v, baked: true };
 }
@@ -1731,7 +1893,7 @@ async function withBaked(id, kind, layout, ed){
   return { data: { ...d, ...extra, ...(await storeImage(id, shown)) }, orig: d.image };
 }
 async function saveOrig(id, orig){
-  if (orig) await setDoc(ORIG(id), { type: "orig", image: orig });
+  if (orig) await setDoc(ORIG(id), { type: "orig", image: orig, priv: true, lk: null });
   else await deleteDoc(ORIG(id)).catch(() => {});
 }
 // 수정 창 열 때 원본 불러오기
@@ -1939,6 +2101,7 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#fHidden").checked = !!f.hidden;
   $("#fDescLine").checked = !!f.descLine;
   $("#fPw").value = f.pw || "";
+  if (secure && id && isLockedF(f)) getDoc(LOCKD(id)).then(s => { if (editingFolder === id && s.exists()) $("#fPw").value = s.data().pw || ""; }).catch(() => {});
   setColor("fColor", f.textColor);
   setPc(f.pcMode === "wide" ? "wide" : "mobile");
   const kids = id ? childFolders(id) : [];
@@ -2010,9 +2173,13 @@ $("#folderForm").addEventListener("submit", e => {
       const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
       const subRatioChanged = editingFolder && fsTouched && fs.subRatio !== subRatio(editingFolder);
+      // 비밀번호: 보안 모드에선 폴더 문서엔 '잠김' 표시만, 진짜 비밀번호는 주인만 읽는 곳에
+      const pwv = $("#fPw").value.trim();
+      const pwData = secure ? { locked: !!pwv, pw: editingFolder ? deleteField() : null } : { pw: pwv };
+      if (!secure) {} else if (pwv) await setDoc(LOCKD(ref.id), { pw: pwv, h: await sha256hex(ref.id + ":" + pwv) }); else await deleteDoc(LOCKD(ref.id)).catch(() => {});
       const data = editingIsGroup
-        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...(fsTouched ? fs : {}), ...img, updated: serverTimestamp() }
-        : { name, desc: $("#fDesc").value.trim(), pcMode: curPc, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...(fsTouched ? fs : {}), ...img, updated: serverTimestamp() };
+        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, ...pwData, textColor: colorVal.fColor || "", ...(fsTouched ? fs : {}), ...img, updated: serverTimestamp() }
+        : { name, desc: $("#fDesc").value.trim(), pcMode: curPc, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, ...pwData, textColor: colorVal.fColor || "", ...(fsTouched ? fs : {}), ...img, updated: serverTimestamp() };
       if (editingFolder) {
         const np = $("#fParent").value || null;
         if (!editingIsGroup && np !== (parentOf(folderDocs.find(d => d.id === editingFolder)) || null)) {
@@ -2023,7 +2190,8 @@ $("#folderForm").addEventListener("submit", e => {
       } else {
         const last = childFolders(currentFolderId()).at(-1);
         if (currentFolderId() && !editingIsGroup) data.parentId = currentFolderId();
-        await setDoc(ref, { type: "folder", created: serverTimestamp(), order: nextOrder(last ? folderKey(last) + 1 : 0), ...data });
+        if (data.pw === null) delete data.pw;
+        await setDoc(ref, { type: "folder", created: serverTimestamp(), order: nextOrder(last ? folderKey(last) + 1 : 0), priv: true, lk: null, ...data });
       }
       await saveOrig(ref.id, orig);
       $("#folderDlg").close(); toast("저장됐어요");
@@ -2065,13 +2233,16 @@ $("#promptForm").addEventListener("submit", e => {
       if (editingPrompt) {
         const nf = $("#pFolder").value;
         if (nf && nf !== currentFolderId()) { data.folderId = nf; data.order = Date.now() / 1e3; }
+        if (secure) Object.assign(data, protOfPrompt(data, data.folderId || currentFolderId()));
         await updateDoc(ref, data);
         if (data.folderId) toast("옮겼어요");
       }
       else {
         const last = prompts().at(-1); // 새 프롬프트는 맨 아래에
+        if (secure) Object.assign(data, protOfPrompt(data, currentFolderId()));
         await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: nextOrder(last ? promptKey(last) + 1 : 0), ...data });
       }
+      if (secure && data.imgSplit) updateDoc(IMGD(ref.id), { priv: data.priv, lk: data.lk }).catch(() => {});
       await saveOrig(ref.id, orig);
       $("#promptDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
@@ -2128,7 +2299,7 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
     const upd = { ...vs, siteTitle, textColor, followAll };
-    await setDoc(SETTINGS(), { type: "settings", ...upd }, { merge: true });
+    await setDoc(SETTINGS(), { type: "settings", ...upd, priv: false }, { merge: true });
     viewCfg = { ...viewCfg, ...upd }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
@@ -2195,13 +2366,16 @@ $("#backupBtn").onclick = async () => {
 // ---------- 로그인 ----------
 onAuthStateChanged(auth, u => {
   if (DBG && !T.auth) { T.auth = performance.now(); dbgShow(); }
-  user = u;
-  $("#loginBtn").hidden = !!u;
-  $("#logoutBtn").hidden = !u;
-  $("#who").hidden = !u || isAdmin();
-  $("#who").textContent = u && !isAdmin() ? u.email + " · 보기 전용" : "";
+  user = u; authReady = true;
+  const real = u && !u.isAnonymous;
+  $("#loginBtn").hidden = !!real;
+  $("#logoutBtn").hidden = !real;
+  $("#who").hidden = !real || isAdmin();
+  $("#who").textContent = real && !isAdmin() ? u.email + " · 보기 전용" : "";
+  subscribeData();
   refilter();
-  render();
+  if (foldersReady) render();
+  if (isAdmin() && foldersReady) migrateSecure();
 });
 $("#loginBtn").onclick = async () => {
   const provider = new GoogleAuthProvider();
