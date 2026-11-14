@@ -851,6 +851,25 @@ function shortCode(id){
   return id;
 }
 const folderHash = id => id ? "#/" + shortCode(id) : "";
+// 그룹 링크: #/g/<짧은 코드>
+let groupsReady = false;
+function groupCode(id){
+  for (let n = 5; n < id.length; n++) { const pre = id.slice(0, n); if (!rawGroups.some(g => g.id !== id && g.id.startsWith(pre))) return pre; }
+  return id;
+}
+const groupHash = id => id ? "#/g/" + groupCode(id) : "";
+// 주소창을 지금 고른 그룹에 맞춤 (첫 화면일 때만)
+function syncGroupHash(){
+  if (!groupsReady || currentFolderId() || reorder) return;
+  const m = location.hash.match(/^#\/g\/([A-Za-z0-9]+)$/);
+  if (m) {
+    const hit = rawGroups.filter(g => g.id.startsWith(m[1]));
+    const id = hit.length === 1 ? hit[0].id : hit.find(g => g.id === m[1])?.id;
+    if (id && groupDocs.some(g => g.id === id)) { selGroup = id; return; }
+  }
+  const want = selGroup ? groupHash(selGroup) : "";
+  if (location.hash !== want && (!location.hash || m || location.hash === "#/" || location.hash === "#")) history.replaceState(null, "", want || location.pathname + location.search);
+}
 
 // 정렬: 순서(order)가 있으면 그 순서, 없으면 폴더는 만든 순 / 프롬프트는 최신이 위
 const folderKey = f => num(f.order, ts(f.created) / 1e3);
@@ -989,7 +1008,7 @@ try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
 const curGroup = () => selGroup || (viewCfg.hideAll ? (groups()[0]?.id || null) : null);
 const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
 onSnapshot(query(col, where("type", "==", "group")), snap => {
-  rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() })); groupsReady = true;
   refilter();
   render();
 }, () => {});
@@ -1031,7 +1050,7 @@ document.addEventListener("pointerover", e => {
 }, { passive: true });
 
 // ---------- 화면 ----------
-function render(){ renderInner(); try { hydrateImgs(); } catch(_) {} if (typeof dbgImgs === "function") setTimeout(dbgImgs, 0); }
+function render(){ syncGroupHash(); renderInner(); try { hydrateImgs(); } catch(_) {} if (typeof dbgImgs === "function") setTimeout(dbgImgs, 0); }
 function renderInner(){
   const fid = currentFolderId();
   const admin = isAdmin();
@@ -1157,7 +1176,9 @@ $("#pills").addEventListener("click", e => {
   const t = e.target.closest("[data-g],[data-gadd],[data-gedit]"); if (!t) return;
   if (t.dataset.gadd) return openGroup(null);
   if (t.dataset.gedit) return openGroup(t.dataset.gedit);
-  selGroup = t.dataset.g || null; render();
+  selGroup = t.dataset.g || null;
+  history.replaceState(null, "", groupHash(selGroup) || location.pathname + location.search);
+  render();
   const v = $("#view"); v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter");
 });
 // 이전 방식(큰 폴더) 그룹이 있으면 알약 그룹으로 자동 변환 (한 번만)
