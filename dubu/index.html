@@ -373,8 +373,26 @@ body.home .wrap{padding-left:22px;padding-right:22px}
 .list.cap-b>.folder.group{box-shadow:none;margin-bottom:0}
 .list.cap-b>.folder.group .fpic{overflow:visible;box-shadow:0 5px 0 -2px #fff,0 5px 0 -1px var(--line),0 10px 0 -4px #fff,0 10px 0 -3px #ececec;margin-bottom:8px}
 /* 각진 테마 */
-body.sq :is(.icon-btn,.menu,.menu button,.pside,.sthumb,.ptext,.box,.folder,.folder .media,.fpic,.ptall,.pimg,.pbar,.tblock,.copy-btn,.pill,.btn,.pcol-img,.expand-inner,.lock-badge,.toast){border-radius:2px!important}
-body.sq .list.cap-b>.folder{border-radius:0!important}
+/* 각진 테마: 흑백 편집숍 느낌 — 모서리 0, 검정 1px 선, 검정 강조 */
+body.sq :is(.pside,.sthumb,.ptext,.box,.folder,.folder .media,.fpic,.ptall,.pimg,.pbar,.copy-btn,.pill,.pcol-img,.expand-inner,.lock-badge,.pnote){border-radius:0!important}
+body.sq #view .folder,body.sq .th-basic .box,body.sq .th-text .box{border:1px solid #111;box-shadow:none}
+body.sq .folder.no-img,body.sq .th-basic :is(.pbar,.ptext,.pside),body.sq .th-text :is(.pbar,.ptext,.pside){background:#fff}
+body.sq .pill{border:1px solid #111;background:transparent;color:#111;font-weight:500}
+body.sq .pill.on{background:#111;border-color:#111;color:#fff}
+body.sq .lock-badge{background:#111;backdrop-filter:none;-webkit-backdrop-filter:none}
+/* 폴더: 그림 안 이름은 왼쪽 아래 검정 딱지 */
+body.sq .list:not(.cap-b)>.folder:not(.no-img) .cap{left:0;right:auto;max-width:calc(100% - 16px);padding:6px 10px!important;background:#111!important;color:#fff!important;text-shadow:none!important;font-size:13px;font-weight:700}
+body.sq .folder.group,body.sq .list.cap-b>.folder.group .fpic{box-shadow:5px 5px 0 -1px #fff,5px 5px 0 0 #111;margin-bottom:6px}
+/* 폴더: 그림 아래 이름은 한 칸짜리 카드(선으로 구분) */
+body.sq .list.cap-b>.folder{border:1px solid #111!important;background:#fff}
+body.sq .list.cap-b>.folder .fpic{border:none;border-bottom:1px solid #111;margin-bottom:0}
+body.sq .list.cap-b>.folder.group .fpic{margin-bottom:0}
+body.sq .list.cap-b>.folder .cap{padding:8px 10px!important;font-size:13px;font-weight:700}
+/* 프롬프트: 그림 + 제목줄을 한 카드로 붙임 */
+body.sq .pimg{margin-bottom:0;border-bottom:none!important}
+body.sq .th-basic .copy-btn{border:1px solid #111;background:#fff;color:#111;font-weight:700}
+body.sq .th-basic .copy-btn:active{background:#111;color:#fff}
+body.sq .expand-inner{background:#fff;border:1px solid #111;color:#111}
 .vsec{margin:4px 0 -4px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted)}
 .empty{text-align:center;color:var(--muted);padding:48px 0;font-size:13px}
 .status{font-size:12px;color:var(--muted)}
