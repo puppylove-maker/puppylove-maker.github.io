@@ -522,6 +522,10 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="fPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
     <div class="field" id="fPcWrap">PC에서 프롬프트 배치<div class="seg" id="fPc"><button type="button" data-pc="mobile">폰이랑 똑같이</button><button type="button" data-pc="wide">넓게 2개씩</button></div></div>
+    <div class="vsec">이 폴더 안에 든 폴더</div>
+    <div class="field">카드 비율<div class="seg" id="fsRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
+    <div class="field">한 줄에 몇 개<div class="seg" id="fsCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
+    <div class="field">폴더 이름<div class="seg" id="fsCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
 
     <div class="row" style="justify-content:space-between">
       <button type="button" class="btn danger press" id="folderDelBtn" hidden>삭제</button>
@@ -632,10 +636,6 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
     <div class="field">카드 비율<div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
     <div class="field">한 줄에 몇 개<div class="seg" id="vCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
     <div class="field">폴더 이름<div class="seg" id="vCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
-    <div class="vsec">폴더 안 폴더</div>
-    <div class="field">카드 비율<div class="seg" id="sRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">세로 (3:4)</button></div></div>
-    <div class="field">한 줄에 몇 개<div class="seg" id="sCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
-    <div class="field">폴더 이름<div class="seg" id="sCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">취소</button>
       <button type="button" class="btn primary press" id="vSave">저장</button>
@@ -811,11 +811,14 @@ let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
 const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800] };
-let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", subRatio: "", subCols: 0, subCap: "in", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, homeCap: "in", shape: "round", siteTitle: "", textColor: "", followAll: false, hideAll: false };
 // 폴더 안 폴더는 따로 정한 적 없으면 첫 화면 설정을 따라감
-const subRatio = () => RATIO_PX[viewCfg.subRatio] ? viewCfg.subRatio : (RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1");
 const homeRatio = () => RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
-const folderRatioOf = f => parentOf(f) ? subRatio() : homeRatio();
+// 폴더 안 폴더: 그 폴더(부모)에 정한 값 → 없으면 첫 화면 설정
+const subCfg = pid => { const p = pid && rawFolders.find(d => d.id === pid) || {};
+  return { ratio: RATIO_PX[p.subRatio] ? p.subRatio : homeRatio(), cols: +p.subCols || +viewCfg.folderCols || 0, cap: p.subCap || "in" }; };
+const subRatio = pid => subCfg(pid).ratio;
+const folderRatioOf = f => parentOf(f) ? subRatio(parentOf(f)) : homeRatio();
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
@@ -828,7 +831,7 @@ function applyView(){
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", subRatio: d.subRatio || "", subCols: d.subCols ?? (d.folderCols || 0), subCap: d.subCap || "in", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
@@ -998,10 +1001,10 @@ function mixedSeq(folder, subs, items){
   return [...subs.map(o => [folderKey(o), o]), ...items.map(o => [promptKey(o), o])].sort((a, b) => a[0] - b[0]).map(x => x[1]);
 }
 function folderListHtml(list){
-  const home = !currentFolderId();
-  const cols = +(home ? viewCfg.folderCols : viewCfg.subCols), cap = home ? viewCfg.homeCap : viewCfg.subCap;
+  const fid = currentFolderId(), sc = subCfg(fid);
+  const cols = fid ? sc.cols : +viewCfg.folderCols, cap = fid ? sc.cap : viewCfg.homeCap;
   const cls = `list${[1, 2, 3].includes(cols) ? " c-" + cols : ""}${cap === "below" ? " cap-b" : ""}`;
-  return `<div class="${cls}" style="--fr:${home ? homeRatio() : subRatio()}">${list.map(f => `
+  return `<div class="${cls}" style="--fr:${fid ? sc.ratio : homeRatio()}">${list.map(f => `
     <button class="box folder press ${gradClass(f)} ${isGroup(f) ? "group" : ""}" data-open="${esc(f.id)}">
       <span class="fpic">${mediaHtml(f)}
       ${f.hidden ? `<span class="lock-badge">${LOCK}비공개</span>` : f.pw ? `<span class="lock-badge">${LOCK}잠금</span>` : ""}</span>
@@ -1759,13 +1762,22 @@ function openFolder(id, newParent = null, asGroup = false){
   $("#fPw").value = f.pw || "";
   setColor("fColor", f.textColor);
   setPc(f.pcMode === "wide" ? "wide" : "mobile");
+  const sc = subCfg(id); fs = { subRatio: sc.ratio, subCols: sc.cols || defCols(), subCap: sc.cap }; fsTouched = false; paintFs();
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
   $("#folderDlg").showModal();
 }
 // 폴더 고르기 목록 (안쪽 폴더는 들여쓰기)
+const FSEG = { fsRatio: "subRatio", fsCols: "subCols", fsCap: "subCap" };
+let fs = {}, fsTouched = false; // 건드렸을 때만 저장 (안 건드리면 계속 첫 화면 설정을 따라감)
+const paintFs = () => Object.entries(FSEG).forEach(([id, k]) =>
+  $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(fs[k]))));
+Object.entries(FSEG).forEach(([id, k]) => $("#" + id).addEventListener("click", e => {
+  const v = e.target.closest("[data-v]")?.dataset.v; if (v == null) return;
+  fs[k] = k === "subCols" ? +v : v; fsTouched = true; paintFs();
+}));
 function setFolderPickRatio(parent){
-  fBakeRatio = parent ? subRatio() : homeRatio();
+  fBakeRatio = parent ? subRatio(parent) : homeRatio();
   $("#fPicker").style.aspectRatio = fBakeRatio;
 }
 $("#fParent").addEventListener("change", () => setFolderPickRatio($("#fParent").value || null));
@@ -1814,9 +1826,10 @@ $("#folderForm").addEventListener("submit", e => {
     try {
       const ref = editingFolder ? doc(db, SITE.col, editingFolder) : doc(col);
       const { data: img, orig } = await withBaked(ref.id, "folder", null, fEditor);
+      const subRatioChanged = editingFolder && fsTouched && fs.subRatio !== subRatio(editingFolder);
       const data = editingIsGroup
-        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() }
-        : { name, desc: $("#fDesc").value.trim(), pcMode: curPc, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...img, updated: serverTimestamp() };
+        ? { name, desc: $("#fDesc").value.trim(), isGroup: true, parentId: null, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...(fsTouched ? fs : {}), ...img, updated: serverTimestamp() }
+        : { name, desc: $("#fDesc").value.trim(), pcMode: curPc, hidden: $("#fHidden").checked, descLine: $("#fDescLine").checked, pw: $("#fPw").value.trim(), textColor: colorVal.fColor || "", ...(fsTouched ? fs : {}), ...img, updated: serverTimestamp() };
       if (editingFolder) {
         const np = $("#fParent").value || null;
         if (!editingIsGroup && np !== (parentOf(folderDocs.find(d => d.id === editingFolder)) || null)) {
@@ -1831,6 +1844,7 @@ $("#folderForm").addEventListener("submit", e => {
       }
       await saveOrig(ref.id, orig);
       $("#folderDlg").close(); toast("저장됐어요");
+      if (subRatioChanged) { const pid = ref.id, r = fs.subRatio; await rebakeFolders(f => parentOf(f) === pid, () => r); }
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
   });
 });
@@ -1910,13 +1924,12 @@ const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
 const defCols = () => matchMedia("(min-width:720px)").matches ? 2 : 1;
-const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", sRatio: "subRatio", sCols: "subCols", sCap: "subCap" };
+const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap" };
 let vs = {};
 const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
   $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(vs[k]))));
 function openViewDlg(){
-  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in",
-         subRatio: subRatio(), subCols: +viewCfg.subCols || defCols(), subCap: viewCfg.subCap || "in" };
+  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in" };
   $("#vTitle").value = viewCfg.siteTitle || "";
   setColor("vColor", viewCfg.textColor);
   $("#vFollow").checked = !!viewCfg.followAll;
@@ -1927,7 +1940,8 @@ Object.entries(VSEG).forEach(([id, k]) => $("#" + id).addEventListener("click", 
   vs[k] = /Cols$/.test(k) ? +v : v; paintView();
 }));
 $("#vSave").onclick = () => withBusy("vSave", async () => {
-  const homeChanged = vs.folderRatio !== homeRatio(), subChanged = vs.subRatio !== subRatio();
+  const homeChanged = vs.folderRatio !== homeRatio();
+  const followsHome = f => { const p = rawFolders.find(d => d.id === parentOf(f)); return !p || !RATIO_PX[p.subRatio]; };
   try {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
@@ -1936,17 +1950,17 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
     viewCfg = { ...viewCfg, ...upd }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
-  if (homeChanged || subChanged) await rebakeFolders(f => parentOf(f) ? subChanged : homeChanged);
+  if (homeChanged) await rebakeFolders(f => !parentOf(f) || followsHome(f));
 });
 // 비율이 바뀌면 폴더 이미지를 원본에서 새 비율로 다시 잘라 저장
-async function rebakeFolders(which = () => true){
+async function rebakeFolders(which = () => true, ratioOf = null){
   const list = folderDocs.filter(f => hasImg(f) && f.baked && which(f));
   let n = 0;
   for (const f of list) {
     try {
       const o = await getDoc(ORIG(f.id));
       if (!o.exists()) continue;
-      const [W, H] = bakeSize("folder", null, f);
+      const [W, H] = ratioOf ? RATIO_PX[ratioOf(f)] : bakeSize("folder", null, f);
       const shown = await bake(o.data().image, W, H, num(f.imgX, 50), num(f.imgY, 50), num(f.zoom, 1));
       await updateDoc(doc(db, SITE.col, f.id), await storeImage(f.id, shown));
       toast(`폴더 이미지 맞추는 중 ${++n}/${list.length}`);
