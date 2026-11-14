@@ -1781,7 +1781,7 @@ const LAYOUTS = [
   { id: "text",    name: "글 카드",     desc: "이미지 없이 글 미리보기", mini: `<div class="mini tx"><i class="bar" style="width:55%"></i><i class="ln"></i><i class="ln"></i><i class="ln" style="width:70%"></i></div>` }
 ];
 const loCards = sel => LAYOUTS.map(l => `<button type="button" class="lo-card press ${l.id === sel ? "on" : ""}" data-lo="${l.id}">${l.mini}<span><b style="color:var(--text)">${l.name}</b><span class="d"><br>${l.desc}</span></span></button>`).join("");
-function openMenu(){
+function openMenu(mode){
   const fid = currentFolderId();
   const cur = folderDocs.find(d => d.id === fid);
   // 비슷한 기능끼리 묶음, 묶음 사이에 줄
@@ -1796,23 +1796,30 @@ function openMenu(){
     edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'
   };
   const orderKey = hasSubs && prompts().length ? "morder" : hasSubs ? "forder" : "order";
-  const sections = !fid
+  const sections = mode === "add" ? [["", [["tpl", "새 프롬프트", I.doc], ["new", "새 폴더", I.folder]]]]
+    : !fid
     ? [["관리", [...(curGroup() && groupDocs.some(x => x.id === curGroup()) ? [["gorder", "이 그룹 안 순서 정리", I.list]] : childFolders(null).length ? [["forder", "폴더 정리하기", I.list]] : []), ["group", "그룹", I.tag]]],
        ["설정", [["view", "화면 설정", I.view]]]]
     : isGroup(cur)
     ? [["관리", [...(hasSubs ? [["forder", "폴더 정리하기", I.list]] : []), ["fedit", "그룹 편집", I.edit]]]]
-    : [["만들기", [["tpl", "새 프롬프트", I.doc]]],
-       ["관리", [...(prompts().length || hasSubs ? [[orderKey, "정리하기", I.list]] : []), ["fedit", "폴더 편집", I.edit]]]];
+    : [["관리", [...(prompts().length || hasSubs ? [[orderKey, "정리하기", I.list]] : []), ["fedit", "폴더 편집", I.edit]]]];
   $("#menu").innerHTML = sections.filter(([, items]) => items.length)
-    .map(([lab, items]) => `<div class="mlab">${lab}</div>` + items.map(([k, t, ic]) => `<button class="press" data-m="${k}">${ic}${t}</button>`).join(""))
+    .map(([lab, items]) => (lab ? `<div class="mlab">${lab}</div>` : "") + items.map(([k, t, ic]) => `<button class="press" data-m="${k}">${ic}${t}</button>`).join(""))
     .join(`<div class="msep"></div>`);
-  $("#menu").classList.add("show"); $("#plusBtn").classList.add("on");
+  $("#menu").classList.add("show"); $("#menu").dataset.mode = mode || ""; if (mode !== "add") $("#plusBtn").classList.add("on");
 }
 function closeMenu(){ $("#menu").classList.remove("show"); $("#plusBtn").classList.remove("on"); }
 // + : 바로 새 폴더 만들기 (지금 보는 곳 안에)
-$("#addBtn").onclick = () => { closeMenu(); openFolder(null, currentFolderId()); };
-$("#plusBtn").onclick = e => { e.stopPropagation(); $("#menu").classList.contains("show") ? closeMenu() : openMenu(); };
-document.addEventListener("click", e => { if (!e.target.closest("#menu,#plusBtn")) closeMenu(); });
+// + : 첫 화면·그룹 안에선 바로 새 폴더, 폴더 안에선 새 프롬프트 / 새 폴더 고르기
+$("#addBtn").onclick = e => {
+  e.stopPropagation();
+  const fid = currentFolderId(), f = folderDocs.find(d => d.id === fid);
+  if (!fid || isGroup(f)) { closeMenu(); openFolder(null, fid); return; }
+  const open = $("#menu").classList.contains("show") && $("#menu").dataset.mode === "add";
+  closeMenu(); if (!open) openMenu("add");
+};
+$("#plusBtn").onclick = e => { e.stopPropagation(); const open = $("#menu").classList.contains("show") && $("#menu").dataset.mode !== "add"; closeMenu(); if (!open) openMenu(); };
+document.addEventListener("click", e => { if (!e.target.closest("#menu,#plusBtn,#addBtn")) closeMenu(); });
 $("#menu").addEventListener("click", e => {
   const k = e.target.closest("[data-m]")?.dataset.m; if (!k) return;
   closeMenu();
