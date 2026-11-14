@@ -560,7 +560,7 @@ img{-webkit-touch-callout:none;-webkit-user-drag:none;user-select:none;-webkit-u
 <dialog id="groupsDlg">
   <div class="dlg">
     <h2>그룹</h2>
-    <p style="margin:-6px 0 0;font-size:12px;color:var(--sub)">스위치를 끄면 그 그룹이 아무에게도 안 보여요.</p>
+    <p style="margin:-6px 0 0;font-size:12px;color:var(--sub)">"전체"를 끄면 전체 알약이 없어지고, 첫 번째 그룹부터 보여요.</p>
     <div class="olist" id="gmList"></div>
     <button type="button" class="btn press" id="gmNew">+ 새 그룹 만들기</button>
     <div class="row" style="justify-content:flex-end">
@@ -788,7 +788,7 @@ let foldersReady = false;
 // 폴더 화면 설정 (카드 비율 · 몇 열) — 모든 방문자에게 똑같이
 const SETTINGS = () => doc(db, SITE.col, "_settings");
 const RATIO_PX = { "4/1": [1000, 250], "16/9": [960, 540], "1/1": [640, 640], "3/4": [600, 800] };
-let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "", followAll: false };
+let viewCfg = { folderRatio: "4/1", folderCols: 0, siteTitle: "", textColor: "", followAll: false, hideAll: false };
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
 function applyView(){
@@ -803,7 +803,7 @@ function applyView(){
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
 }, () => {});
@@ -844,12 +844,14 @@ function refilter(){
   const all = isAdmin();
   folderDocs = all ? rawFolders : rawFolders.filter(f => !hiddenChain(f) && !lockedAncestor(f));
   groupDocs = all ? rawGroups : rawGroups.filter(g => !g.hidden);
-  if (selGroup && !groupDocs.some(g => g.id === selGroup && !g.off)) selGroup = null;
+  if (selGroup && !groupDocs.some(g => g.id === selGroup)) selGroup = null;
 }
 const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>`;
 // 그룹 (이름 + 넣을 폴더 목록)
 let groupDocs = [], selGroup = null, gOpen = false;
 try { gOpen = localStorage.getItem(LS("pv-gopen")) === "1"; } catch(_) {}
+// 지금 보여줄 그룹: 고른 그룹, 없으면 ('전체'가 꺼졌을 때) 첫 번째 그룹
+const curGroup = () => selGroup || (viewCfg.hideAll ? (groups()[0]?.id || null) : null);
 const groups = () => [...groupDocs].sort((a,b) => num(a.order, ts(a.created)/1e3) - num(b.order, ts(b.created)/1e3));
 onSnapshot(query(col, where("type", "==", "group")), snap => {
   rawGroups = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -911,7 +913,7 @@ function renderInner(){
   if (!fid) {
     $("#view").classList.remove("pc-col", "pc-mobile"); document.body.classList.remove("pc-mobile");
     $("#pageTitle").textContent = siteName(); document.title = siteName();
-    const g = groupDocs.find(x => x.id === selGroup);
+    const g = groupDocs.find(x => x.id === curGroup());
     const list = g ? homeFolders().filter(f => (g.folderIds || []).includes(f.id)) : homeFolders();
     if (reorder) return renderReorder();
     if (!foldersReady) { $("#view").innerHTML = ""; return; }
@@ -989,8 +991,8 @@ function renderGroups(fid, admin){
   $("#gAcc").classList.toggle("open", gOpen);
   if (!show) return;
   $("#pills").innerHTML =
-    `<button class="pill press ${!selGroup ? "on" : ""}" data-g="">전체</button>` +
-    groups().filter(g => !g.off).map(g => `<button class="pill press ${g.id === selGroup ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
+    (viewCfg.hideAll && groups().length ? "" : `<button class="pill press ${!curGroup() ? "on" : ""}" data-g="">전체</button>`) +
+    groups().map(g => `<button class="pill press ${g.id === curGroup() ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
     "";
 }
 let pwFor = null, pwThen = null, lastAsked = null;
@@ -1040,15 +1042,15 @@ let editingGroup = null, gSel = new Set(), gOrderIds = [];
 let gmIds = [];
 function paintManager(){
   const map = Object.fromEntries(groupDocs.map(g => [g.id, g]));
-  $("#gmList").innerHTML = gmIds.length ? gmIds.map((id, i) => `
+  const allRow = `<div class="orow"><button type="button" class="gsw ${viewCfg.hideAll ? "" : "on"}" data-gall="1" role="switch" aria-checked="${viewCfg.hideAll ? "false" : "true"}" aria-label="전체 보이기"></button><span class="oname" style="${viewCfg.hideAll ? "color:var(--muted)" : ""}">전체</span></div>`;
+  $("#gmList").innerHTML = allRow + (gmIds.length ? gmIds.map((id, i) => `
     <div class="orow" data-oid="${esc(id)}">
-      <button type="button" class="gsw ${map[id]?.off ? "" : "on"}" data-gvis="${esc(id)}" role="switch" aria-checked="${map[id]?.off ? "false" : "true"}" aria-label="그룹 보이기"></button>
-      <span class="oname" style="${map[id]?.off ? "color:var(--muted)" : ""}">${map[id]?.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(map[id]?.name || "")}</span>
+      <span class="oname">${map[id]?.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(map[id]?.name || "")}</span>
       <button type="button" class="oarrow press" data-gup="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
       <button type="button" class="oarrow press" data-gdown="${i}" ${i === gmIds.length - 1 ? "disabled" : ""} aria-label="아래로">▼</button>
       <button type="button" class="oarrow press" data-gedit="${esc(id)}" aria-label="편집">${pencil(false)}</button>
       <button type="button" class="oarrow del press" data-gdel="${esc(id)}" aria-label="삭제"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg></button>
-    </div>`).join("") : `<div class="empty" style="padding:16px 0">아직 그룹이 없어요</div>`;
+    </div>`).join("") : `<div class="empty" style="padding:16px 0">아직 그룹이 없어요</div>`);
   $("#gmSave").hidden = gmIds.length < 2;
 }
 function openGroupManager(){
@@ -1057,14 +1059,13 @@ function openGroupManager(){
   $("#groupsDlg").showModal();
 }
 $("#gmList").addEventListener("click", e => {
-  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel],[data-gvis]"); if (!t) return;
-  if (t.dataset.gvis) {
-    // 켜기/끄기: 꺼진 그룹은 알약이 아예 안 보임 (주인 포함 모두)
-    const id = t.dataset.gvis, g = rawGroups.find(x => x.id === id); if (!g) return;
-    g.off = !g.off; if (g.off && selGroup === id) selGroup = null;
-    paintManager(); renderGroups(currentFolderId(), isAdmin());
-    updateDoc(doc(db, SITE.col, id), { off: g.off }).then(() => toast(g.off ? "그룹을 껐어요" : "그룹을 켰어요"))
-      .catch(() => { g.off = !g.off; paintManager(); renderGroups(currentFolderId(), isAdmin()); toast("바꾸지 못했어요"); });
+  const t = e.target.closest("[data-gup],[data-gdown],[data-gedit],[data-gdel],[data-gall]"); if (!t) return;
+  if (t.dataset.gall) {
+    // '전체' 알약 켜기/끄기 (모두에게)
+    viewCfg.hideAll = !viewCfg.hideAll; selGroup = null;
+    paintManager(); render();
+    setDoc(SETTINGS(), { type: "settings", hideAll: viewCfg.hideAll }, { merge: true }).then(() => toast(viewCfg.hideAll ? "'전체'를 껐어요" : "'전체'를 켰어요"))
+      .catch(() => { viewCfg.hideAll = !viewCfg.hideAll; paintManager(); render(); toast("바꾸지 못했어요"); });
     return;
   }
   if (t.dataset.gdel) {
@@ -1879,8 +1880,8 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
   try {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
-    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll });
-    viewCfg = { folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }; applyView(); render();
+    await setDoc(SETTINGS(), { type: "settings", folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }, { merge: true });
+    viewCfg = { ...viewCfg, folderRatio: vr, folderCols: vc, siteTitle, textColor, followAll }; applyView(); render();
     $("#viewDlg").close(); toast("저장됐어요");
   } catch(_) { toast("저장 실패: 권한을 확인해주세요"); return; }
   if (ratioChanged) await rebakeFolders();
