@@ -747,7 +747,7 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
     <div class="tools" id="pTools"></div>
     <div class="two"><input id="pTitle" placeholder="제목" aria-label="제목"><input id="pHint" placeholder="부제목 (비우면 안 보임)" aria-label="부제목"></div>
     <input id="pNote" class="note-in" placeholder="안내글 · 박스 위에 작게 (비우면 없음)" aria-label="안내글">
-    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand" checked>눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
+    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand">눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -2305,6 +2305,12 @@ function folderOptions(cur, banned = new Set()){
   tree(null, 0);
   return opts.join("");
 }
+// '눌러서 전체 보기' 켜면 부제목 기본 '전체 보기', 끄면 기본 비움 (직접 쓴 부제목은 그대로)
+document.getElementById("pExpand").addEventListener("change", e => {
+  const h = document.getElementById("pHint"), v = h.value.trim();
+  if (e.target.checked && !v) h.value = DEFAULT_HINT;
+  else if (!e.target.checked && (v === DEFAULT_HINT || v === OLD_HINT)) h.value = "";
+});
 function openPrompt(id, preset){
   editingPrompt = id;
   $("#pFolder").innerHTML = folderOptions(currentFolderId());
@@ -2313,7 +2319,8 @@ function openPrompt(id, preset){
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
   fillTexts("pTexts", textsOf(p));
-  $("#pExpand").checked = !p.noExpand;
+  // 새 프롬프트는 '눌러서 전체 보기' 꺼진 채로 시작
+  $("#pExpand").checked = (id || "noExpand" in p) ? !p.noExpand : false;
   $("#pHidden").checked = !!p.hidden;
   $("#pNote").value = p.note || "";
   setColor("pColor", p.titleColor);
@@ -2322,7 +2329,8 @@ function openPrompt(id, preset){
   setTallBtn(p.tallBtn || "long");
   setOocOpen(p.oocOpen ? "1" : "0"); setOocTone(p.oocTone || "white"); setOocAlpha(p.oocAlpha ?? 70);
   curColMode = p.colMode || "plain"; setColMode(curColMode); curColRatio = p.colRatio || "3/4"; setColRatio(curColRatio); setAlign(p.textAlign || "left");
-  $("#pHint").value = (p.hint === undefined || p.hint === OLD_HINT) ? DEFAULT_HINT : p.hint;
+  { const isDef = p.hint === undefined || p.hint === OLD_HINT || p.hint === DEFAULT_HINT;
+    $("#pHint").value = isDef ? ($("#pExpand").checked ? DEFAULT_HINT : "") : p.hint; }
   id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
   { const [l0, r0] = normLayout(p); curGridRatio = r0; setLayout(l0); setGridRatio(r0); }
   $("#loAcc").classList.remove("open");
