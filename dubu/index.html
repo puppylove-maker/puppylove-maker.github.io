@@ -323,6 +323,16 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .chk input{width:15px;height:15px;margin:0;padding:0;accent-color:#111;flex:none}
 .chk small{font-size:11px;color:var(--muted)}
 .chk-row{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+/* 버튼마다 사진 */
+.tbimg{display:none;align-items:center;gap:8px;margin:2px 0 6px}
+.texts.bimg-on .tblock:not(:first-child) .tbimg{display:flex}
+.texts.bimg-on .tblock:first-child .thead::after{content:"대표 사진";font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:4px}
+.tbimg-pick{width:44px;height:44px;border-radius:8px;border:1px dashed #c8c8c8;background:#fff center/cover no-repeat;display:grid;place-items:center;font-size:18px;color:#999;padding:0;cursor:pointer}
+.tbimg-pick.has{border-style:solid;border-color:#e3e3e3;color:transparent}
+.tbimg small{font-size:11px;color:var(--muted)}
+.tbimg-rm{font-size:11px;color:var(--muted);background:none;border:none;padding:4px;text-decoration:underline;cursor:pointer}
+.media img.bswap{animation:bswap .25s ease}
+@keyframes bswap{from{opacity:.35}to{opacity:1}}
 .item.noexp .press{cursor:default}
 .tblock{display:grid;gap:6px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .thead{display:flex;align-items:center;gap:6px}
@@ -747,7 +757,7 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
     <div class="tools" id="pTools"></div>
     <div class="two"><input id="pTitle" placeholder="제목" aria-label="제목"><input id="pHint" placeholder="부제목 (비우면 안 보임)" aria-label="부제목"></div>
     <input id="pNote" class="note-in" placeholder="안내글 · 박스 위에 작게 (비우면 없음)" aria-label="안내글">
-    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand">눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
+    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand">눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pBtnImg">버튼마다 사진</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -1257,7 +1267,7 @@ function protOfPrompt(p, fid, fl = rawFolders){
 const protDiff = (o, w) => o.priv !== w.priv || (o.lk || null) !== w.lk;
 const hasImgDoc = o => !!o.imgSplit;
 async function runAll(tasks, n = 15){ for (let i = 0; i < tasks.length; i += n) await Promise.all(tasks.slice(i, i + n).map(t => t().catch(() => {}))); }
-function protFix(o, w){ return [() => updateDoc(doc(db, SITE.col, o.id), w), ...(hasImgDoc(o) ? [() => updateDoc(IMGD(o.id), w)] : [])]; }
+function protFix(o, w){ return [() => updateDoc(doc(db, SITE.col, o.id), w), ...(hasImgDoc(o) ? [() => updateDoc(IMGD(o.id), w)] : []), ...(Array.isArray(o.bimgs) ? o.bimgs.filter(b => b && b.k && b.v).map(b => () => updateDoc(doc(db, SITE.col, o.id + "_b" + b.k), w)) : [])]; }
 // 폴더 구조(잠금·비공개·위치)가 바뀌면 그 아래 프롬프트까지 다시 계산
 let lastSig = null, healT = null;
 function healFolders(){
@@ -1310,6 +1320,7 @@ async function migrateSecure(){
     const want = d => {
       if (d.id === "_settings") return { priv: false, lk: null };
       if (d.id.endsWith("_orig")) return { priv: true, lk: null };
+      if (d.type === "img" && d.of) { const o = byId.get(d.of); return o ? want(o) : { priv: true, lk: null }; }
       if (d.id.endsWith("_img")) { const o = byId.get(d.id.slice(0, -4)); return o ? want(o) : { priv: true, lk: null }; }
       if (d.type === "folder") return protOfFolder(d, fl);
       if (d.type === "group") return { priv: !!d.hidden, lk: null };
@@ -1331,7 +1342,7 @@ document.addEventListener("pointerover", e => {
 }, { passive: true });
 
 // ---------- 화면 ----------
-function render(){ syncGroupHash(); renderInner(); try { hydrateImgs(); } catch(_) {} if (typeof dbgImgs === "function") setTimeout(dbgImgs, 0); }
+function render(){ syncGroupHash(); renderInner(); try { hydrateImgs(); applyBimgs(); } catch(_) {} if (typeof dbgImgs === "function") setTimeout(dbgImgs, 0); }
 function renderInner(){
   const fid = currentFolderId();
   const admin = isAdmin();
@@ -1678,13 +1689,15 @@ function hintStyle(p){ const c = effColor(p.titleColor); return c ? ` style="col
 // 한 프롬프트 안의 여러 텍스트 칸: [{label, content}]
 const textsOf = p => (p.texts && p.texts.length) ? p.texts : [{ label: p.copyLabel || "복사", content: p.content || "" }];
 const TRASH = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`;
-function textBlockHtml(t, scroll){
-  return `<div class="tblock"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow press" data-tmove="-1" aria-label="위로">▲</button><button type="button" class="oarrow press" data-tmove="1" aria-label="아래로">▼</button><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
+function textBlockHtml(t, scroll, b){
+  const k = (b && b.k) || "", v = (b && b.v) || 0;
+  return `<div class="tblock" data-k="${esc(k)}" data-v="${v}"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow press" data-tmove="-1" aria-label="위로">▲</button><button type="button" class="oarrow press" data-tmove="1" aria-label="아래로">▼</button><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
+    ${scroll ? "" : `<div class="tbimg"><button type="button" class="tbimg-pick" data-bimgpick aria-label="이 버튼 사진">+</button><small>누르면 보일 사진</small><button type="button" class="tbimg-rm" data-bimgrm hidden>빼기</button><input type="file" accept="image/*" hidden data-bimgfile></div>`}
     <textarea class="tbody ${scroll ? "scroll-box" : ""}" placeholder="복사될 프롬프트 내용">${esc(t.content || "")}</textarea></div>`;
 }
-function fillTexts(id, texts){
+function fillTexts(id, texts, bimgs){
   const box = document.getElementById(id);
-  box.innerHTML = texts.map(t => textBlockHtml(t, id === "nTexts")).join("");
+  box.innerHTML = texts.map((t, i) => textBlockHtml(t, id === "nTexts", bimgs && bimgs[i])).join("");
   syncTextBtns(box);
 }
 function syncTextBtns(box){
@@ -1717,6 +1730,10 @@ document.addEventListener("click", e => {
     row.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
     return;
   }
+  const bp = e.target.closest("[data-bimgpick]");
+  if (bp) { bp.parentElement.querySelector("[data-bimgfile]").click(); return; }
+  const br = e.target.closest("[data-bimgrm]");
+  if (br) { const row = br.closest(".tblock"); row.dataset.src = ""; row.dataset.v = "0"; setBimgThumb(row, ""); return; }
   const rm = e.target.closest("[data-rmtext]");
   if (rm) { const box = rm.closest(".texts"); rm.closest(".tblock").remove(); syncTextBtns(box); }
 });
@@ -1841,10 +1858,11 @@ async function finishReorder(save){
       for (const id of reorder.removed) {
         batch.delete(doc(db, SITE.col, id)); batch.delete(ORIG(id)); batch.delete(IMGD(id));
         const isFolders = isF(id);
+        if (!isFolders) (reorder.map[id]?.bimgs || []).forEach(b => b && b.k && batch.delete(BIMGD(id, b.k)));
         if (isFolders && isGroup(reorder.map[id])) { childFolders(id).forEach(k => batch.update(doc(db, SITE.col, k.id), { parentId: null })); continue; }
         if (isFolders) for (const fid of [id, ...descendants(id)]) {
           if (fid !== id) { batch.delete(doc(db, SITE.col, fid)); batch.delete(ORIG(fid)); batch.delete(IMGD(fid)); }
-          (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); batch.delete(IMGD(d.id)); });
+          (await getDocs(query(col, where("folderId", "==", fid)))).docs.forEach(d => { batch.delete(d.ref); batch.delete(ORIG(d.id)); batch.delete(IMGD(d.id)); (d.data().bimgs || []).forEach(b => b && b.k && batch.delete(BIMGD(d.id, b.k))); });
         }
       }
       await batch.commit(); toast(n ? "저장하고 삭제했어요" : "순서를 저장했어요");
@@ -1866,6 +1884,61 @@ $("#backBtn").onclick = () => {
   location.hash = folderHash(parentOf(f));
 };
 
+// ---------- 버튼마다 사진 ----------
+const BIMGD = (pid, k) => doc(db, SITE.col, pid + "_b" + k);
+const bimgsOf = p => (p && p.btnImg && Array.isArray(p.bimgs)) ? p.bimgs : [];
+function setBimgThumb(row, src){
+  const b = row.querySelector(".tbimg-pick"); if (!b) return;
+  b.style.backgroundImage = src ? `url("${src}")` : ""; b.classList.toggle("has", !!src); b.textContent = src ? "" : "+";
+  row.querySelector("[data-bimgrm]").hidden = !src;
+}
+document.addEventListener("change", e => {
+  const f = e.target.closest("[data-bimgfile]"); if (!f || !f.files[0]) return;
+  const row = f.closest(".tblock"), rd = new FileReader();
+  rd.onload = () => { row.dataset.src = rd.result; setBimgThumb(row, rd.result); };
+  rd.readAsDataURL(f.files[0]); f.value = "";
+});
+const syncBimgOn = () => document.getElementById("pTexts").classList.toggle("bimg-on", document.getElementById("pBtnImg").checked);
+document.getElementById("pBtnImg").addEventListener("change", syncBimgOn);
+async function fetchBimg(pid, k, v){
+  const key = pid + "_b" + k + ":" + v;
+  if (imgReady.has(key)) return imgReady.get(key);
+  if (!imgMem.has(key)) imgMem.set(key, getDoc(BIMGD(pid, k)).then(sn => sn.exists() ? (sn.data().image || "") : "").catch(() => ""));
+  const src = await imgMem.get(key);
+  if (src) imgReady.set(key, src); else imgMem.delete(key);
+  return src;
+}
+const bimgSel = new Map(); // 지금 고른 버튼 (다시 그려도 유지)
+async function showBimg(p, i){
+  const el = document.querySelector(`#it-${CSS.escape(p.id)} .media img`); if (!el) return;
+  const b = bimgsOf(p)[i];
+  let src = "";
+  if (i > 0 && b && b.k && b.v) src = await fetchBimg(p.id, b.k, b.v);
+  if (!src) src = p.imgSplit ? (imgReady.get(p.id + ":" + (p.imgV || 0)) || "") : (p.image || "");
+  if (!src || el.getAttribute("src") === src) return;
+  el.src = src; el.dataset.loaded = "1"; el.classList.add("ready");
+  el.classList.remove("bswap"); void el.offsetWidth; el.classList.add("bswap");
+}
+function applyBimgs(){ bimgSel.forEach((i, id) => { const p = promptDocs.find(x => x.id === id); if (p && p.btnImg) showBimg(p, i); }); }
+// 저장: 새로 고른 사진은 박스 크기에 맞춰 줄여서 따로 저장, 빠진 건 지움
+async function saveBimgs(pid, on, prot, size, old){
+  const rows = [...document.querySelectorAll("#pTexts .tblock")], out = [];
+  for (const [i, r] of rows.entries()) {
+    let k = r.dataset.k || "", v = +r.dataset.v || 0;
+    if (on && i > 0 && r.dataset.src) {
+      k = k || Math.random().toString(36).slice(2, 8); v = Date.now() + i;
+      const img = await bake(r.dataset.src, size[0], size[1]);
+      await setDoc(BIMGD(pid, k), { type: "img", of: pid, image: img, v, ...prot });
+      imgReady.set(pid + "_b" + k + ":" + v, img);
+    }
+    out.push(on && i > 0 && v ? { k, v } : { k: "", v: 0 });
+  }
+  const keep = new Set(out.filter(b => b.v).map(b => b.k));
+  (old || []).forEach(b => { if (b && b.k && !keep.has(b.k)) deleteDoc(BIMGD(pid, b.k)).catch(() => {}); });
+  return out;
+}
+const delBimgs = p => bimgsOf({ ...p, btnImg: true }).forEach(b => b && b.k && deleteDoc(BIMGD(p.id, b.k)).catch(() => {}));
+
 $("#view").addEventListener("click", e => {
   const t = e.target.closest("[data-edit],[data-copy],[data-open],[data-tog],[data-up],[data-down],[data-del],#oDone,#oCancel");
   if (!t) return;
@@ -1877,6 +1950,7 @@ $("#view").addEventListener("click", e => {
   if (t.dataset.edit) return openPrompt(t.dataset.edit);
   if (t.dataset.copy) {
     const pd = promptDocs.find(x => x.id === t.dataset.copy), txt = pd ? (textsOf(pd)[+t.dataset.i || 0]?.content || "") : "";
+    if (pd && pd.btnImg) { bimgSel.set(pd.id, +t.dataset.i || 0); showBimg(pd, +t.dataset.i || 0); }
     // 내용이 링크(https://…) 하나뿐이면 복사 대신 그 주소로 이동
     if (/^https?:\/\/\S+$/.test(txt.trim())) { window.open(txt.trim(), "_blank", "noopener"); return; }
     return copyText(txt);
@@ -2318,7 +2392,9 @@ function openPrompt(id, preset){
   const p = promptDocs.find(d => d.id === id) || preset || {};
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
-  fillTexts("pTexts", textsOf(p));
+  fillTexts("pTexts", textsOf(p), id ? p.bimgs : null);
+  $("#pBtnImg").checked = !!p.btnImg; syncBimgOn();
+  if (id) document.querySelectorAll("#pTexts .tblock").forEach(r => { if (r.dataset.k && +r.dataset.v) fetchBimg(id, r.dataset.k, r.dataset.v).then(src => src && r.isConnected && setBimgThumb(r, src)); });
   // 새 프롬프트는 '눌러서 전체 보기' 꺼진 채로 시작
   $("#pExpand").checked = (id || "noExpand" in p) ? !p.noExpand : false;
   $("#pHidden").checked = !!p.hidden;
@@ -2421,6 +2497,15 @@ $("#promptForm").addEventListener("submit", e => {
         await setDoc(ref, { type: "prompt", folderId: currentFolderId(), created: serverTimestamp(), order: nextOrder(last ? promptKey(last) + 1 : 0), ...data });
       }
       if (secure && data.imgSplit) updateDoc(IMGD(ref.id), { priv: data.priv, lk: data.lk }).catch(() => {});
+      {
+        const old = editingPrompt ? (promptDocs.find(d => d.id === editingPrompt)?.bimgs || []) : [];
+        const on = $("#pBtnImg").checked, prot = secure ? { priv: data.priv, lk: data.lk } : { priv: false, lk: null };
+        let size = bakeSize("prompt", curLayout);
+        if (curLayout === "col1" && curColRatio === "auto" && data.imgRatio) size = ratioWH(data.imgRatio, 560);
+        const bimgs = await saveBimgs(ref.id, on, prot, size, old);
+        await updateDoc(ref, { btnImg: on, bimgs });
+        if (secure && on) bimgs.forEach(b => b.v && updateDoc(BIMGD(ref.id, b.k), prot).catch(() => {}));
+      }
       await saveOrig(ref.id, orig);
       $("#promptDlg").close(); toast("저장됐어요");
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
@@ -2428,7 +2513,7 @@ $("#promptForm").addEventListener("submit", e => {
 });
 $("#promptDelBtn").onclick = async () => {
   if (!confirm("이 프롬프트를 삭제할까요?")) return;
-  try { await deleteDoc(doc(db, SITE.col, editingPrompt)); delAux(editingPrompt); $("#promptDlg").close(); toast("삭제했어요"); }
+  try { const pd0 = promptDocs.find(d => d.id === editingPrompt); await deleteDoc(doc(db, SITE.col, editingPrompt)); delAux(editingPrompt); if (pd0) delBimgs(pd0); $("#promptDlg").close(); toast("삭제했어요"); }
   catch(_) { toast("삭제 실패: 권한을 확인해주세요"); }
 };
 
