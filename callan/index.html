@@ -600,7 +600,7 @@ body.sq .ooc-black .ooc-text{border-top-color:rgba(255,255,255,.5)}
 .mini.ooc{background:#f6f6f6;border-radius:6px;padding:5px}
 /* 설정 줄: 이름 왼쪽, 고르기 오른쪽 한 줄 */
 .field.inl{display:flex;align-items:center;gap:10px}
-.field.inl>span{flex:0 0 44px;font-size:12px;color:var(--sub)}
+.field.inl>span{flex:0 0 58px;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .field.inl>.seg{flex:1;padding:2px;gap:2px}
 .field.inl>.seg button{height:26px;font-size:11.5px}
 .field.inl+.field.inl{margin-top:-6px}
@@ -660,7 +660,13 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
 .title-chev[data-icon=txt].on .gt,.title-chev[data-icon=caps].on .gt{color:var(--text)}
 .title-chev[data-icon=txt] svg,.title-chev[data-icon=caps] svg{display:none}
 .title-chev[data-icon=txt].pop,.title-chev[data-icon=caps].pop,.title-chev[data-icon=cur].pop{animation:gi-bounce .35s ease}
-#vGIcon{flex-wrap:wrap}
+/* 화면 설정: 그룹 버튼 고르기는 아이콘 한 줄 + 글자 한 줄 */
+#vGIcon{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr));flex-wrap:nowrap}
+#vGIcon button[data-v=txt],#vGIcon button[data-v=caps],#vGIcon button[data-v=cur]{grid-column:span 2}
+#viewDlg .dlg{gap:12px}
+#viewDlg .vsec{margin-top:6px}
+.inl-in{flex:1;min-width:0;height:32px!important;padding:0 10px!important;font-size:13px!important}
+#viewDlg .cpick{gap:6px}
 </style>
 </head>
 <body>
@@ -809,20 +815,21 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
 <dialog id="viewDlg">
   <div class="dlg">
     <h2>화면 설정</h2>
-    <label>보관함 이름 (맨 위 제목)<input id="vTitle" placeholder="프롬프트 보관함"></label>
-    <label id="vPwWrap">보관함 비밀번호 <small style="color:var(--muted)">(선택 · 비우면 누구나 들어옴)</small><input id="vPw" type="text" autocomplete="off" placeholder="비밀번호 없음"></label>
-    <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
-    <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
-    <div class="field inl"><span>그룹 아이콘</span><div class="seg" id="vGIcon"><button type="button" data-v="chev" aria-label="chev"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" data-v="tri" aria-label="tri"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 10h10l-5 6z" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="dots" aria-label="dots"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="star" aria-label="star"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z"/></svg></button><button type="button" data-v="heart" aria-label="heart"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button><button type="button" data-v="hanger" aria-label="hanger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9"/></svg></button><button type="button" data-v="txt" style="font-size:11px">글자</button><button type="button" data-v="caps" style="font-size:10px;letter-spacing:.08em">ALL</button><button type="button" data-v="cur" style="font-size:11px">이름▾</button></div></div>
-    <div class="field inl" id="vAllWrap"><span>전체 글자</span><input id="vAll" placeholder="전체 (영문은 All)" style="flex:1;min-width:0;height:32px;padding:0 10px;font-size:13px"></div>
-    <div class="field inl"><span>그룹 처음</span><div class="seg" id="vGOpen"><button type="button" data-v="closed">접어두기</button><button type="button" data-v="open">펼쳐두기</button></div></div>
-    <div class="field inl"><span>그룹 탭</span><div class="seg" id="vTab"><button type="button" data-v="pill">알약</button><button type="button" data-v="line">밑줄</button><button type="button" data-v="mark">형광펜</button><button type="button" data-v="float">띄우기</button></div></div>
+    <div class="field inl"><span>이름</span><input id="vTitle" placeholder="프롬프트 보관함" class="inl-in"></div>
+    <div class="field inl" id="vPwWrap"><span>비밀번호</span><input id="vPw" type="text" autocomplete="off" placeholder="없음 (누구나 들어옴)" class="inl-in"></div>
+    <div class="field inl"><span>글씨 색</span><div class="cpick" id="vColor"></div></div>
+    <label class="chk" style="margin-left:68px"><input type="checkbox" id="vFollow">모든 박스에 적용</label>
     <div class="field inl"><span>모양</span><div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
+    <div class="vsec">그룹</div>
+    <div class="field inl"><span>버튼</span><div class="seg" id="vGIcon"><button type="button" data-v="chev" aria-label="chev"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" data-v="tri" aria-label="tri"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 10h10l-5 6z" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="dots" aria-label="dots"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="star" aria-label="star"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z"/></svg></button><button type="button" data-v="heart" aria-label="heart"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button><button type="button" data-v="hanger" aria-label="hanger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9"/></svg></button><button type="button" data-v="txt" style="font-size:11px">글자</button><button type="button" data-v="caps" style="font-size:10px;letter-spacing:.08em">ALL</button><button type="button" data-v="cur" style="font-size:11px">이름▾</button></div></div>
+    <div class="field inl"><span>탭</span><div class="seg" id="vTab"><button type="button" data-v="pill">알약</button><button type="button" data-v="line">밑줄</button><button type="button" data-v="mark">형광펜</button><button type="button" data-v="float">띄우기</button></div></div>
+    <div class="field inl"><span>처음엔</span><div class="seg" id="vGOpen"><button type="button" data-v="closed">접기</button><button type="button" data-v="open">펼치기</button></div></div>
+    <div class="field inl" id="vAllWrap"><span>‘전체’ 글자</span><input id="vAll" placeholder="전체" class="inl-in"></div>
     <div class="vsec">첫 화면 폴더</div>
     <div class="field inl"><span>비율</span><div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">3:4</button></div></div>
     <div class="field inl"><span>열</span><div class="seg" id="vCols"><button type="button" data-v="1">1열</button><button type="button" data-v="2">2열</button><button type="button" data-v="3">3열</button></div></div>
     <div class="field inl"><span>이름</span><div class="seg" id="vCap"><button type="button" data-v="in">그림 안</button><button type="button" data-v="below">그림 아래</button></div></div>
-    <div class="field inl"><span>흰 칸</span><div class="seg" id="vBox"><button type="button" data-v="on">켬</button><button type="button" data-v="off">끔</button></div></div>
+    <div class="field inl" id="vBoxRow"><span>흰 칸</span><div class="seg" id="vBox"><button type="button" data-v="on">켬</button><button type="button" data-v="off">끔</button></div></div>
     <div class="row" style="justify-content:flex-end">
       <button type="button" class="btn press" data-close="viewDlg">취소</button>
       <button type="button" class="btn primary press" id="vSave">저장</button>
@@ -2428,8 +2435,9 @@ const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 const defCols = () => matchMedia("(min-width:720px)").matches ? 2 : 1;
 const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", vBox: "homeBox", vGIcon: "grpIcon", vTab: "tabStyle", vGOpen: "grpOpen" };
 let vs = {};
-const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
+const paintView = () => { Object.entries(VSEG).forEach(([id, k]) =>
   $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(vs[k]))));
+  $("#vBoxRow").hidden = !(vs.shape === "square" && vs.homeCap === "in"); };
 function openViewDlg(){
   vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on", grpIcon: viewCfg.grpIcon || "chev", tabStyle: viewCfg.tabStyle || "pill", grpOpen: viewCfg.grpOpen || "closed" };
   $("#vTitle").value = viewCfg.siteTitle || "";
