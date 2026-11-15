@@ -324,13 +324,11 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .chk small{font-size:11px;color:var(--muted)}
 .chk-row{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 /* 버튼마다 사진 */
-.tbimg{display:none;align-items:center;gap:8px;margin:2px 0 6px}
-.texts.bimg-on .tblock:not(:first-child) .tbimg{display:flex}
-.texts.bimg-on .tblock:first-child .thead::after{content:"대표 사진";font-size:10.5px;color:var(--muted);white-space:nowrap;margin-left:4px}
-.tbimg-pick{width:44px;height:44px;border-radius:8px;border:1px dashed #c8c8c8;background:#fff center/cover no-repeat;display:grid;place-items:center;font-size:18px;color:#999;padding:0;cursor:pointer}
-.tbimg-pick.has{border-style:solid;border-color:#e3e3e3;color:transparent}
-.tbimg small{font-size:11px;color:var(--muted)}
-.tbimg-rm{font-size:11px;color:var(--muted);background:none;border:none;padding:4px;text-decoration:underline;cursor:pointer}
+.bpager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
+.bpager button{width:34px;height:30px;border-radius:9px;border:1px solid #e3e3e3;background:#fff;font-size:16px;line-height:1;color:#333;padding:0;cursor:pointer}
+.bpager button:disabled{opacity:.3}
+.bpager span{flex:1;text-align:center;font-size:12px;color:var(--muted)}
+.bpager b{color:var(--text);font-weight:700}
 .media img.bswap{animation:bswap .25s ease}
 @keyframes bswap{from{opacity:.35}to{opacity:1}}
 .item.noexp .press{cursor:default}
@@ -753,11 +751,12 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
 <dialog id="promptDlg">
   <form class="dlg" id="promptForm">
     <h2 id="promptDlgTitle">새 프롬프트</h2>
+    <div class="bpager" id="bPager" hidden><button type="button" data-bpg="-1" aria-label="이전 버튼 사진">‹</button><span id="bPgLab"></span><button type="button" data-bpg="1" aria-label="다음 버튼 사진">›</button></div>
     <div class="picker r21" id="pPicker"></div>
     <div class="tools" id="pTools"></div>
     <div class="two"><input id="pTitle" placeholder="제목" aria-label="제목"><input id="pHint" placeholder="부제목 (비우면 안 보임)" aria-label="부제목"></div>
     <input id="pNote" class="note-in" placeholder="안내글 · 박스 위에 작게 (비우면 없음)" aria-label="안내글">
-    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand">눌러서 전체 보기</label><label class="chk"><input type="checkbox" id="pBtnImg">버튼마다 사진</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
+    <div class="chk-row"><label class="chk"><input type="checkbox" id="pExpand">눌러서 전체 보기</label><label class="chk" id="pBtnImgWrap" hidden><input type="checkbox" id="pBtnImg">버튼마다 사진</label><label class="chk"><input type="checkbox" id="pHidden">비공개 <small>(로그인 시에만 보임)</small></label></div>
     <div class="field">프롬프트 텍스트<div class="texts" id="pTexts"></div><button type="button" class="btn sm press add-text" data-addtext="pTexts">+ 텍스트 칸 추가</button></div>
     <div class="acc" id="loAcc">
       <button type="button" class="acc-head press" id="loAccBtn"><span>박스 디자인 변경</span><span class="acc-cur" id="loCur"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -1692,7 +1691,6 @@ const TRASH = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" strok
 function textBlockHtml(t, scroll, b){
   const k = (b && b.k) || "", v = (b && b.v) || 0;
   return `<div class="tblock" data-k="${esc(k)}" data-v="${v}"><div class="thead"><input class="tlabel" placeholder="복사 버튼 이름 (예: 복사)" value="${esc(t.label || "")}"><button type="button" class="oarrow press" data-tmove="-1" aria-label="위로">▲</button><button type="button" class="oarrow press" data-tmove="1" aria-label="아래로">▼</button><button type="button" class="oarrow del press" data-rmtext aria-label="칸 삭제">${TRASH}</button></div>
-    ${scroll ? "" : `<div class="tbimg"><button type="button" class="tbimg-pick" data-bimgpick aria-label="이 버튼 사진">+</button><small>누르면 보일 사진</small><button type="button" class="tbimg-rm" data-bimgrm hidden>빼기</button><input type="file" accept="image/*" hidden data-bimgfile></div>`}
     <textarea class="tbody ${scroll ? "scroll-box" : ""}" placeholder="복사될 프롬프트 내용">${esc(t.content || "")}</textarea></div>`;
 }
 function fillTexts(id, texts, bimgs){
@@ -1702,6 +1700,7 @@ function fillTexts(id, texts, bimgs){
 }
 function syncTextBtns(box){
   const rows = [...box.querySelectorAll(".tblock")];
+  if (box.id === "pTexts" && typeof bSync === "function") setTimeout(bSync, 0);
   rows.forEach((r, i) => {
     r.querySelector("[data-rmtext]").hidden = rows.length < 2;
     r.querySelectorAll("[data-tmove]").forEach(b => { b.hidden = rows.length < 2; b.disabled = b.dataset.tmove === "-1" ? i === 0 : i === rows.length - 1; });
@@ -1730,10 +1729,6 @@ document.addEventListener("click", e => {
     row.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" });
     return;
   }
-  const bp = e.target.closest("[data-bimgpick]");
-  if (bp) { bp.parentElement.querySelector("[data-bimgfile]").click(); return; }
-  const br = e.target.closest("[data-bimgrm]");
-  if (br) { const row = br.closest(".tblock"); row.dataset.src = ""; row.dataset.v = "0"; setBimgThumb(row, ""); return; }
   const rm = e.target.closest("[data-rmtext]");
   if (rm) { const box = rm.closest(".texts"); rm.closest(".tblock").remove(); syncTextBtns(box); }
 });
@@ -1887,19 +1882,35 @@ $("#backBtn").onclick = () => {
 // ---------- 버튼마다 사진 ----------
 const BIMGD = (pid, k) => doc(db, SITE.col, pid + "_b" + k);
 const bimgsOf = p => (p && p.btnImg && Array.isArray(p.bimgs)) ? p.bimgs : [];
-function setBimgThumb(row, src){
-  const b = row.querySelector(".tbimg-pick"); if (!b) return;
-  b.style.backgroundImage = src ? `url("${src}")` : ""; b.classList.toggle("has", !!src); b.textContent = src ? "" : "+";
-  row.querySelector("[data-bimgrm]").hidden = !src;
+// 사진 칸 위 화살표로 버튼별 사진 넘기기 (1번 = 대표 사진)
+let bRow = null, mainSt = null; // 지금 보고 있는 버튼 칸 (null = 대표 사진)
+const pRows = () => [...document.querySelectorAll("#pTexts .tblock")];
+const bOn = () => $("#pBtnImg").checked && pRows().length > 1;
+const pickSt = d => ({ image: d.image, imgX: d.imgX, imgY: d.imgY, zoom: d.zoom });
+function bStash(){ const d = pickSt(pEditor.data()); if (bRow) bRow._bst = { ...(bRow._bst || {}), ...d }; else mainSt = d; }
+function bGo(row){
+  bStash();
+  bRow = row || null;
+  pEditor.load(bRow ? (bRow._bst || { image: "" }) : (mainSt || { image: "" }));
+  bSync();
 }
-document.addEventListener("change", e => {
-  const f = e.target.closest("[data-bimgfile]"); if (!f || !f.files[0]) return;
-  const row = f.closest(".tblock"), rd = new FileReader();
-  rd.onload = () => { row.dataset.src = rd.result; setBimgThumb(row, rd.result); };
-  rd.readAsDataURL(f.files[0]); f.value = "";
+function bSync(){
+  const rows = pRows();
+  $("#pBtnImgWrap").hidden = rows.length < 2;
+  if (bRow && (!bRow.isConnected || !bOn() || rows.indexOf(bRow) < 1)) { bStash(); bRow = null; pEditor.load(mainSt || { image: "" }); }
+  $("#bPager").hidden = !bOn();
+  if (!bOn()) return;
+  const i = bRow ? rows.indexOf(bRow) : 0, lab = rows[i]?.querySelector(".tlabel").value.trim() || "복사";
+  $("#bPgLab").innerHTML = `<b>${i + 1} / ${rows.length}</b> · ${esc(lab)} 버튼${i === 0 ? " (대표 사진)" : ""}`;
+  $("#bPager [data-bpg='-1']").disabled = i === 0; $("#bPager [data-bpg='1']").disabled = i === rows.length - 1;
+}
+$("#bPager").addEventListener("click", e => {
+  const b = e.target.closest("[data-bpg]"); if (!b) return;
+  const rows = pRows(), i = (bRow ? rows.indexOf(bRow) : 0) + +b.dataset.bpg;
+  if (i >= 0 && i < rows.length) bGo(i ? rows[i] : null);
 });
-const syncBimgOn = () => document.getElementById("pTexts").classList.toggle("bimg-on", document.getElementById("pBtnImg").checked);
-document.getElementById("pBtnImg").addEventListener("change", syncBimgOn);
+document.getElementById("pTexts").addEventListener("input", e => { if (e.target.classList.contains("tlabel")) bSync(); });
+document.getElementById("pBtnImg").addEventListener("change", () => bSync());
 async function fetchBimg(pid, k, v){
   const key = pid + "_b" + k + ":" + v;
   if (imgReady.has(key)) return imgReady.get(key);
@@ -1922,16 +1933,19 @@ async function showBimg(p, i){
 function applyBimgs(){ bimgSel.forEach((i, id) => { const p = promptDocs.find(x => x.id === id); if (p && p.btnImg) showBimg(p, i); }); }
 // 저장: 새로 고른 사진은 박스 크기에 맞춰 줄여서 따로 저장, 빠진 건 지움
 async function saveBimgs(pid, on, prot, size, old){
-  const rows = [...document.querySelectorAll("#pTexts .tblock")], out = [];
+  const rows = pRows(), out = [];
   for (const [i, r] of rows.entries()) {
     let k = r.dataset.k || "", v = +r.dataset.v || 0;
-    if (on && i > 0 && r.dataset.src) {
+    const st = r._bst;
+    if (!on || i === 0 || !st || !st.image) { out.push({ k: "", v: 0 }); continue; }
+    const changed = st.image !== st.orig || st.imgX !== 50 || st.imgY !== 50 || st.zoom !== 1 || !v;
+    if (changed) {
       k = k || Math.random().toString(36).slice(2, 8); v = Date.now() + i;
-      const img = await bake(r.dataset.src, size[0], size[1]);
+      const img = await bake(st.image, size[0], size[1], st.imgX, st.imgY, st.zoom);
       await setDoc(BIMGD(pid, k), { type: "img", of: pid, image: img, v, ...prot });
       imgReady.set(pid + "_b" + k + ":" + v, img);
     }
-    out.push(on && i > 0 && v ? { k, v } : { k: "", v: 0 });
+    out.push({ k, v });
   }
   const keep = new Set(out.filter(b => b.v).map(b => b.k));
   (old || []).forEach(b => { if (b && b.k && !keep.has(b.k)) deleteDoc(BIMGD(pid, b.k)).catch(() => {}); });
@@ -2393,8 +2407,8 @@ function openPrompt(id, preset){
   $("#promptDlgTitle").textContent = id ? "프롬프트 수정" : "새 프롬프트";
   $("#pTitle").value = p.title || "";
   fillTexts("pTexts", textsOf(p), id ? p.bimgs : null);
-  $("#pBtnImg").checked = !!p.btnImg; syncBimgOn();
-  if (id) document.querySelectorAll("#pTexts .tblock").forEach(r => { if (r.dataset.k && +r.dataset.v) fetchBimg(id, r.dataset.k, r.dataset.v).then(src => src && r.isConnected && setBimgThumb(r, src)); });
+  $("#pBtnImg").checked = !!p.btnImg; bRow = null; mainSt = null; bSync();
+  if (id) pRows().forEach(r => { if (r.dataset.k && +r.dataset.v) fetchBimg(id, r.dataset.k, r.dataset.v).then(src => { if (!src || !r.isConnected) return; r._bst = { image: src, orig: src, imgX: 50, imgY: 50, zoom: 1 }; if (bRow === r) pEditor.load(r._bst); }); });
   // 새 프롬프트는 '눌러서 전체 보기' 꺼진 채로 시작
   $("#pExpand").checked = (id || "noExpand" in p) ? !p.noExpand : false;
   $("#pHidden").checked = !!p.hidden;
@@ -2407,7 +2421,8 @@ function openPrompt(id, preset){
   curColMode = p.colMode || "plain"; setColMode(curColMode); curColRatio = p.colRatio || "3/4"; setColRatio(curColRatio); setAlign(p.textAlign || "left");
   { const isDef = p.hint === undefined || p.hint === OLD_HINT || p.hint === DEFAULT_HINT;
     $("#pHint").value = isDef ? ($("#pExpand").checked ? DEFAULT_HINT : "") : p.hint; }
-  id ? loadOriginal(id, p, pEditor) : pEditor.load(p);
+  const pMain = { load(o){ if (bRow) mainSt = o; else pEditor.load(o); } }; // 다른 버튼 사진 보는 중이면 대표 사진 자리에만 넣어둠
+  id ? loadOriginal(id, p, pMain) : pEditor.load(p);
   { const [l0, r0] = normLayout(p); curGridRatio = r0; setLayout(l0); setGridRatio(r0); }
   $("#loAcc").classList.remove("open");
   $("#moreAcc").classList.remove("open");
@@ -2481,6 +2496,7 @@ $("#promptForm").addEventListener("submit", e => {
   withBusy("promptSave", async () => {
     try {
       const ref = editingPrompt ? doc(db, SITE.col, editingPrompt) : doc(col);
+      if (bRow) bGo(null); // 대표 사진으로 돌려놓고 저장
       const { data: img, orig } = await withBaked(ref.id, "prompt", curLayout, pEditor);
       const texts = readTexts("pTexts");
       const data = { title: $("#pTitle").value.trim(), content: texts[0].content, texts, noExpand: !$("#pExpand").checked, hidden: $("#pHidden").checked, titleColor: colorVal.pColor || "", theme: curTheme, tallPos: curTallPos, tallBtn: curTallBtn, oocOpen: curOocOpen === "1", oocTone: curOocTone, oocAlpha: +$("#pOocAlpha").value, colMode: curColMode, colRatio: curColRatio, textAlign: curAlign, hint: $("#pHint").value.trim(), note: $("#pNote").value.trim(), layout: curLayout, gridRatio: curGridRatio, ...img, updated: serverTimestamp() };
@@ -2499,7 +2515,7 @@ $("#promptForm").addEventListener("submit", e => {
       if (secure && data.imgSplit) updateDoc(IMGD(ref.id), { priv: data.priv, lk: data.lk }).catch(() => {});
       {
         const old = editingPrompt ? (promptDocs.find(d => d.id === editingPrompt)?.bimgs || []) : [];
-        const on = $("#pBtnImg").checked, prot = secure ? { priv: data.priv, lk: data.lk } : { priv: false, lk: null };
+        const on = bOn(), prot = secure ? { priv: data.priv, lk: data.lk } : { priv: false, lk: null };
         let size = bakeSize("prompt", curLayout);
         if (curLayout === "col1" && curColRatio === "auto" && data.imgRatio) size = ratioWH(data.imgRatio, 560);
         const bimgs = await saveBimgs(ref.id, on, prot, size, old);
