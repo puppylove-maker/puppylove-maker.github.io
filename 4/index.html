@@ -324,11 +324,10 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .chk small{font-size:11px;color:var(--muted)}
 .chk-row{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 /* 버튼마다 사진 */
-.bpager{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
-.bpager button{width:34px;height:30px;border-radius:9px;border:1px solid #e3e3e3;background:#fff;font-size:16px;line-height:1;color:#333;padding:0;cursor:pointer}
+.bpager{display:inline-flex;align-items:center;gap:4px}
+.bpager[hidden]{display:none}
+.bpager button{width:30px;height:30px;border-radius:8px;border:1px solid #e3e3e3;background:#fff;font-size:16px;line-height:1;color:#333;padding:0;cursor:pointer}
 .bpager button:disabled{opacity:.3}
-.bpager span{flex:1;text-align:center;font-size:12px;color:var(--muted)}
-.bpager b{color:var(--text);font-weight:700}
 .media img.bswap{animation:bswap .25s ease}
 @keyframes bswap{from{opacity:.35}to{opacity:1}}
 .item.noexp .press{cursor:default}
@@ -751,7 +750,6 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
 <dialog id="promptDlg">
   <form class="dlg" id="promptForm">
     <h2 id="promptDlgTitle">새 프롬프트</h2>
-    <div class="bpager" id="bPager" hidden><button type="button" data-bpg="-1" aria-label="이전 버튼 사진">‹</button><span id="bPgLab"></span><button type="button" data-bpg="1" aria-label="다음 버튼 사진">›</button></div>
     <div class="picker r21" id="pPicker"></div>
     <div class="tools" id="pTools"></div>
     <div class="two"><input id="pTitle" placeholder="제목" aria-label="제목"><input id="pHint" placeholder="부제목 (비우면 안 보임)" aria-label="부제목"></div>
@@ -1900,12 +1898,11 @@ function bSync(){
   if (bRow && (!bRow.isConnected || !bOn() || rows.indexOf(bRow) < 1)) { bStash(); bRow = null; pEditor.load(mainSt || { image: "" }); }
   $("#bPager").hidden = !bOn();
   if (!bOn()) return;
-  const i = bRow ? rows.indexOf(bRow) : 0, lab = rows[i]?.querySelector(".tlabel").value.trim() || "복사";
-  $("#bPgLab").innerHTML = `<b>${i + 1} / ${rows.length}</b> · ${esc(lab)} 버튼${i === 0 ? " (대표 사진)" : ""}`;
+  const i = bRow ? rows.indexOf(bRow) : 0;
   $("#bPager [data-bpg='-1']").disabled = i === 0; $("#bPager [data-bpg='1']").disabled = i === rows.length - 1;
 }
-$("#bPager").addEventListener("click", e => {
-  const b = e.target.closest("[data-bpg]"); if (!b) return;
+document.addEventListener("click", e => {
+  const b = e.target.closest("#bPager [data-bpg]"); if (!b) return;
   const rows = pRows(), i = (bRow ? rows.indexOf(bRow) : 0) + +b.dataset.bpg;
   if (i >= 0 && i < rows.length) bGo(i ? rows[i] : null);
 });
@@ -2093,6 +2090,8 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
 // 화면에 보이는 크기에 맞춰 작게 저장 (폴더 4:1, 프롬프트 2:1)
 const fEditor = makeEditor("fPicker", "fTools", "fGrad", 1600, 1600);
 const pEditor = makeEditor("pPicker", "pTools", null, 1600, 1600);
+// 버튼마다 사진: '제거' 오른쪽에 ‹ › 화살표
+$("#pTools [data-act=remove]").insertAdjacentHTML("afterend", `<span class="bpager" id="bPager" hidden><button type="button" data-bpg="-1" aria-label="이전 버튼 사진">‹</button><button type="button" data-bpg="1" aria-label="다음 버튼 사진">›</button></span>`);
 
 // ---------- 박스에 보이는 부분만 잘라서 가볍게 저장 ----------
 const ORIG = id => doc(db, SITE.col, id + "_orig"); // 원본은 따로 (수정할 때만 불러옴)
