@@ -835,7 +835,7 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
     <div class="field inl" id="vAllWrap"><span>글자</span><input id="vAll" placeholder="ALL" maxlength="12" class="inl-in"></div>
     <div class="field inl"><span>탭</span><div class="seg" id="vTab"><button type="button" data-v="pill">알약</button><button type="button" data-v="line">밑줄</button><button type="button" data-v="mark">형광펜</button><button type="button" data-v="float">띄우기</button></div></div>
     <div class="field inl" id="vMarkRow"><span>형광펜 색</span><div class="seg" id="vMark"><button type="button" data-v="#FFE58A" aria-label="노랑" title="노랑"><i style="display:block;width:16px;height:16px;border-radius:50%;background:#FFE58A;margin:auto"></i></button><button type="button" data-v="#FFC9D9" aria-label="분홍" title="분홍"><i style="display:block;width:16px;height:16px;border-radius:50%;background:#FFC9D9;margin:auto"></i></button><button type="button" data-v="#BFF0D4" aria-label="민트" title="민트"><i style="display:block;width:16px;height:16px;border-radius:50%;background:#BFF0D4;margin:auto"></i></button><button type="button" data-v="#C7E3FF" aria-label="하늘" title="하늘"><i style="display:block;width:16px;height:16px;border-radius:50%;background:#C7E3FF;margin:auto"></i></button><button type="button" data-v="#DCCBFF" aria-label="보라" title="보라"><i style="display:block;width:16px;height:16px;border-radius:50%;background:#DCCBFF;margin:auto"></i></button><button type="button" data-v="#E2E2E2" aria-label="회색" title="회색"><i style="display:block;width:16px;height:16px;border-radius:50%;background:#E2E2E2;margin:auto"></i></button></div></div>
-    <div class="field inl"><span>처음엔</span><div class="seg" id="vGOpen"><button type="button" data-v="closed">접기</button><button type="button" data-v="open">펼치기</button></div></div>
+    <div class="field inl"><span>처음엔</span><div class="seg" id="vGOpen"><button type="button" data-v="closed">접기</button><button type="button" data-v="open">펼치기</button><button type="button" data-v="always">펼침·버튼✕</button></div></div>
     </div></details>
     <details class="vacc"><summary class="vsec">첫 화면 폴더</summary><div class="vacc-in">
     <div class="field inl"><span>비율</span><div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">3:4</button></div></div>
@@ -1084,7 +1084,8 @@ function applyView(){
   if (tg) updToggle();
   ["line", "mark", "float"].forEach(t => document.body.classList.toggle("tab-" + t, viewCfg.tabStyle === t));
   document.documentElement.style.setProperty("--mark", /^#[0-9a-fA-F]{6}$/.test(viewCfg.markColor || "") ? viewCfg.markColor : "#FFE58A");
-  if (!gTouched) gOpen = viewCfg.grpOpen === "open";
+  if (viewCfg.grpOpen === "always") gOpen = true;
+  else if (!gTouched) gOpen = viewCfg.grpOpen === "open";
   if (!currentFolderId()) { $("#pageTitle").textContent = siteName(); document.title = siteName(); }
 }
 applyView();
@@ -1452,7 +1453,8 @@ function renderGroups(fid, admin){
   if (admin) { migrateOldGroups(); migrateSubSep(); migrateEff(); }
   const home = !fid && !reorder;
   const show = home && groupDocs.length > 0;
-  $("#grpToggle").hidden = !show;
+  if (viewCfg.grpOpen === "always") gOpen = true;
+  $("#grpToggle").hidden = !show || viewCfg.grpOpen === "always";
   $("#gAcc").hidden = !show;
   $("#grpToggle").classList.toggle("on", gOpen);
   $("#gAcc").classList.toggle("open", gOpen);
