@@ -1272,7 +1272,7 @@ function renderInner(){
 
   // 보관함 전체 비밀번호
   if (secure && viewCfg.siteLocked && !admin && !unlocked._site) {
-    $("#backBtn").hidden = true; $("#gAcc").hidden = true; $("#pills").hidden = true;
+    $("#backBtn").hidden = true; $("#gAcc").hidden = true; $("#grpToggle").hidden = true;
     document.body.classList.add("home");
     $("#pageTitle").textContent = siteName(); document.title = siteName();
     pwFor = { id: "_site", name: siteName() }; pwThen = render;
