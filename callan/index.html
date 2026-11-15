@@ -49,6 +49,9 @@ img.lazy-img.ready{opacity:1}
 .title-chev{border:none;background:none;padding:4px;margin-left:2px;color:#999;cursor:pointer;display:grid;place-items:center;flex:none}
 .title-chev svg{width:18px;height:18px;transition:transform .3s var(--ease)}
 .title-chev.on svg{transform:rotate(180deg)}
+.title-chev[data-icon=dots].on svg,.title-chev[data-icon=star].on svg,.title-chev[data-icon=heart].on svg,.title-chev[data-icon=hanger].on svg{transform:none}
+.title-chev[data-icon=star].on,.title-chev[data-icon=heart].on,.title-chev[data-icon=hanger].on,.title-chev[data-icon=dots].on{color:var(--text)}
+.title-chev[data-icon=star].on svg path,.title-chev[data-icon=heart].on svg path{fill:currentColor}
 .gacc{display:grid;grid-template-rows:0fr;transition:grid-template-rows .32s var(--ease),margin .32s var(--ease)}
 .gacc>div{overflow:hidden}
 .gacc.open{grid-template-rows:1fr;margin-top:-10px;margin-bottom:14px}
@@ -623,6 +626,18 @@ body.sq:not(.home) #view>.list>.folder.no-img,body.sq:not(.home) #view>.list.cap
   .list.c-2.r-hdr .folder.no-img .cap,.list.c-3.r-hdr .folder.no-img .cap{padding-top:0;padding-bottom:0}
   body.sq .list.c-2.r-hdr:not(.cap-b):not(.nobox)>.folder:not(.no-img) .cap{font-size:10.5px!important;padding:2px 6px!important}
 }
+/* 그룹 탭 모양 */
+body.tab-line .pills .pill,body.tab-mark .pills .pill,body.tab-float .pills .pill{border:none;background:none;border-radius:0;color:#999;font-weight:400;box-shadow:none}
+body.tab-line .pills{gap:18px;border-bottom:1px solid var(--line);padding-bottom:0}
+body.tab-line .pills .pill{height:auto;padding:5px 0 7px}
+body.tab-line .pills .pill.on{color:var(--text);font-weight:700;box-shadow:inset 0 -2px 0 var(--text)}
+body.tab-mark .pills{gap:12px}
+body.tab-mark .pills .pill{height:auto;padding:2px 4px}
+body.tab-mark .pills .pill.on{color:var(--text);font-weight:700;background:linear-gradient(transparent 55%,#FFE58A 55%)}
+body.tab-float .pills{gap:4px;padding:4px 16px 8px 2px}
+body.tab-float .pills .pill{border-radius:999px}
+body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+#vGIcon button{display:grid;place-items:center}
 </style>
 </head>
 <body>
@@ -775,6 +790,8 @@ body.sq:not(.home) #view>.list>.folder.no-img,body.sq:not(.home) #view>.list.cap
     <label id="vPwWrap">보관함 비밀번호 <small style="color:var(--muted)">(선택 · 비우면 누구나 들어옴)</small><input id="vPw" type="text" autocomplete="off" placeholder="비밀번호 없음"></label>
     <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
     <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
+    <div class="field inl"><span>그룹 아이콘</span><div class="seg" id="vGIcon"><button type="button" data-v="chev" aria-label="chev"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" data-v="tri" aria-label="tri"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 10h10l-5 6z" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="dots" aria-label="dots"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="star" aria-label="star"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z"/></svg></button><button type="button" data-v="heart" aria-label="heart"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button><button type="button" data-v="hanger" aria-label="hanger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9"/></svg></button></div></div>
+    <div class="field inl"><span>그룹 탭</span><div class="seg" id="vTab"><button type="button" data-v="pill">알약</button><button type="button" data-v="line">밑줄</button><button type="button" data-v="mark">형광펜</button><button type="button" data-v="float">띄우기</button></div></div>
     <div class="field inl"><span>모양</span><div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
     <div class="vsec">첫 화면 폴더</div>
     <div class="field inl"><span>비율</span><div class="seg" id="vRatio"><button type="button" data-v="4/1">헤더</button><button type="button" data-v="16/9">와이드</button><button type="button" data-v="1/1">정사각</button><button type="button" data-v="3/4">3:4</button></div></div>
@@ -1014,13 +1031,19 @@ function applyView(){
   document.documentElement.style.setProperty("--fr", r);
   $("#pageTitle").style.color = viewCfg.textColor || "";
   document.body.classList.toggle("sq", viewCfg.shape === "square");
+  // 그룹 펼치기 아이콘 · 그룹 탭 모양
+  const GICON = {"chev": "<path d=\"M6 9l6 6 6-6\"/>", "tri": "<path d=\"M7 10h10l-5 6z\" fill=\"currentColor\" stroke=\"none\"/>", "dots": "<circle cx=\"6\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"18\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/>", "star": "<path d=\"M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z\"/>", "heart": "<path d=\"M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z\"/>", "hanger": "<path d=\"M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9\"/>"};
+  const gi = GICON[viewCfg.grpIcon] ? viewCfg.grpIcon : "chev";
+  const tg = document.getElementById("grpToggle");
+  if (tg) { tg.querySelector("svg").innerHTML = GICON[gi]; tg.dataset.icon = gi; }
+  ["line", "mark", "float"].forEach(t => document.body.classList.toggle("tab-" + t, viewCfg.tabStyle === t));
   if (!currentFolderId()) { $("#pageTitle").textContent = siteName(); document.title = siteName(); }
 }
 applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
   secure = d.secureV === 1; settingsReady = true;
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", siteLocked: !!d.siteLocked, shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", grpIcon: d.grpIcon || "chev", tabStyle: d.tabStyle || "pill", siteLocked: !!d.siteLocked, shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
   subscribeData();
@@ -2358,12 +2381,12 @@ const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
 const defCols = () => matchMedia("(min-width:720px)").matches ? 2 : 1;
-const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", vBox: "homeBox" };
+const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", vBox: "homeBox", vGIcon: "grpIcon", vTab: "tabStyle" };
 let vs = {};
 const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
   $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(vs[k]))));
 function openViewDlg(){
-  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on" };
+  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on", grpIcon: viewCfg.grpIcon || "chev", tabStyle: viewCfg.tabStyle || "pill" };
   $("#vTitle").value = viewCfg.siteTitle || "";
   $("#vPwWrap").hidden = !secure; $("#vPw").value = "";
   if (secure && viewCfg.siteLocked) getDoc(LOCKD("_site")).then(sn => { if (sn.exists()) $("#vPw").value = sn.data().pw || ""; }).catch(() => {});
