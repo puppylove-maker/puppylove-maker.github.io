@@ -652,6 +652,15 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
 .title-chev[data-icon=hanger].pop svg{transform-origin:50% 15%;animation:gi-swing .8s ease}
 .title-chev[data-icon=tri].pop,.title-chev[data-icon=chev].pop{animation:gi-bounce .35s ease}
 .title-chev svg circle{transform-box:fill-box;transform-origin:center}
+.title-chev .gt{font-size:12.5px;color:#999;font-weight:500;line-height:1;white-space:nowrap}
+.title-chev .gt.caps{font-size:10.5px;letter-spacing:.16em;font-weight:700;text-transform:uppercase}
+.title-chev .gt.cur{color:#666;font-weight:600}
+.title-chev[data-icon=cur]{display:flex;align-items:center;gap:2px}
+.title-chev[data-icon=cur] svg{width:12px;height:12px}
+.title-chev[data-icon=txt].on .gt,.title-chev[data-icon=caps].on .gt{color:var(--text)}
+.title-chev[data-icon=txt] svg,.title-chev[data-icon=caps] svg{display:none}
+.title-chev[data-icon=txt].pop,.title-chev[data-icon=caps].pop,.title-chev[data-icon=cur].pop{animation:gi-bounce .35s ease}
+#vGIcon{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -804,7 +813,8 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
     <label id="vPwWrap">보관함 비밀번호 <small style="color:var(--muted)">(선택 · 비우면 누구나 들어옴)</small><input id="vPw" type="text" autocomplete="off" placeholder="비밀번호 없음"></label>
     <div class="field">테마 글씨 색 (제목·부제목·버튼)<div class="cpick" id="vColor"></div></div>
     <label class="chk"><input type="checkbox" id="vFollow">전체가 이 테마 색 따라가기 <small>(박스별 색 무시)</small></label>
-    <div class="field inl"><span>그룹 아이콘</span><div class="seg" id="vGIcon"><button type="button" data-v="chev" aria-label="chev"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" data-v="tri" aria-label="tri"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 10h10l-5 6z" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="dots" aria-label="dots"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="star" aria-label="star"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z"/></svg></button><button type="button" data-v="heart" aria-label="heart"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button><button type="button" data-v="hanger" aria-label="hanger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9"/></svg></button></div></div>
+    <div class="field inl"><span>그룹 아이콘</span><div class="seg" id="vGIcon"><button type="button" data-v="chev" aria-label="chev"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" data-v="tri" aria-label="tri"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 10h10l-5 6z" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="dots" aria-label="dots"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="star" aria-label="star"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z"/></svg></button><button type="button" data-v="heart" aria-label="heart"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button><button type="button" data-v="hanger" aria-label="hanger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9"/></svg></button><button type="button" data-v="txt" style="font-size:11px">글자</button><button type="button" data-v="caps" style="font-size:10px;letter-spacing:.08em">ALL</button><button type="button" data-v="cur" style="font-size:11px">이름▾</button></div></div>
+    <div class="field inl" id="vAllWrap"><span>전체 글자</span><input id="vAll" placeholder="전체 (영문은 All)" style="flex:1;min-width:0;height:32px;padding:0 10px;font-size:13px"></div>
     <div class="field inl"><span>그룹 처음</span><div class="seg" id="vGOpen"><button type="button" data-v="closed">접어두기</button><button type="button" data-v="open">펼쳐두기</button></div></div>
     <div class="field inl"><span>그룹 탭</span><div class="seg" id="vTab"><button type="button" data-v="pill">알약</button><button type="button" data-v="line">밑줄</button><button type="button" data-v="mark">형광펜</button><button type="button" data-v="float">띄우기</button></div></div>
     <div class="field inl"><span>모양</span><div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
@@ -1049,9 +1059,9 @@ function applyView(){
   document.body.classList.toggle("sq", viewCfg.shape === "square");
   // 그룹 펼치기 아이콘 · 그룹 탭 모양
   const GICON = {"chev": "<path d=\"M6 9l6 6 6-6\"/>", "tri": "<path d=\"M7 10h10l-5 6z\" fill=\"currentColor\" stroke=\"none\"/>", "dots": "<circle cx=\"6\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/><circle cx=\"18\" cy=\"12\" r=\"1.6\" fill=\"currentColor\" stroke=\"none\"/>", "star": "<path d=\"M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z\"/>", "heart": "<path d=\"M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z\"/>", "hanger": "<path d=\"M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9\"/>"};
-  const gi = GICON[viewCfg.grpIcon] ? viewCfg.grpIcon : "chev";
+  window.__GICON = GICON;
   const tg = document.getElementById("grpToggle");
-  if (tg) { tg.querySelector("svg").innerHTML = GICON[gi]; tg.dataset.icon = gi; }
+  if (tg) updToggle();
   ["line", "mark", "float"].forEach(t => document.body.classList.toggle("tab-" + t, viewCfg.tabStyle === t));
   if (!gTouched) gOpen = viewCfg.grpOpen === "open";
   if (!currentFolderId()) { $("#pageTitle").textContent = siteName(); document.title = siteName(); }
@@ -1060,7 +1070,7 @@ applyView();
 onSnapshot(SETTINGS(), snap => {
   const d = snap.exists() ? snap.data() : {};
   secure = d.secureV === 1; settingsReady = true;
-  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", grpIcon: d.grpIcon || "chev", tabStyle: d.tabStyle || "pill", grpOpen: d.grpOpen || "closed", siteLocked: !!d.siteLocked, shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
+  viewCfg = { folderRatio: d.folderRatio || "4/1", folderCols: d.folderCols || 0, homeCap: d.homeCap || "in", homeBox: d.homeBox || "on", grpIcon: d.grpIcon || "chev", tabStyle: d.tabStyle || "pill", grpOpen: d.grpOpen || "closed", allLabel: d.allLabel || "", siteLocked: !!d.siteLocked, shape: d.shape || "round", siteTitle: d.siteTitle || "", textColor: d.textColor || "", followAll: !!d.followAll, hideAll: !!d.hideAll };
   try { localStorage.setItem(LS("pv-view"), JSON.stringify(viewCfg)); } catch(_) {}
   applyView(); if (typeof render === "function" && foldersReady) render();
   subscribeData();
@@ -1403,6 +1413,21 @@ function folderListHtml(list){
     </button>`).join("")}</div>`;
 }
 
+// '전체' 글자 (주인이 바꿀 수 있음)
+const allLabel = () => viewCfg.allLabel || "전체";
+// 그룹 펼치기 버튼: 아이콘 또는 글자(전체 / ALL / 지금 고른 그룹 이름 ▾)
+function updToggle(){
+  const tg = document.getElementById("grpToggle"), GICON = window.__GICON || {};
+  const kind = viewCfg.grpIcon || "chev";
+  const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  let html;
+  if (kind === "txt") html = `<span class="gt">${esc(allLabel())}</span>`;
+  else if (kind === "caps") html = `<span class="gt caps">${esc(viewCfg.allLabel || "All")}</span>`;
+  else if (kind === "cur") { const g = groupDocs.find(x => x.id === curGroup()); html = `<span class="gt cur">${esc(g ? g.name : allLabel())}</span>${svg(GICON.chev)}`; }
+  else html = svg(GICON[kind] || GICON.chev);
+  if (tg.dataset.html !== html) { tg.innerHTML = html; tg.dataset.html = html; }
+  tg.dataset.icon = GICON[kind] ? kind : kind === "txt" || kind === "caps" || kind === "cur" ? kind : "chev";
+}
 function renderGroups(fid, admin){
   if (admin) { migrateOldGroups(); migrateSubSep(); migrateEff(); }
   const home = !fid && !reorder;
@@ -1412,8 +1437,9 @@ function renderGroups(fid, admin){
   $("#grpToggle").classList.toggle("on", gOpen);
   $("#gAcc").classList.toggle("open", gOpen);
   if (!show) return;
+  updToggle();
   $("#pills").innerHTML =
-    (viewCfg.hideAll && groups().length ? "" : `<button class="pill press ${!curGroup() ? "on" : ""}" data-g="">전체</button>`) +
+    (viewCfg.hideAll && groups().length ? "" : `<button class="pill press ${!curGroup() ? "on" : ""}" data-g="">${esc(allLabel())}</button>`) +
     groups().map(g => `<button class="pill press ${g.id === curGroup() ? "on" : ""}" data-g="${esc(g.id)}">${g.hidden ? `<span class="lock-ic">${LOCK}</span>` : ""}${esc(g.name)}</button>`).join("") +
     "";
 }
@@ -2407,6 +2433,7 @@ const paintView = () => Object.entries(VSEG).forEach(([id, k]) =>
 function openViewDlg(){
   vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on", grpIcon: viewCfg.grpIcon || "chev", tabStyle: viewCfg.tabStyle || "pill", grpOpen: viewCfg.grpOpen || "closed" };
   $("#vTitle").value = viewCfg.siteTitle || "";
+  $("#vAll").value = viewCfg.allLabel || "";
   $("#vPwWrap").hidden = !secure; $("#vPw").value = "";
   if (secure && viewCfg.siteLocked) getDoc(LOCKD("_site")).then(sn => { if (sn.exists()) $("#vPw").value = sn.data().pw || ""; }).catch(() => {});
   setColor("vColor", viewCfg.textColor);
@@ -2422,7 +2449,7 @@ $("#vSave").onclick = () => withBusy("vSave", async () => {
   try {
     const siteTitle = $("#vTitle").value.trim();
     const textColor = colorVal.vColor || "", followAll = $("#vFollow").checked;
-    const upd = { ...vs, siteTitle, textColor, followAll };
+    const upd = { ...vs, siteTitle, textColor, followAll, allLabel: $("#vAll").value.trim() };
     if (secure) {
       // 보관함 전체 비밀번호: 진짜 비밀번호는 주인만 읽는 곳에, 설정엔 '잠김' 표시만
       const spw = $("#vPw").value.trim();
