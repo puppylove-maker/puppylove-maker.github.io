@@ -725,6 +725,7 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
     <div class="field">글씨 색<div class="cpick" id="fColor"></div></div>
     <label>제목<input id="fName" required placeholder="폴더 이름"></label>
     <label id="fParentWrap">위치 (이 폴더를 어디에 넣을지)<select id="fParent"></select></label>
+    <div class="field" id="fGrpWrap" hidden>넣을 그룹 (눌러서 선택 · 여러 개 가능)<div class="gpick" id="fGrp"></div></div>
     <div class="field"><div class="lab-row">안내글 (폴더 맨 위에 보여요)<label class="chk mini"><input type="checkbox" id="fDescLine">구분선</label></div><textarea class="short" id="fDesc" placeholder="선택"></textarea></div>
     <label>비밀번호 <small style="color:var(--muted)">(비우면 비밀번호 없음)</small><input id="fPw" autocomplete="off" placeholder="없음"></label>
     <label class="chk"><input type="checkbox" id="fHidden">비공개 <small>(로그인 시에만 보임)</small></label>
@@ -2367,8 +2368,22 @@ function openFolder(id, newParent = null, asGroup = false){
   const sc = subCfg(id); fs = { subRatio: sc.ratio, subCols: sc.cols || defCols(), subCap: sc.cap, subBox: sc.box }; fsTouched = false; paintFs();
   id ? loadOriginal(id, f, fEditor) : fEditor.load(f);
   $("#folderDelBtn").hidden = !id;
+  // 넣을 그룹: 첫 화면 폴더일 때만 (새 폴더는 지금 보고 있는 그룹이 미리 골라짐)
+  fGrpSel = new Set(id ? groupDocs.filter(g => (g.folderIds || []).includes(id)).map(g => g.id) : (!newParent && curGroup() ? [curGroup()] : []));
+  paintFGrp();
   $("#folderDlg").showModal();
 }
+let fGrpSel = new Set();
+const fGrpShown = () => !editingIsGroup && groupDocs.length > 0 && !(editingFolder ? $("#fParent").value : currentFolderId());
+function paintFGrp(){
+  $("#fGrpWrap").hidden = !fGrpShown();
+  $("#fGrp").innerHTML = groups().map(g => `<button type="button" class="pill press ${fGrpSel.has(g.id) ? "on" : ""}" data-fg="${esc(g.id)}">${esc(g.name)}</button>`).join("");
+}
+$("#fGrp").addEventListener("click", e => {
+  const b = e.target.closest("[data-fg]"); if (!b) return;
+  const id = b.dataset.fg; fGrpSel.has(id) ? fGrpSel.delete(id) : fGrpSel.add(id); b.classList.toggle("on", fGrpSel.has(id));
+});
+$("#fParent").addEventListener("change", paintFGrp);
 // 폴더 고르기 목록 (안쪽 폴더는 들여쓰기)
 const FSEG = { fsRatio: "subRatio", fsCols: "subCols", fsCap: "subCap", fsBox: "subBox" };
 let fs = {}, fsTouched = false; // 건드렸을 때만 저장 (안 건드리면 계속 첫 화면 설정을 따라감)
@@ -2462,6 +2477,11 @@ $("#folderForm").addEventListener("submit", e => {
         await setDoc(ref, { type: "folder", created: serverTimestamp(), order: nextOrder(last ? folderKey(last) + 1 : 0), priv: true, lk: null, ...data });
       }
       await saveOrig(ref.id, orig);
+      if (fGrpShown()) await Promise.all(groupDocs.map(g => {
+        const ids = g.folderIds || [], had = ids.includes(ref.id), want = fGrpSel.has(g.id);
+        if (had === want) return null;
+        return updateDoc(doc(db, SITE.col, g.id), { folderIds: want ? [...ids, ref.id] : ids.filter(x => x !== ref.id), updated: serverTimestamp() }).catch(() => {});
+      }));
       $("#folderDlg").close(); toast("저장됐어요");
       if (subRatioChanged) { const pid = ref.id, r = newSubEff; await rebakeFolders(f => parentOf(f) === pid, () => r); }
     } catch(_) { toast("저장 실패: 권한을 확인해주세요"); }
