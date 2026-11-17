@@ -358,6 +358,11 @@ textarea.scroll-box{min-height:0;height:96px;resize:none;overflow-y:auto}
 .gsw.on::after{transform:translateX(14px)}
 .otag{font-size:10px;font-weight:600;color:var(--sub);background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:1px 5px;margin-right:6px;vertical-align:1px}
 .oarrow.del svg{width:15px;height:15px}
+.ograb{flex:none;width:22px;align-self:stretch;display:grid;place-items:center;color:#b5b5b5;cursor:grab;touch-action:none;margin:-8px 0 -8px -4px}
+.ograb svg{width:14px;height:14px}
+.orow.dragging{position:relative;z-index:5;box-shadow:0 10px 26px rgba(0,0,0,.14);transition:none!important;cursor:grabbing}
+.olist.drag-on .orow:not(.dragging){transition:transform .2s cubic-bezier(.2,.8,.2,1)}
+body.odrag{user-select:none;-webkit-user-select:none}
 .orow.leaving{transition:opacity .22s var(--ease),transform .22s var(--ease);opacity:0;transform:translateX(16px) scale(.97)}
 .obar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
 
@@ -1785,6 +1790,7 @@ function renderReorder(){
       <span class="row"><button class="btn sm press" id="oCancel">취소</button><button class="btn sm primary press" id="oDone">완료</button></span></div>
     <div class="olist">${rows.map((o, i) => `
       <div class="orow" data-oid="${o.id}">
+        <span class="ograb" aria-label="끌어서 순서 바꾸기"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></span>
         ${hasImg(o) ? imgTag(o, "othumb") : `<span class="othumb"></span>`}
         <span class="oname">${reorder.kind === "mixed" && o.type === "folder" ? `<span class="otag">폴더</span>` : ""}${esc(o.name || o.title || "제목 없음")}</span>
         <button class="oarrow press" data-up="${i}" ${i === 0 ? "disabled" : ""} aria-label="위로">▲</button>
@@ -1804,6 +1810,39 @@ function moveRow(from, to){
     requestAnimationFrame(() => { el.style.transition = "transform .3s cubic-bezier(.2,.8,.2,1)"; el.style.transform = ""; });
   });
 }
+// 끌어서 순서 바꾸기 (점 6개 손잡이를 잡고 위아래로)
+document.addEventListener("pointerdown", e => {
+  const h = e.target.closest(".olist .ograb"); if (!h || !reorder) return;
+  e.preventDefault();
+  const row = h.closest(".orow"), list = row.parentElement, rows = [...list.children];
+  const from = rows.indexOf(row), gap = 8, step = row.offsetHeight + gap;
+  const tops = rows.map(r => r.getBoundingClientRect().top + window.scrollY);
+  let to = from, startY = e.clientY + window.scrollY, lastY = e.clientY, raf = 0;
+  row.classList.add("dragging"); list.classList.add("drag-on"); document.body.classList.add("odrag");
+  try { h.setPointerCapture(e.pointerId); } catch(_) {}
+  const update = () => {
+    const y = lastY + window.scrollY, dy = y - startY;
+    row.style.transform = `translateY(${dy}px) scale(1.02)`;
+    const mid = tops[from] + row.offsetHeight / 2 + dy;
+    to = rows.reduce((n, r, i) => n + (i !== from && tops[i] + r.offsetHeight / 2 < mid ? 1 : 0), 0);
+    rows.forEach((r, i) => { if (r === row) return; r.style.transform = from < to && i > from && i <= to ? `translateY(${-step}px)` : to < from && i >= to && i < from ? `translateY(${step}px)` : ""; });
+  };
+  const edge = () => { // 화면 끝에 가까우면 저절로 스크롤
+    const m = 70, v = lastY < m ? -(m - lastY) / 4 : lastY > innerHeight - m ? (lastY - innerHeight + m) / 4 : 0;
+    if (v) { window.scrollBy(0, v); update(); }
+    raf = requestAnimationFrame(edge);
+  };
+  raf = requestAnimationFrame(edge);
+  const move = ev => { lastY = ev.clientY; update(); };
+  const up = () => {
+    cancelAnimationFrame(raf);
+    h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", up); h.removeEventListener("pointercancel", up);
+    document.body.classList.remove("odrag"); list.classList.remove("drag-on");
+    rows.forEach(r => { r.style.transform = ""; r.classList.remove("dragging"); });
+    if (to !== from) { const ids = reorder.ids; const [x] = ids.splice(from, 1); ids.splice(to, 0, x); renderReorder(); }
+  };
+  h.addEventListener("pointermove", move); h.addEventListener("pointerup", up); h.addEventListener("pointercancel", up);
+});
 function removeRow(id){
   const el = document.querySelector(`.orow[data-oid="${id}"]`);
   const go = () => {
