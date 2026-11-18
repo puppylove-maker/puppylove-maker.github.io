@@ -21,7 +21,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 [hidden]{display:none!important}
 button,input,textarea,select{outline:none}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font,Pretendard),Pretendard,-apple-system,system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
 .wrap{max-width:1080px;margin:0 auto;padding:20px 16px 40px;min-height:calc(100vh / var(--z,1));display:flex;flex-direction:column}
 main{flex:1;display:flex;flex-direction:column;justify-content:center;padding-bottom:6vh}
 header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;min-height:32px}
@@ -676,6 +676,11 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
 .title-chev[data-icon=txt].pop,.title-chev[data-icon=caps].pop,.title-chev[data-icon=cur].pop{animation:gi-bounce .35s ease}
 /* 화면 설정: 그룹 버튼 고르기는 아이콘 한 줄 + 글자 한 줄 */
 #vGIcon{display:flex!important;flex-wrap:nowrap}
+#vFont{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))}
+#vFont button{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+/* 제목에만 쓰는 글꼴: 본문은 프리텐다드 그대로 */
+body.font-title-only{font-family:Pretendard,-apple-system,system-ui,sans-serif}
+body.font-title-only :is(#pageTitle,.cap,.ptitle,.pills .pill,.gt,.ooc-head b){font-family:var(--font),Pretendard,sans-serif}
 #vGIcon button{flex:0 0 30px;padding:0}
 #vGIcon button[data-v=txt]{flex:1 1 auto;min-width:0;padding:0 6px;font-size:11px;letter-spacing:.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 화면 설정: 그룹 · 첫 화면 폴더는 접었다 펴기 */
@@ -842,6 +847,7 @@ body.tab-float .pills .pill.on{background:#fff;color:var(--text);font-weight:700
     <div class="field inl" id="vPwWrap"><span>비밀번호</span><input id="vPw" type="text" autocomplete="off" placeholder="없음 (누구나 들어옴)" class="inl-in"></div>
     <div class="field inl"><span>글씨 색</span><div class="cpick" id="vColor"></div></div>
     <label class="chk" style="margin-left:68px"><input type="checkbox" id="vFollow">모든 박스에 적용</label>
+    <div class="field inl"><span>글꼴</span><div class="seg" id="vFont"></div></div>
     <div class="field inl"><span>모양</span><div class="seg" id="vShape"><button type="button" data-v="round">둥글게</button><button type="button" data-v="square">각지게</button></div></div>
     <details class="vacc"><summary class="vsec">그룹</summary><div class="vacc-in">
     <div class="field inl"><span>버튼</span><div class="seg" id="vGIcon"><button type="button" data-v="chev" aria-label="chev"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M6 9l6 6 6-6"/></svg></button><button type="button" data-v="tri" aria-label="tri"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M7 10h10l-5 6z" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="dots" aria-label="dots"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg></button><button type="button" data-v="star" aria-label="star"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 4l2.4 5 5.6.6-4.2 3.8 1.2 5.6L12 16.3 7 19l1.2-5.6L4 9.6 9.6 9z"/></svg></button><button type="button" data-v="heart" aria-label="heart"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button><button type="button" data-v="hanger" aria-label="hanger"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M12 7a2 2 0 1 1 2-2c0 1.2-2 1.6-2 3v1l8 5.5a1.5 1.5 0 0 1-.9 2.5H4.9a1.5 1.5 0 0 1-.9-2.5L12 9"/></svg></button><button type="button" data-v="txt" id="vTxtBtn">ALL</button></div></div>
@@ -1085,7 +1091,32 @@ async function migrateEff(){
 }
 const siteName = () => (viewCfg.siteTitle || "").trim() || "프롬프트 보관함";
 try { Object.assign(viewCfg, JSON.parse(localStorage.getItem(LS("pv-view")) || "{}")); } catch(_) {}
+// ---------- 글꼴 ----------
+const FONTS = {
+  pretendard: { n: "프리텐다드", fam: "Pretendard" },
+  suit: { n: "SUIT", fam: "SUIT", files: [[400, "https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@55118d981336d8fce005eb62888c12c0568ef7b0/fonts/static/woff2/SUIT-Regular.woff2"], [700, "https://cdn.jsdelivr.net/gh/sun-typeface/SUIT@55118d981336d8fce005eb62888c12c0568ef7b0/fonts/static/woff2/SUIT-Bold.woff2"]] },
+  suite: { n: "SUITE", fam: "SUITE", files: [[400, "https://cdn.jsdelivr.net/gh/fonts-archive/SUITE@54d6062840127ccca6d103f67a2e368f042e7650/SUITE-Regular.woff2"], [700, "https://cdn.jsdelivr.net/gh/fonts-archive/SUITE@54d6062840127ccca6d103f67a2e368f042e7650/SUITE-Bold.woff2"]] },
+  nsneo: { n: "나눔스퀘어", fam: "NanumSquareNeo", files: [[400, "https://cdn.jsdelivr.net/gh/fonts-archive/NanumSquareNeo@44ddf60f0bd60dcf81fa74d10b99dafa1de988d0/NanumSquareNeo.woff2"], [700, "https://cdn.jsdelivr.net/gh/fonts-archive/NanumSquareNeo@44ddf60f0bd60dcf81fa74d10b99dafa1de988d0/NanumSquareNeoB.woff2"]] },
+  orbit: { n: "Orbit", fam: "Orbit", g: "Orbit" },
+  sunflower: { n: "선플라워", fam: "Sunflower", g: "Sunflower:wght@300;500;700" },
+  kkubulim: { n: "꾸불림", fam: "BMKkubulim", title: true, files: [[400, "https://cdn.jsdelivr.net/gh/fonts-archive/BMKkubulim@17e4f2c31e1ced8d0f1af4d6960f5b59d1831148/BMKkubulim.woff2"]] },
+  galmuri: { n: "갈무리", fam: "Galmuri11", files: [[400, "https://cdn.jsdelivr.net/gh/quiple/galmuri@71e1cacf1437a11220307120e63e30bc275312d4/dist/Galmuri11.woff2"], [700, "https://cdn.jsdelivr.net/gh/quiple/galmuri@71e1cacf1437a11220307120e63e30bc275312d4/dist/Galmuri11-Bold.woff2"]] },
+  mabinogi: { n: "마비노기", fam: "MabinogiClassic", files: [[400, "https://cdn.jsdelivr.net/gh/fonts-archive/MabinogiClassic@65e9961ff256b9f371c00d3312ada5f2e4c000b9/MabinogiClassic.woff2"]] },
+};
+const fontLoaded = new Set(["pretendard"]);
+function loadFont(k){ // 고른 글꼴만 그때 불러옴
+  const f = FONTS[k]; if (!f || fontLoaded.has(k)) return; fontLoaded.add(k);
+  if (f.g) { const l = document.createElement("link"); l.rel = "stylesheet"; l.href = `https://fonts.googleapis.com/css2?family=${f.g}&display=swap`; document.head.appendChild(l); return; }
+  const st = document.createElement("style");
+  st.textContent = f.files.map(([w, u]) => `@font-face{font-family:"${f.fam}";src:url("${u}") format("woff2");font-weight:${w};font-display:swap}`).join("")
+    + (f.files.length === 1 ? `@font-face{font-family:"${f.fam}";src:url("${f.files[0][1]}") format("woff2");font-weight:700;font-display:swap}` : "");
+  document.head.appendChild(st);
+}
+const fontKey = () => FONTS[viewCfg.font] ? viewCfg.font : "pretendard";
 function applyView(){
+  { const k = fontKey(), f = FONTS[k]; loadFont(k);
+    document.documentElement.style.setProperty("--font", `"${f.fam}"`);
+    document.body.classList.toggle("font-title-only", !!f.title); }
   const r = RATIO_PX[viewCfg.folderRatio] ? viewCfg.folderRatio : "4/1";
   document.documentElement.style.setProperty("--fr", r);
   $("#pageTitle").style.color = viewCfg.textColor || "";
@@ -2615,7 +2646,7 @@ const colorStyle = c => c ? ` style="color:${esc(c)}"` : "";
 
 // ---------- 폴더 화면 설정 ----------
 const defCols = () => matchMedia("(min-width:720px)").matches ? 2 : 1;
-const VSEG = { vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", vBox: "homeBox", vGIcon: "grpIcon", vTab: "tabStyle", vGOpen: "grpOpen", vMark: "markColor" };
+const VSEG = { vFont: "font", vShape: "shape", vRatio: "folderRatio", vCols: "folderCols", vCap: "homeCap", vBox: "homeBox", vGIcon: "grpIcon", vTab: "tabStyle", vGOpen: "grpOpen", vMark: "markColor" };
 let vs = {};
 const paintView = () => { Object.entries(VSEG).forEach(([id, k]) =>
   $("#" + id).querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === String(vs[k]))));
@@ -2625,9 +2656,12 @@ const paintView = () => { Object.entries(VSEG).forEach(([id, k]) =>
   $("#vTxtBtn").textContent = $("#vAll").value.trim() || "ALL"; };
 $("#vAll").addEventListener("input", () => { $("#vTxtBtn").textContent = $("#vAll").value.trim() || "ALL"; });
 function openViewDlg(){
-  vs = { shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on", grpIcon: ["caps", "cur"].includes(viewCfg.grpIcon) ? "txt" : viewCfg.grpIcon || "chev", tabStyle: viewCfg.tabStyle || "pill", grpOpen: viewCfg.grpOpen || "closed", markColor: viewCfg.markColor || "#FFE58A" };
+  vs = { font: fontKey(), shape: viewCfg.shape || "round", folderRatio: homeRatio(), folderCols: +viewCfg.folderCols || defCols(), homeCap: viewCfg.homeCap || "in", homeBox: viewCfg.homeBox || "on", grpIcon: ["caps", "cur"].includes(viewCfg.grpIcon) ? "txt" : viewCfg.grpIcon || "chev", tabStyle: viewCfg.tabStyle || "pill", grpOpen: viewCfg.grpOpen || "closed", markColor: viewCfg.markColor || "#FFE58A" };
   $("#vTitle").value = viewCfg.siteTitle || "";
   $("#vAll").value = viewCfg.allLabel || "";
+  // 글꼴 버튼: 각 이름을 그 글꼴로 보여줌
+  Object.keys(FONTS).forEach(loadFont);
+  $("#vFont").innerHTML = Object.entries(FONTS).map(([k, f]) => `<button type="button" data-v="${k}" style="font-family:'${f.fam}',Pretendard,sans-serif">${f.n}</button>`).join("");
   $("#viewDlg").querySelectorAll(".vacc").forEach(d => d.open = false);
   $("#vPwWrap").hidden = !secure; $("#vPw").value = "";
   if (secure && viewCfg.siteLocked) getDoc(LOCKD("_site")).then(sn => { if (sn.exists()) $("#vPw").value = sn.data().pw || ""; }).catch(() => {});
