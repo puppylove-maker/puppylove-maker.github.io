@@ -2081,6 +2081,7 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
   const picker = $("#" + pickerId), tools = $("#" + toolsId), gradEl = gradId ? $("#" + gradId) : document.createElement("div");
   tools.innerHTML = `
     <button type="button" class="btn sm press" data-act="pick">이미지 선택</button>
+    <button type="button" class="btn sm ghost press" data-act="paste">붙여넣기</button>
     <button type="button" class="btn sm ghost press" data-act="remove">제거</button>
     <span class="zoom-row" data-el="zoomRow"><span>확대</span><input type="range" min="1" max="3" step="0.01" aria-label="확대"></span>`;
   gradEl.innerHTML = `<button type="button" data-g="white">흰색</button><button type="button" data-g="black">검은색</button><button type="button" data-g="none">없음</button>`;
@@ -2109,6 +2110,7 @@ function makeEditor(pickerId, toolsId, gradId, maxW, maxH){
   tools.addEventListener("click", e => {
     const a = e.target.closest("[data-act]")?.dataset.act;
     if (a === "pick") pick();
+    if (a === "paste") pasteImage(api);
     if (a === "remove") { st.image = ""; paint(); }
   });
   gradEl.addEventListener("click", e => { const g = e.target.closest("[data-g]")?.dataset.g; if (g) { st.grad = g; paint(); } });
@@ -2251,6 +2253,32 @@ async function resizeImage(file, maxW, maxH){
     return out;
   } finally { URL.revokeObjectURL(url); }
 }
+// ---------- 사진 붙여넣기 ----------
+async function setFromBlob(ed, blob){
+  try { ed.setImage(await resizeImage(blob, ed.maxW, ed.maxH)); toast("사진을 붙여넣었어요"); }
+  catch(_) { toast("사진을 불러오지 못했어요"); }
+}
+// '붙여넣기' 버튼: 복사해 둔 사진을 클립보드에서 꺼냄
+async function pasteImage(ed){
+  if (!navigator.clipboard || !navigator.clipboard.read) { toast("이 브라우저에선 버튼이 안 돼요. 길게 눌러 붙여넣기 해주세요"); return; }
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      const type = item.types.find(t => t.startsWith("image/"));
+      if (type) { await setFromBlob(ed, await item.getType(type)); return; }
+    }
+    toast("복사한 사진이 없어요");
+  } catch(_) { toast("붙여넣기를 허용해 주세요"); }
+}
+// Ctrl+V / 길게 눌러 붙여넣기: 폴더·프롬 창이 열려 있으면 그 사진 칸으로
+document.addEventListener("paste", e => {
+  const ed = $("#promptDlg").open ? pEditor : $("#folderDlg").open ? fEditor : null;
+  if (!ed || !e.clipboardData) return;
+  const f = [...e.clipboardData.files].find(x => x.type.startsWith("image/"));
+  if (!f) return;
+  const inText = e.target.closest && e.target.closest("input,textarea,[contenteditable]");
+  if (inText && e.clipboardData.getData("text")) return; // 글 붙여넣기는 그대로
+  e.preventDefault(); setFromBlob(ed, f);
+});
 $("#fileIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = "";
   if (!f || !fileTarget) return;
